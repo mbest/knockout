@@ -99,13 +99,12 @@
         // observable has been initialized. Thus if one binding is dependent on
         // another, the order they are specified in the binding list doesn't matter.
         function parsedBindingsObservableAccessor(bindingKey) {
-            var val = parsedBindingsAccessor(bindingKey);
-            if (val !== undefined && bindingKey !== undefined) {
+            if (bindingKey !== undefined && bindingKey in parsedBindings) {
                 initializeBindingUpdateObservable(bindingKey);
                 if (bindingKey in bindingUpdateObservables)
                     bindingUpdateObservables[bindingKey]();
             }
-            return val;
+            return parsedBindingsAccessor(bindingKey);
         }
 
         try {

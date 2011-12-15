@@ -86,28 +86,33 @@
         if (targetNodeOrNodeArray) {
             var firstTargetNode = getFirstNodeFromPossibleArray(targetNodeOrNodeArray);
 
-            var whenToDispose = function () { return (!firstTargetNode) || !ko.utils.domNodeIsAttachedToDocument(firstTargetNode); }; // Passive disposal (on next evaluation)
-            var activelyDisposeWhenNodeIsRemoved = (firstTargetNode && renderMode == "replaceNode") ? firstTargetNode.parentNode : firstTargetNode;
+            var doRender = function () {
+                // Ensure we've got a proper binding context to work with
+                var bindingContext = (dataOrBindingContext && (dataOrBindingContext instanceof ko.bindingContext))
+                    ? dataOrBindingContext
+                    : new ko.bindingContext(ko.utils.unwrapObservable(dataOrBindingContext));
 
-            return new ko.dependentObservable( // So the DOM is automatically updated when any dependency changes
-                function () {
-                    // Ensure we've got a proper binding context to work with
-                    var bindingContext = (dataOrBindingContext && (dataOrBindingContext instanceof ko.bindingContext))
-                        ? dataOrBindingContext
-                        : new ko.bindingContext(ko.utils.unwrapObservable(dataOrBindingContext));
+                // Support selecting template as a function of the data being rendered
+                var templateName = typeof(template) == 'function' ? template(bindingContext['$data']) : template;
 
-                    // Support selecting template as a function of the data being rendered
-                    var templateName = typeof(template) == 'function' ? template(bindingContext['$data']) : template;
+                var renderedNodesArray = executeTemplate(targetNodeOrNodeArray, renderMode, templateName, bindingContext, options);
+                if (renderMode == "replaceNode") {
+                    targetNodeOrNodeArray = renderedNodesArray;
+                    firstTargetNode = getFirstNodeFromPossibleArray(targetNodeOrNodeArray);
+                }
+            };
 
-                    var renderedNodesArray = executeTemplate(targetNodeOrNodeArray, renderMode, templateName, bindingContext, options);
-                    if (renderMode == "replaceNode") {
-                        targetNodeOrNodeArray = renderedNodesArray;
-                        firstTargetNode = getFirstNodeFromPossibleArray(targetNodeOrNodeArray);
-                    }
-                },
-                null,
-                { 'disposeWhen': whenToDispose, 'disposeWhenNodeIsRemoved': activelyDisposeWhenNodeIsRemoved }
-            );
+            if (renderMode == "replaceChildren") {
+                doRender();
+            } else {
+                var whenToDispose = function () { return (!firstTargetNode) || !ko.utils.domNodeIsAttachedToDocument(firstTargetNode); }; // Passive disposal (on next evaluation)
+                var activelyDisposeWhenNodeIsRemoved = (firstTargetNode && renderMode == "replaceNode") ? firstTargetNode.parentNode : firstTargetNode;
+
+                ko.dependentObservable( // So the DOM is automatically updated when any dependency changes
+                    doRender, null,
+                    { 'disposeWhen': whenToDispose, 'disposeWhenNodeIsRemoved': activelyDisposeWhenNodeIsRemoved }
+                );
+            }
         } else {
             // We don't yet have a DOM node to evaluate, so use a memo and render the template later when there is a DOM node
             return ko.memoization.memoize(function (domNode) {
@@ -129,32 +134,21 @@
                 options['afterRender'](addedNodesArray, bindingContext['$data']);
         };
 
-        return new ko.dependentObservable(function () {
-            var unwrappedArray = ko.utils.unwrapObservable(arrayOrObservableArray) || [];
-            if (typeof unwrappedArray.length == "undefined") // Coerce single value into array
-                unwrappedArray = [unwrappedArray];
+        var unwrappedArray = ko.utils.unwrapObservable(arrayOrObservableArray) || [];
+        if (typeof unwrappedArray.length == "undefined") // Coerce single value into array
+            unwrappedArray = [unwrappedArray];
 
-            // Filter out any entries marked as destroyed
-            var filteredArray = ko.utils.arrayFilter(unwrappedArray, function(item) {
-                return options['includeDestroyed'] || item === undefined || item === null || !ko.utils.unwrapObservable(item['_destroy']);
-            });
+        // Filter out any entries marked as destroyed
+        var filteredArray = ko.utils.arrayFilter(unwrappedArray, function(item) {
+            return options['includeDestroyed'] || item === undefined || item === null || !ko.utils.unwrapObservable(item['_destroy']);
+        });
 
-            ko.utils.setDomNodeChildrenFromArrayMapping(targetNode, filteredArray, function (arrayValue) {
-                // Support selecting template as a function of the data being rendered
-                var templateName = typeof(template) == 'function' ? template(arrayValue) : template;
-                return executeTemplate(null, "ignoreTargetNode", templateName, createInnerBindingContext(arrayValue), options);
-            }, options, activateBindingsCallback);
-
-        }, null, { 'disposeWhenNodeIsRemoved': targetNode });
+        ko.utils.setDomNodeChildrenFromArrayMapping(targetNode, filteredArray, function (arrayValue) {
+            // Support selecting template as a function of the data being rendered
+            var templateName = typeof(template) == 'function' ? template(arrayValue) : template;
+            return executeTemplate(null, "ignoreTargetNode", templateName, createInnerBindingContext(arrayValue), options);
+        }, options, activateBindingsCallback);
     };
-
-    var templateSubscriptionDomDataKey = '__ko__templateSubscriptionDomDataKey__';
-    function disposeOldSubscriptionAndStoreNewOne(element, newSubscription) {
-        var oldSubscription = ko.utils.domData.get(element, templateSubscriptionDomDataKey);
-        if (oldSubscription && (typeof(oldSubscription.dispose) == 'function'))
-            oldSubscription.dispose();
-        ko.utils.domData.set(element, templateSubscriptionDomDataKey, newSubscription);
-    }
 
     ko.bindingHandlers['template'] = {
         'init': function(element, valueAccessor) {
@@ -184,12 +178,10 @@
                     shouldDisplay = shouldDisplay && !ko.utils.unwrapObservable(bindingValue['ifnot']);
             }
 
-            var templateSubscription = null;
-
             if (typeof bindingValue['foreach'] != "undefined") {
                 // Render once for each data point (treating data set as empty if shouldDisplay==false)
                 var dataArray = (shouldDisplay && bindingValue['foreach']) || [];
-                templateSubscription = ko.renderTemplateForEach(templateName || element, dataArray, /* options: */ bindingValue, element, bindingContext);
+                ko.renderTemplateForEach(templateName || element, dataArray, /* options: */ bindingValue, element, bindingContext);
             }
             else {
                 if (shouldDisplay) {
@@ -197,13 +189,10 @@
                     var innerBindingContext = (typeof bindingValue == 'object') && ('data' in bindingValue)
                         ? bindingContext['createChildContext'](ko.utils.unwrapObservable(bindingValue['data'])) // Given an explitit 'data' value, we create a child binding context for it
                         : bindingContext;                                                                       // Given no explicit 'data' value, we retain the same binding context
-                    templateSubscription = ko.renderTemplate(templateName || element, innerBindingContext, /* options: */ bindingValue, element);
+                    ko.renderTemplate(templateName || element, innerBindingContext, /* options: */ bindingValue, element);
                 } else
                     ko.virtualElements.emptyNode(element);
             }
-
-            // It only makes sense to have a single template subscription per element (otherwise which one should have its output displayed?)
-            disposeOldSubscriptionAndStoreNewOne(element, templateSubscription);
         }
     };
 
