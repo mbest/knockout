@@ -26,7 +26,7 @@
                 newContiguousSet.push(current);
             }
 
-            // ... then mutate the input array to match this. 
+            // ... then mutate the input array to match this.
             // (The following line replaces the contents of contiguousNodeArray with newContiguousSet)
             Array.prototype.splice.apply(contiguousNodeArray, [0, contiguousNodeArray.length].concat(newContiguousSet));
         }
@@ -37,7 +37,7 @@
         var mappedNodes = [];
         var dependentObservable = ko.dependentObservable(function() {
             var newMappedNodes = mapping(valueToMap) || [];
-            
+
             // On subsequent evaluations, just replace the previously-inserted DOM nodes
             if (mappedNodes.length > 0) {
                 fixUpVirtualElements(mappedNodes);
@@ -45,7 +45,7 @@
                 if (callbackAfterAddingNodes)
                     callbackAfterAddingNodes(valueToMap, newMappedNodes);
             }
-            
+
             // Replace the contents of the mappedNodes array, thereby updating the record
             // of which nodes would be deleted if valueToMap was itself later removed
             mappedNodes.splice(0, mappedNodes.length);
@@ -53,7 +53,7 @@
         }, null, { 'disposeWhenNodeIsRemoved': containerNode, 'disposeWhen': function() { return (mappedNodes.length == 0) || !ko.utils.domNodeIsAttachedToDocument(mappedNodes[0]) } });
         return { mappedNodes : mappedNodes, dependentObservable : dependentObservable };
     }
-    
+
     var lastMappingResultDomDataKey = "setDomNodeChildrenFromArrayMapping_lastMappingResult";
 
     ko.utils.setDomNodeChildrenFromArrayMapping = function (domNode, array, mapping, options, callbackAfterAddingNodes) {
@@ -63,7 +63,7 @@
         var isFirstExecution = ko.utils.domData.get(domNode, lastMappingResultDomDataKey) === undefined;
         var lastMappingResult = ko.utils.domData.get(domNode, lastMappingResultDomDataKey) || [];
         var lastArray = ko.utils.arrayMap(lastMappingResult, function (x) { return x.arrayEntry; });
-        var editScript = ko.utils.compareArrays(lastArray, array);
+        var editScript = ko.utils.compareArrays(lastArray, array, options['comparer']);
 
         // Build the new mapping result
         var newMappingResult = [];
@@ -83,36 +83,52 @@
                     break;
 
                 case "deleted":
-                    // Stop tracking changes to the mapping for these nodes
-                    lastMappingResult[lastMappingResultIndex].dependentObservable.dispose();
-                
-                    // Queue these nodes for later removal
-                    fixUpVirtualElements(lastMappingResult[lastMappingResultIndex].domNodes);
-                    ko.utils.arrayForEach(lastMappingResult[lastMappingResultIndex].domNodes, function (node) {
-                        nodesToDelete.push({
-                          element: node,
-                          index: i,
-                          value: editScript[i].value
+                    if (!('moveTo' in editScript[i])) {
+                        // Stop tracking changes to the mapping for these nodes
+                        lastMappingResult[lastMappingResultIndex].dependentObservable.dispose();
+
+                        // Queue these nodes for later removal
+                        fixUpVirtualElements(lastMappingResult[lastMappingResultIndex].domNodes);
+                        ko.utils.arrayForEach(lastMappingResult[lastMappingResultIndex].domNodes, function (node) {
+                            nodesToDelete.push({
+                              element: node,
+                              index: i,
+                              value: editScript[i].value
+                            });
+                            insertAfterNode = node;
                         });
-                        insertAfterNode = node;
-                    });
+                    }
                     lastMappingResultIndex++;
                     break;
 
-                case "added": 
-                    var valueToMap = editScript[i].value;
-                    var mapData = mapNodeAndRefreshWhenChanged(domNode, mapping, valueToMap, callbackAfterAddingNodes);
-                    var mappedNodes = mapData.mappedNodes;
-                    
-                    // On the first evaluation, insert the nodes at the current insertion point
-                    newMappingResult.push({ arrayEntry: editScript[i].value, domNodes: mappedNodes, dependentObservable: mapData.dependentObservable });
+                case "added":
+                    var mappedNodes;
+                    var movingNodes = false;
+                    if ('moveFrom' in editScript[i]) {
+                        var dataToRetain = lastMappingResult[editScript[i].moveFrom];
+                        newMappingResult.push(dataToRetain);
+                        mappedNodes = dataToRetain.domNodes;
+                        movingNodes = true;
+                    } else {
+                        var valueToMap = editScript[i].value;
+                        var mapData = mapNodeAndRefreshWhenChanged(domNode, mapping, valueToMap, callbackAfterAddingNodes);
+                        mappedNodes = mapData.mappedNodes;
+
+                        // On the first evaluation, insert the nodes at the current insertion point
+                        newMappingResult.push({ arrayEntry: editScript[i].value, domNodes: mappedNodes, dependentObservable: mapData.dependentObservable });
+                    }
+
                     for (var nodeIndex = 0, nodeIndexMax = mappedNodes.length; nodeIndex < nodeIndexMax; nodeIndex++) {
                         var node = mappedNodes[nodeIndex];
-                        nodesAdded.push({
-                          element: node,
-                          index: i,
-                          value: editScript[i].value
-                        });
+                        if (movingNodes) {
+                            node = node.parentNode.removeChild(node);
+                        } else {
+                            nodesAdded.push({
+                              element: node,
+                              index: i,
+                              value: editScript[i].value
+                            });
+                        }
                         if (insertAfterNode == null) {
                             // Insert "node" (the newly-created node) as domNode's first child
                             ko.virtualElements.prepend(domNode, node);
@@ -121,13 +137,13 @@
                             ko.virtualElements.insertAfter(domNode, node, insertAfterNode);
                         }
                         insertAfterNode = node;
-                    } 
-                    if (callbackAfterAddingNodes)
+                    }
+                    if (!movingNodes && callbackAfterAddingNodes)
                         callbackAfterAddingNodes(valueToMap, mappedNodes);
                     break;
             }
         }
-        
+
         ko.utils.arrayForEach(nodesToDelete, function (node) { ko.cleanNode(node.element) });
 
         var invokedBeforeRemoveCallback = false;

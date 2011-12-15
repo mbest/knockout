@@ -513,6 +513,7 @@ ko.bindingHandlers['foreach'] = {
             // If bindingValue.data is the array, preserve all relevant options
             return {
                 'foreach': bindingValue['data'],
+                'comparer': bindingValue['comparer'],
                 'includeDestroyed': bindingValue['includeDestroyed'],
                 'afterAdd': bindingValue['afterAdd'],
                 'beforeRemove': bindingValue['beforeRemove'],
