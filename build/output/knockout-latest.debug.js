@@ -2228,9 +2228,12 @@ ko.bindingHandlers['selectedOptions'] = {
             }
         });
     },
-    'update': function (element, valueAccessor) {
+    'update': function (element, valueAccessor, allBindingsAccessor) {
         if (element.tagName != "SELECT")
             throw new Error("values binding applies only to SELECT elements");
+
+        // make sure options are updated first (and set dependency on options binding)
+        allBindingsAccessor('options');
 
         var newValue = ko.utils.unwrapObservable(valueAccessor());
         if (newValue && typeof newValue.length == "number") {
@@ -2938,7 +2941,7 @@ ko.exportSymbol('ko.renderTemplate', ko.renderTemplate);
                 }
             }
         }
-        console.log('matrix('+maxAllowedDistance+'): countComparisons=' + countComparisons);
+        //console.log('matrix('+maxAllowedDistance+'): countComparisons=' + countComparisons);
 
         return distances;
     }
@@ -2989,7 +2992,7 @@ ko.exportSymbol('ko.renderTemplate', ko.renderTemplate);
                     }
                 }
             }
-            console.log('move: countComparisons=' + countComparisons + '; countMoves=' + countMoves);
+            //console.log('move: countComparisons=' + countComparisons + '; countMoves=' + countMoves);
         }
         return editScript.reverse();
     }
