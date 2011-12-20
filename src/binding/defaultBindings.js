@@ -235,10 +235,9 @@ ko.bindingHandlers['options'] = {
                 else
                     optionText = optionValue;				 // Given no optionsText arg; use the data value itself
                 if ((optionText === null) || (optionText === undefined))
-                    optionText = "";
-                optionText = ko.utils.unwrapObservable(optionText).toString();
-                typeof option.innerText == "string" ? option.innerText = optionText
-                                                    : option.textContent = optionText;
+                    optionText = "";                                    
+
+                ko.utils.setTextContent(option, optionText);
 
                 element.appendChild(option);
             }
@@ -284,9 +283,12 @@ ko.bindingHandlers['selectedOptions'] = {
             }
         });
     },
-    'update': function (element, valueAccessor) {
+    'update': function (element, valueAccessor, allBindingsAccessor) {
         if (element.tagName != "SELECT")
             throw new Error("values binding applies only to SELECT elements");
+
+        // make sure options are updated first (and set dependency on options binding)
+        allBindingsAccessor('options');
 
         var newValue = ko.utils.unwrapObservable(valueAccessor());
         if (newValue && typeof newValue.length == "number") {
