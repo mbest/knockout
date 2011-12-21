@@ -83,7 +83,7 @@
                     break;
 
                 case "deleted":
-                    if (!('moveTo' in editScript[i])) {
+                    if (editScript[i].moveTo === undefined) {
                         // Stop tracking changes to the mapping for these nodes
                         lastMappingResult[lastMappingResultIndex].dependentObservable.dispose();
 
@@ -102,9 +102,8 @@
                     break;
 
                 case "added":
-                    var mappedNodes;
-                    var movingNodes = false;
-                    if ('moveFrom' in editScript[i]) {
+                    var mappedNodes, movingNodes;
+                    if (editScript[i].moveFrom !== undefined) {
                         var dataToRetain = lastMappingResult[editScript[i].moveFrom];
                         newMappingResult.push(dataToRetain);
                         mappedNodes = dataToRetain.domNodes;
@@ -113,6 +112,7 @@
                         var valueToMap = editScript[i].value;
                         var mapData = mapNodeAndRefreshWhenChanged(domNode, mapping, valueToMap, callbackAfterAddingNodes);
                         mappedNodes = mapData.mappedNodes;
+                        movingNodes = false;
 
                         // On the first evaluation, insert the nodes at the current insertion point
                         newMappingResult.push({ arrayEntry: editScript[i].value, domNodes: mappedNodes, dependentObservable: mapData.dependentObservable });
