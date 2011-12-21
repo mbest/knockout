@@ -2941,7 +2941,7 @@ ko.exportSymbol('ko.renderTemplate', ko.renderTemplate);
                 }
             }
         }
-        console.log('matrix('+maxAllowedDistance+'): countComparisons=' + countComparisons);
+        //console.log('matrix('+maxAllowedDistance+'): countComparisons=' + countComparisons);
 
         return distances;
     }
@@ -2992,7 +2992,7 @@ ko.exportSymbol('ko.renderTemplate', ko.renderTemplate);
                     }
                 }
             }
-            console.log('move: countComparisons=' + countComparisons + '; countMoves=' + countMoves);
+            //console.log('move: countComparisons=' + countComparisons + '; countMoves=' + countMoves);
         }
         return editScript.reverse();
     }
