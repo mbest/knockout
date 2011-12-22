@@ -134,35 +134,6 @@ describe('Templating', {
         value_of(passedDataItem).should_be(myModel);
     },
 
-    'Should automatically rerender into DOM element when dependencies change': function () {
-        var dependency = new ko.observable("A");
-        ko.setTemplateEngine(new dummyTemplateEngine({ someTemplate: function () {
-            return "Value = " + dependency();
-        }
-        }));
-
-        ko.renderTemplate("someTemplate", null, null, testNode);
-        value_of(testNode.childNodes.length).should_be(1);
-        value_of(testNode.childNodes[0].innerHTML).should_be("Value = A");
-
-        dependency("B");
-        value_of(testNode.childNodes.length).should_be(1);
-        value_of(testNode.childNodes[0].innerHTML).should_be("Value = B");
-    },
-
-    'If the supplied data item is observable, evaluates it and has subscription on it': function () {
-        var observable = new ko.observable("A");
-        ko.setTemplateEngine(new dummyTemplateEngine({ someTemplate: function (data) {
-            return "Value = " + data;
-        }
-        }));
-        ko.renderTemplate("someTemplate", observable, null, testNode);
-        value_of(testNode.childNodes[0].innerHTML).should_be("Value = A");
-
-        observable("B");
-        value_of(testNode.childNodes[0].innerHTML).should_be("Value = B");
-    },
-
     'Should stop updating DOM nodes when the dependency next changes if the DOM node has been removed from the document': function () {
         var dependency = new ko.observable("A");
         var template = { someTemplate: function () { return "Value = " + dependency() } };

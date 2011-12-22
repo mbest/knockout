@@ -182,6 +182,17 @@ ko.utils = new (function () {
             return string.substring(0, startsWith.length) === startsWith;
         },
 
+        buildEvalFunction: function (expression, scopeLevels) {
+            // Build the source for a function that evaluates "expression"
+            // For each scope variable, add an extra level of "with" nesting
+            // Example result: with(sc[1]) { with(sc[0]) { return (expression) } }
+            var functionBody = "return (" + expression + ")";
+            for (var i = 0; i < scopeLevels; i++) {
+                functionBody = "with(sc[" + i + "]) { " + functionBody + " } ";
+            }
+            return new Function("sc", functionBody);
+        },
+        
         evalWithinScope: function (expression /*, scope1, scope2, scope3... */) {
             // Build the source for a function that evaluates "expression"
             // For each scope variable, add an extra level of "with" nesting
@@ -484,6 +495,10 @@ ko.utils.domData = new (function () {
                 delete dataStore[dataStoreKey];
                 node[dataStoreKeyExpandoPropertyName] = null;
             }
+        },
+        clean: function (node) {
+            // clear expando property from cloned node (needed because IE copies expando properties)
+            delete node[dataStoreKeyExpandoPropertyName];
         }
     }
 })();
@@ -1688,7 +1703,9 @@ ko.exportSymbol('ko.jsonExpressionRewriting.insertPropertyAccessorsIntoJson', ko
 (function() {
     var defaultBindingAttributeName = "data-bind";
 
-    ko.bindingProvider = function() { };
+    ko.bindingProvider = function() {
+        this.bindingCache = {};
+    };
 
     ko.utils.extend(ko.bindingProvider.prototype, {
         'nodeHasBindings': function(node) {
@@ -1719,8 +1736,16 @@ ko.exportSymbol('ko.jsonExpressionRewriting.insertPropertyAccessorsIntoJson', ko
         'parseBindingsString': function(bindingsString, bindingContext) {
             try {
                 var viewModel = bindingContext['$data'];
-                var rewrittenBindings = " { " + ko.jsonExpressionRewriting.insertPropertyAccessorsIntoJson(bindingsString) + " } ";
-                return ko.utils.evalWithinScope(rewrittenBindings, viewModel === null ? window : viewModel, bindingContext);
+                var scopes = (typeof viewModel == 'object' && viewModel != null) ? [viewModel, bindingContext] : [bindingContext];
+                var cacheKey = scopes.length + '_' + bindingsString;
+                var bindingFunction;
+                if (cacheKey in this.bindingCache) {
+                    bindingFunction = this.bindingCache[cacheKey];
+                } else {
+                    var rewrittenBindings = " { " + ko.jsonExpressionRewriting.insertPropertyAccessorsIntoJson(bindingsString) + " } ";
+                    bindingFunction = this.bindingCache[cacheKey] = ko.utils.buildEvalFunction(rewrittenBindings, scopes.length);
+                }
+                return bindingFunction(scopes);
             } catch (ex) {
                 throw new Error("Unable to parse bindings.\nMessage: " + ex + ";\nBindings value: " + bindingsString);
             }           
@@ -3159,7 +3184,7 @@ ko.exportSymbol('ko.utils.compareArrays', ko.utils.compareArrays);
             }
         }
 
-        ko.utils.arrayForEach(nodesToDelete, function (node) { ko.cleanNode(node.element) });
+        //ko.utils.arrayForEach(nodesToDelete, function (node) { ko.cleanNode(node.element) });
 
         var invokedBeforeRemoveCallback = false;
         if (!isFirstExecution) {
@@ -3175,7 +3200,8 @@ ko.exportSymbol('ko.utils.compareArrays', ko.utils.compareArrays);
         }
         if (!invokedBeforeRemoveCallback)
             ko.utils.arrayForEach(nodesToDelete, function (node) {
-                ko.removeNode(node.element);
+                node.element.parentNode.removeChild(node.element);
+                //ko.removeNode(node.element);
             });
 
         // Store a copy of the array items we just considered so we can difference it next time
@@ -3186,12 +3212,52 @@ ko.exportSymbol('ko.utils.compareArrays', ko.utils.compareArrays);
 ko.exportSymbol('ko.utils.setDomNodeChildrenFromArrayMapping', ko.utils.setDomNodeChildrenFromArrayMapping);
 ko.nativeTemplateEngine = function () {
     this['allowTemplateRewriting'] = false;
+    this.templateSourceCache = {};
 }
 
+var anonymousTemplatesCacheDomDataKey = "__ko_anon_template_cache__";
+
 ko.nativeTemplateEngine.prototype = new ko.templateEngine();
+ko.nativeTemplateEngine.prototype['makeTemplateSource'] = function(template) {
+    var source;
+    if (typeof template == "string") {
+        // Named template
+        if (template in this.templateSourceCache)
+            source = this.templateSourceCache[template];
+        else {
+            source = ko.templateEngine.prototype['makeTemplateSource'](template);
+            this.templateSourceCache[template] = source;
+        }
+    } else if ((template.nodeType == 1) || (template.nodeType == 8)) {
+        // Anonymous template
+        source = ko.utils.domData.get(template, anonymousTemplatesCacheDomDataKey);
+        if (source === undefined) {
+            source = ko.templateEngine.prototype['makeTemplateSource'](template);
+            ko.utils.domData.set(template, anonymousTemplatesCacheDomDataKey, source);
+        }
+    } else
+        throw new Error("Unknown template type: " + template);
+    return source; 
+};
 ko.nativeTemplateEngine.prototype['renderTemplateSource'] = function (templateSource, bindingContext, options) {
-    var templateText = templateSource.text();
-    return ko.utils.parseHtmlFragment(templateText);
+    var newNodes;
+    if (templateSource.cachedNodes === undefined) {
+        var templateText = templateSource.text();
+        newNodes = templateSource.cachedNodes = ko.utils.parseHtmlFragment(templateText);
+    } else {
+        newNodes = ko.utils.arrayMap(templateSource.cachedNodes, function(oldNode) {
+            var newNode = oldNode.cloneNode(true);
+            ko.utils.domData.clean(newNode);
+            var oldSource = ko.utils.domData.get(oldNode, anonymousTemplatesCacheDomDataKey);
+            if (oldSource) {
+                var newSource = ko.templateEngine.prototype['makeTemplateSource'](newNode);
+                newSource.cachedNodes = oldSource.cachedNodes;
+                ko.utils.domData.set(newNode, anonymousTemplatesCacheDomDataKey, newSource);
+            }
+            return newNode;
+        });
+    }
+    return newNodes;
 };
 
 ko.nativeTemplateEngine.instance = new ko.nativeTemplateEngine();
