@@ -144,7 +144,7 @@
             }
         }
 
-        //ko.utils.arrayForEach(nodesToDelete, function (node) { ko.cleanNode(node.element) });
+        ko.utils.arrayForEach(nodesToDelete, function (node) { ko.cleanNode(node.element) });
 
         var invokedBeforeRemoveCallback = false;
         if (!isFirstExecution) {
@@ -160,8 +160,7 @@
         }
         if (!invokedBeforeRemoveCallback)
             ko.utils.arrayForEach(nodesToDelete, function (node) {
-                node.element.parentNode.removeChild(node.element);
-                //ko.removeNode(node.element);
+                ko.removeNode(node.element);
             });
 
         // Store a copy of the array items we just considered so we can difference it next time

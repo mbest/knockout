@@ -37,7 +37,7 @@ ko.utils.domData = new (function () {
         },
         clean: function (node) {
             // clear expando property from cloned node (needed because IE copies expando properties)
-            delete node[dataStoreKeyExpandoPropertyName];
+            node[dataStoreKeyExpandoPropertyName] = null;
         }
     }
 })();

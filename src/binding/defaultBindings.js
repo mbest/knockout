@@ -460,6 +460,77 @@ ko.bindingHandlers['hasfocus'] = {
     }
 };
 
+ko.bindingHandlers['repeat'] = {
+    'init': function(element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
+        var repeatIndex = '$index';
+        var repeatCount = ko.utils.unwrapObservable(valueAccessor());
+        var repeatBind; 
+
+        if (typeof repeatCount == 'object') {
+            if ('index' in repeatCount)
+                repeatIndex = repeatCount['index'];
+            if ('bind' in repeatCount)
+                repeatBind = repeatCount['bind'];
+            repeatCount = ko.utils.unwrapObservable(repeatCount['count']);
+        }
+
+        var allRepeatNodes = [];
+        var parent = element.parentNode;
+
+        var cleanNode = element.cloneNode(true);
+        // IE's cloneNode copies expando properties; remove them from the new node
+        for (prop in cleanNode) {
+            if (prop.substr(0, 4) == '__ko')
+                delete cleanNode[prop];
+        }
+        // remove the repeat binding (and possibly replace with new binding)
+        if (repeatBind)
+            cleanNode.setAttribute('data-bind', repeatBind);
+        else
+            cleanNode.removeAttribute('data-bind');
+
+        // First node is a placeholder so make it hidden and delete children
+        element.style.display = "none";
+        while (element.firstChild)
+            element.removeChild(element.firstChild);
+        
+        // use dependent observable to manage sibling elements
+        ko.dependentObservable(function() {
+            var repeatCount = ko.utils.unwrapObservable(valueAccessor());
+            if (typeof repeatCount == 'object')
+                repeatCount = ko.utils.unwrapObservable(repeatCount['count']);
+                
+            if (allRepeatNodes.length > repeatCount) {
+                // remove nodes from end
+                while (allRepeatNodes.length > repeatCount) {
+                    ko.removeNode(allRepeatNodes.pop());
+                }
+            } else if (allRepeatNodes.length < repeatCount) {
+                // add nodes to end
+                var endNode = allRepeatNodes.length ? allRepeatNodes[allRepeatNodes.length-1] : element;
+                var startInsert = allRepeatNodes.length; 
+                for (var i = startInsert; i < repeatCount; i++) {
+                    var newNode = cleanNode.cloneNode(true);     
+                    if (endNode.nextSibling)
+                        parent.insertBefore(newNode, endNode.nextSibling);
+                    else
+                        parent.appendChild(newNode);    
+                    endNode = newNode;
+                    allRepeatNodes[i] = newNode;
+                }
+                // apply bindings to inserted nodes
+                for (var i = startInsert; i < repeatCount; i++) {
+                    var newContext = ko.utils.extend(new bindingContext.constructor(), bindingContext);
+                    newContext[repeatIndex] = i;
+                    ko.applyBindings(newContext, allRepeatNodes[i]);
+                }
+            }
+        }, null, {'disposeWhenNodeIsRemoved': element});
+        
+        return { 'controlsDescendantBindings': true };
+    }
+};
+
 // "with: someExpression" is equivalent to "template: { if: someExpression, data: someExpression }"
 ko.bindingHandlers['with'] = {
     makeTemplateValueAccessor: function(valueAccessor) {

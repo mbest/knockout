@@ -95,6 +95,7 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
             if (!_hasBeenEvaluated)
                 evaluateImmediate();
             ko.dependencyDetection.registerDependency(dependentObservable);
+            dependentObservable._latestValue = _latestValue;
             return _latestValue;
         }
     }
@@ -114,6 +115,7 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
     
     ko.exportProperty(dependentObservable, 'dispose', dependentObservable.dispose);
     ko.exportProperty(dependentObservable, 'getDependenciesCount', dependentObservable.getDependenciesCount);
+    dependentObservable._latestValue = _latestValue;
     
     return dependentObservable;
 };

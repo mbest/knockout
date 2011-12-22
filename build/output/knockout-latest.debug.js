@@ -498,7 +498,7 @@ ko.utils.domData = new (function () {
         },
         clean: function (node) {
             // clear expando property from cloned node (needed because IE copies expando properties)
-            delete node[dataStoreKeyExpandoPropertyName];
+            node[dataStoreKeyExpandoPropertyName] = null;
         }
     }
 })();
@@ -882,7 +882,7 @@ ko.observable = function (initialValue) {
             // Ignore writes if the value hasn't changed
             if ((!observable['equalityComparer']) || !observable['equalityComparer'](_latestValue, arguments[0])) {
                 observable.valueWillMutate();
-                _latestValue = arguments[0];
+                observable._latestValue = _latestValue = arguments[0];
                 observable.valueHasMutated();
             }
             return this; // Permits chained assignments
@@ -893,6 +893,7 @@ ko.observable = function (initialValue) {
             return _latestValue;
         }
     }
+    observable._latestValue = _latestValue;
     ko.subscribable.call(observable);
     observable.valueHasMutated = function () { observable["notifySubscribers"](_latestValue); }
     observable.valueWillMutate = function () { observable["notifySubscribers"](_latestValue, "beforeChange"); }
@@ -1151,6 +1152,7 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
             if (!_hasBeenEvaluated)
                 evaluateImmediate();
             ko.dependencyDetection.registerDependency(dependentObservable);
+            dependentObservable._latestValue = _latestValue;
             return _latestValue;
         }
     }
@@ -1170,6 +1172,7 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
     
     ko.exportProperty(dependentObservable, 'dispose', dependentObservable.dispose);
     ko.exportProperty(dependentObservable, 'getDependenciesCount', dependentObservable.getDependenciesCount);
+    dependentObservable._latestValue = _latestValue;
     
     return dependentObservable;
 };
@@ -2430,6 +2433,77 @@ ko.bindingHandlers['hasfocus'] = {
     }
 };
 
+ko.bindingHandlers['repeat'] = {
+    'init': function(element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
+        var repeatIndex = '$index';
+        var repeatCount = ko.utils.unwrapObservable(valueAccessor());
+        var repeatBind; 
+
+        if (typeof repeatCount == 'object') {
+            if ('index' in repeatCount)
+                repeatIndex = repeatCount['index'];
+            if ('bind' in repeatCount)
+                repeatBind = repeatCount['bind'];
+            repeatCount = ko.utils.unwrapObservable(repeatCount['count']);
+        }
+
+        var allRepeatNodes = [];
+        var parent = element.parentNode;
+
+        var cleanNode = element.cloneNode(true);
+        // IE's cloneNode copies expando properties; remove them from the new node
+        for (prop in cleanNode) {
+            if (prop.substr(0, 4) == '__ko')
+                delete cleanNode[prop];
+        }
+        // remove the repeat binding (and possibly replace with new binding)
+        if (repeatBind)
+            cleanNode.setAttribute('data-bind', repeatBind);
+        else
+            cleanNode.removeAttribute('data-bind');
+
+        // First node is a placeholder so make it hidden and delete children
+        element.style.display = "none";
+        while (element.firstChild)
+            element.removeChild(element.firstChild);
+        
+        // use dependent observable to manage sibling elements
+        ko.dependentObservable(function() {
+            var repeatCount = ko.utils.unwrapObservable(valueAccessor());
+            if (typeof repeatCount == 'object')
+                repeatCount = ko.utils.unwrapObservable(repeatCount['count']);
+                
+            if (allRepeatNodes.length > repeatCount) {
+                // remove nodes from end
+                while (allRepeatNodes.length > repeatCount) {
+                    ko.removeNode(allRepeatNodes.pop());
+                }
+            } else if (allRepeatNodes.length < repeatCount) {
+                // add nodes to end
+                var endNode = allRepeatNodes.length ? allRepeatNodes[allRepeatNodes.length-1] : element;
+                var startInsert = allRepeatNodes.length; 
+                for (var i = startInsert; i < repeatCount; i++) {
+                    var newNode = cleanNode.cloneNode(true);     
+                    if (endNode.nextSibling)
+                        parent.insertBefore(newNode, endNode.nextSibling);
+                    else
+                        parent.appendChild(newNode);    
+                    endNode = newNode;
+                    allRepeatNodes[i] = newNode;
+                }
+                // apply bindings to inserted nodes
+                for (var i = startInsert; i < repeatCount; i++) {
+                    var newContext = ko.utils.extend(new bindingContext.constructor(), bindingContext);
+                    newContext[repeatIndex] = i;
+                    ko.applyBindings(newContext, allRepeatNodes[i]);
+                }
+            }
+        }, null, {'disposeWhenNodeIsRemoved': element});
+        
+        return { 'controlsDescendantBindings': true };
+    }
+};
+
 // "with: someExpression" is equivalent to "template: { if: someExpression, data: someExpression }"
 ko.bindingHandlers['with'] = {
     makeTemplateValueAccessor: function(valueAccessor) {
@@ -3184,7 +3258,7 @@ ko.exportSymbol('ko.utils.compareArrays', ko.utils.compareArrays);
             }
         }
 
-        //ko.utils.arrayForEach(nodesToDelete, function (node) { ko.cleanNode(node.element) });
+        ko.utils.arrayForEach(nodesToDelete, function (node) { ko.cleanNode(node.element) });
 
         var invokedBeforeRemoveCallback = false;
         if (!isFirstExecution) {
@@ -3200,8 +3274,7 @@ ko.exportSymbol('ko.utils.compareArrays', ko.utils.compareArrays);
         }
         if (!invokedBeforeRemoveCallback)
             ko.utils.arrayForEach(nodesToDelete, function (node) {
-                node.element.parentNode.removeChild(node.element);
-                //ko.removeNode(node.element);
+                ko.removeNode(node.element);
             });
 
         // Store a copy of the array items we just considered so we can difference it next time
@@ -3212,52 +3285,12 @@ ko.exportSymbol('ko.utils.compareArrays', ko.utils.compareArrays);
 ko.exportSymbol('ko.utils.setDomNodeChildrenFromArrayMapping', ko.utils.setDomNodeChildrenFromArrayMapping);
 ko.nativeTemplateEngine = function () {
     this['allowTemplateRewriting'] = false;
-    this.templateSourceCache = {};
 }
 
-var anonymousTemplatesCacheDomDataKey = "__ko_anon_template_cache__";
-
 ko.nativeTemplateEngine.prototype = new ko.templateEngine();
-ko.nativeTemplateEngine.prototype['makeTemplateSource'] = function(template) {
-    var source;
-    if (typeof template == "string") {
-        // Named template
-        if (template in this.templateSourceCache)
-            source = this.templateSourceCache[template];
-        else {
-            source = ko.templateEngine.prototype['makeTemplateSource'](template);
-            this.templateSourceCache[template] = source;
-        }
-    } else if ((template.nodeType == 1) || (template.nodeType == 8)) {
-        // Anonymous template
-        source = ko.utils.domData.get(template, anonymousTemplatesCacheDomDataKey);
-        if (source === undefined) {
-            source = ko.templateEngine.prototype['makeTemplateSource'](template);
-            ko.utils.domData.set(template, anonymousTemplatesCacheDomDataKey, source);
-        }
-    } else
-        throw new Error("Unknown template type: " + template);
-    return source; 
-};
 ko.nativeTemplateEngine.prototype['renderTemplateSource'] = function (templateSource, bindingContext, options) {
-    var newNodes;
-    if (templateSource.cachedNodes === undefined) {
-        var templateText = templateSource.text();
-        newNodes = templateSource.cachedNodes = ko.utils.parseHtmlFragment(templateText);
-    } else {
-        newNodes = ko.utils.arrayMap(templateSource.cachedNodes, function(oldNode) {
-            var newNode = oldNode.cloneNode(true);
-            ko.utils.domData.clean(newNode);
-            var oldSource = ko.utils.domData.get(oldNode, anonymousTemplatesCacheDomDataKey);
-            if (oldSource) {
-                var newSource = ko.templateEngine.prototype['makeTemplateSource'](newNode);
-                newSource.cachedNodes = oldSource.cachedNodes;
-                ko.utils.domData.set(newNode, anonymousTemplatesCacheDomDataKey, newSource);
-            }
-            return newNode;
-        });
-    }
-    return newNodes;
+    var templateText = templateSource.text();
+    return ko.utils.parseHtmlFragment(templateText);
 };
 
 ko.nativeTemplateEngine.instance = new ko.nativeTemplateEngine();
