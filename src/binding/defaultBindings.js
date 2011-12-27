@@ -462,51 +462,45 @@ ko.bindingHandlers['hasfocus'] = {
 
 ko.bindingHandlers['repeat'] = {
     'init': function(element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
-        var repeatIndex = '$index';
-        var repeatCount = ko.utils.unwrapObservable(valueAccessor());
-        var repeatBind; 
-
-        if (typeof repeatCount == 'object') {
-            if ('index' in repeatCount)
-                repeatIndex = repeatCount['index'];
-            if ('bind' in repeatCount)
-                repeatBind = repeatCount['bind'];
-            repeatCount = ko.utils.unwrapObservable(repeatCount['count']);
+        // initialize optional parameters
+        var repeatIndex = '$index', repeatData = '$item', repeatBind;
+        var repeatParam = ko.utils.unwrapObservable(valueAccessor());
+        if (typeof repeatParam == 'object') {
+            if ('index' in repeatParam) repeatIndex = repeatParam['index'];
+            if ('item' in repeatParam) repeatData = repeatParam['item'];
+            if ('bind' in repeatParam) repeatBind = repeatParam['bind'];
         }
 
-        var allRepeatNodes = [];
-        var parent = element.parentNode;
-
+        // Make a copy of the element node to be copied for each repetition
         var cleanNode = element.cloneNode(true);
         // IE's cloneNode copies expando properties; remove them from the new node
-        for (prop in cleanNode) {
-            if (prop.substr(0, 4) == '__ko')
-                delete cleanNode[prop];
-        }
-        // remove the repeat binding (and possibly replace with new binding)
-        if (repeatBind)
-            cleanNode.setAttribute('data-bind', repeatBind);
-        else
-            cleanNode.removeAttribute('data-bind');
+        ko.utils.domData.clean(cleanNode);
+        // Remove node's binding (not necessary but cleaner)
+        cleanNode.removeAttribute('data-bind');
 
-        // First node is a placeholder so make it hidden and delete children
+        // Original element node is just a placeholder; make it hidden and delete children
         element.style.display = "none";
+        element.disabled = true;
         while (element.firstChild)
             element.removeChild(element.firstChild);
         
-        // use dependent observable to manage sibling elements
+        // Use a dependent observable to manage (add/remove) sibling elements
+        var allRepeatNodes = [];
+        var parent = element.parentNode;
         ko.dependentObservable(function() {
             var repeatCount = ko.utils.unwrapObservable(valueAccessor());
-            if (typeof repeatCount == 'object')
-                repeatCount = ko.utils.unwrapObservable(repeatCount['count']);
-                
-            if (allRepeatNodes.length > repeatCount) {
-                // remove nodes from end
-                while (allRepeatNodes.length > repeatCount) {
-                    ko.removeNode(allRepeatNodes.pop());
+            var repeatArray;
+            if (typeof repeatCount == 'object') {
+                if ('count' in repeatCount) {
+                    repeatCount = ko.utils.unwrapObservable(repeatCount['count']);
+                } else if ('foreach' in repeatCount) {
+                    repeatArray = repeatCount['foreach']; 
+                    repeatCount = ko.utils.unwrapObservable(repeatArray)['length'];
                 }
-            } else if (allRepeatNodes.length < repeatCount) {
-                // add nodes to end
+            } 
+                
+            if (allRepeatNodes.length < repeatCount) {
+                // Array is longer: add nodes to end (also initially populates nodes)
                 var endNode = allRepeatNodes.length ? allRepeatNodes[allRepeatNodes.length-1] : element;
                 var startInsert = allRepeatNodes.length; 
                 for (var i = startInsert; i < repeatCount; i++) {
@@ -515,14 +509,34 @@ ko.bindingHandlers['repeat'] = {
                         parent.insertBefore(newNode, endNode.nextSibling);
                     else
                         parent.appendChild(newNode);    
-                    endNode = newNode;
+                    newNode.setAttribute('data-repeat-index', i);
                     allRepeatNodes[i] = newNode;
+                    endNode = newNode;
                 }
-                // apply bindings to inserted nodes
-                for (var i = startInsert; i < repeatCount; i++) {
-                    var newContext = ko.utils.extend(new bindingContext.constructor(), bindingContext);
+                // Apply bindings to inserted nodes
+                for (i = startInsert; i < repeatCount; i++) {
+                    var newContext = ko.utils.extend(new ko.bindingContext(), bindingContext);
                     newContext[repeatIndex] = i;
-                    ko.applyBindings(newContext, allRepeatNodes[i]);
+                    if (repeatArray) {
+                        newContext[repeatData] = (function(index) { return function() { 
+                            return ko.utils.unwrapObservable(ko.utils.unwrapObservable(repeatArray)[index]); 
+                        }; })(i);
+                        /*newContext[repeatData] = (function(index) { return ko.dependentObservable(function() { 
+                            return ko.utils.unwrapObservable(ko.utils.unwrapObservable(repeatArray)[index]); 
+                        }, null, {'disposeWhenNodeIsRemoved': allRepeatNodes[index]}); })(i);*/
+                    }
+                    var shouldBindDescendants = true;
+                    if (repeatBind) {
+                        var binding = ko.bindingProvider['instance']['parseBindingsString'](repeatBind, newContext);
+                        shouldBindDescendants = ko.applyBindingsToNode(allRepeatNodes[i], binding, newContext).shouldBindDescendants;
+                    }
+                    if (shouldBindDescendants)
+                        ko.applyBindingsToDescendants(newContext, allRepeatNodes[i]);
+                }
+            } else if (allRepeatNodes.length > repeatCount) {
+                // Array is shorter: remove nodes from end
+                while (allRepeatNodes.length > repeatCount) {
+                    ko.removeNode(allRepeatNodes.pop());
                 }
             }
         }, null, {'disposeWhenNodeIsRemoved': element});
