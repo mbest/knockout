@@ -193,19 +193,6 @@ ko.utils = new (function () {
             return new Function("sc", functionBody);
         },
         
-        evalWithinScope: function (expression /*, scope1, scope2, scope3... */) {
-            // Build the source for a function that evaluates "expression"
-            // For each scope variable, add an extra level of "with" nesting
-            // Example result: with(sc[1]) { with(sc[0]) { return (expression) } }
-            var scopes = Array.prototype.slice.call(arguments, 1);
-            var functionBody = "return (" + expression + ")";
-            for (var i = 0; i < scopes.length; i++) {
-                if (scopes[i] && typeof scopes[i] == "object")
-                    functionBody = "with(sc[" + i + "]) { " + functionBody + " } ";
-            }
-            return (new Function("sc", functionBody))(scopes);
-        },
-
         domNodeIsContainedBy: function (node, containedByNode) {
             if (containedByNode.compareDocumentPosition)
                 return (containedByNode.compareDocumentPosition(node) & 16) == 16;
@@ -1709,6 +1696,8 @@ ko.exportSymbol('ko.jsonExpressionRewriting.insertPropertyAccessorsIntoJson', ko
 
     ko.bindingProvider = function() {
         this.bindingCache = {};
+        this.bindingCacheIndex = 0;
+        this['cacheUpperLimit'] = 100;
     };
 
     ko.utils.extend(ko.bindingProvider.prototype, {
@@ -1745,14 +1734,45 @@ ko.exportSymbol('ko.jsonExpressionRewriting.insertPropertyAccessorsIntoJson', ko
                 var bindingFunction;
                 if (cacheKey in this.bindingCache) {
                     bindingFunction = this.bindingCache[cacheKey];
+                    // bump cache index if difference is greater than ten
+                    if (this.bindingCacheIndex - bindingFunction.bindingCacheIndex > 10)
+                        bindingFunction.bindingCacheIndex = this.nextCacheValue();
                 } else {
                     var rewrittenBindings = " { " + ko.jsonExpressionRewriting.insertPropertyAccessorsIntoJson(bindingsString) + " } ";
                     bindingFunction = this.bindingCache[cacheKey] = ko.utils.buildEvalFunction(rewrittenBindings, scopes.length);
+                    bindingFunction.bindingCacheIndex = this.nextCacheValue();
                 }
                 return bindingFunction(scopes);
             } catch (ex) {
                 throw new Error("Unable to parse bindings.\nMessage: " + ex + ";\nBindings value: " + bindingsString);
             }           
+        },
+        
+        nextCacheValue: function() {
+            this.keepCacheWithinLimits();
+            return this.bindingCacheIndex++;
+        },
+        
+        keepCacheWithinLimits: function() {
+            if (this.bindingCacheIndex >= this['cacheUpperLimit']) {
+                var halfLimit = (this['cacheUpperLimit']) / 2;
+                if (this.bindingCacheIndex % halfLimit == 0) {
+                    // clear bottom half of cache whenever cache is at upper limit
+                    var limit = this.bindingCacheIndex - halfLimit;
+                    setTimeout(function() {
+                        this.clearCacheBottom(limit);
+                    }.bind(this), 0);
+                } 
+            }
+        },
+        
+        clearCacheBottom: function(limit) {
+            for(var prop in this.bindingCache) {
+                var bindingFunction = this.bindingCache[prop];
+                if (typeof bindingFunction.bindingCacheIndex != 'undefined' && bindingFunction.bindingCacheIndex < limit) {
+                    delete this.bindingCache[prop];
+                }
+            }
         }
     });
 
@@ -2277,8 +2297,19 @@ ko.bindingHandlers['selectedOptions'] = {
 };
 
 ko.bindingHandlers['text'] = {
+    'init': function(element) {
+        if (element.childNodes.length == 1 && element.firstChild.nodeType == 3)
+            return;
+        while (element.firstChild) {
+            element.removeChild(element.firstChild);
+        }
+        element.appendChild(document.createTextNode(""));        
+    },
     'update': function (element, valueAccessor) {
-        ko.utils.setTextContent(element, valueAccessor());
+        var value = ko.utils.unwrapObservable(valueAccessor());
+        if ((value === null) || (value === undefined))
+            value = "";
+        element.firstChild.data = value;
     }
 };
 
@@ -2480,7 +2511,7 @@ ko.bindingHandlers['repeat'] = {
                 repeatCount = o.repeatArray['length'];
             }
         } 
-        o.repeatUpdate.notifySubscribers();
+        o.repeatUpdate["notifySubscribers"]();
             
         if (allRepeatNodes.length < repeatCount) {
             // Array is longer: add nodes to end (also initially populates nodes)

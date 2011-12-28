@@ -303,8 +303,19 @@ ko.bindingHandlers['selectedOptions'] = {
 };
 
 ko.bindingHandlers['text'] = {
+    'init': function(element) {
+        if (element.childNodes.length == 1 && element.firstChild.nodeType == 3)
+            return;
+        while (element.firstChild) {
+            element.removeChild(element.firstChild);
+        }
+        element.appendChild(document.createTextNode(""));        
+    },
     'update': function (element, valueAccessor) {
-        ko.utils.setTextContent(element, valueAccessor());
+        var value = ko.utils.unwrapObservable(valueAccessor());
+        if ((value === null) || (value === undefined))
+            value = "";
+        element.firstChild.data = value;
     }
 };
 
@@ -506,7 +517,7 @@ ko.bindingHandlers['repeat'] = {
                 repeatCount = o.repeatArray['length'];
             }
         } 
-        o.repeatUpdate.notifySubscribers();
+        o.repeatUpdate["notifySubscribers"]();
             
         if (allRepeatNodes.length < repeatCount) {
             // Array is longer: add nodes to end (also initially populates nodes)
