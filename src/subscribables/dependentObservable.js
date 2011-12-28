@@ -92,10 +92,11 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
             }
         } else {
             // Reading the value
-            if (!_hasBeenEvaluated)
+            if (!_hasBeenEvaluated) {
                 evaluateImmediate();
+                dependentObservable._latestValue = _latestValue;
+            }
             ko.dependencyDetection.registerDependency(dependentObservable);
-            dependentObservable._latestValue = _latestValue;
             return _latestValue;
         }
     }
