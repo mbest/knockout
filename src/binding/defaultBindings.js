@@ -522,16 +522,16 @@ ko.bindingHandlers['repeat'] = {
         if (allRepeatNodes.length < repeatCount) {
             // Array is longer: add nodes to end (also initially populates nodes)
             var endNode = allRepeatNodes.length ? allRepeatNodes[allRepeatNodes.length-1] : element;
+            var insertBefore = endNode.nextSibling;
             var startInsert = allRepeatNodes.length; 
             for (var i = startInsert; i < repeatCount; i++) {
                 var newNode = o.cleanNode.cloneNode(true);     
-                if (endNode.nextSibling)
-                    parent.insertBefore(newNode, endNode.nextSibling);
+                if (insertBefore)
+                    parent.insertBefore(newNode, insertBefore);
                 else
                     parent.appendChild(newNode);    
                 newNode.setAttribute('data-repeat-index', i);
                 allRepeatNodes[i] = newNode;
-                endNode = newNode;
             }
             // Apply bindings to inserted nodes
             for (i = startInsert; i < repeatCount; i++) {
