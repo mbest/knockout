@@ -543,6 +543,10 @@ ko.bindingHandlers['repeat'] = {
                         o.repeatUpdate();   // for dependency tracking
                         return ko.utils.unwrapObservable(o.repeatArray[index]); 
                     }; })(i);
+                    /*newContext[repeatData] = (function(index) { return ko.dependentObservable(function() {
+                        o.repeatUpdate();   // for dependency tracking
+                        return ko.utils.unwrapObservable(o.repeatArray[index]); 
+                    }, null, {'deferEvaluation': true, 'disposeWhenNodeIsRemoved': allRepeatNodes[index]}); })(i);*/
                 }
                 var shouldBindDescendants = true;
                 if (o.repeatBind) {
@@ -559,6 +563,32 @@ ko.bindingHandlers['repeat'] = {
             }
         }
     }
+};
+
+var withInitializedDomDataKey = "__ko_withlightInit__";
+ko.bindingHandlers['withlight'] = {
+    'init': function(element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
+        return { 'controlsDescendantBindings': true };
+    },
+    'update': function(element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
+        var bindingValue = ko.utils.unwrapObservable(valueAccessor());
+        if (typeof bindingValue != 'object' || bindingValue === null)
+            throw new Error('withlight must be used with an object');
+        if (!element[withInitializedDomDataKey]) {
+            element[withInitializedDomDataKey] = element.innerHTML;
+        } else {
+            while (element.firstChild)
+                ko.removeNode(element.firstChild);
+            element.innerHTML = element[withInitializedDomDataKey];
+        }
+        var innerContext = bindingContext['createChildContext'](bindingValue),
+            currentChild, nextInQueue = element.childNodes[0];
+        while (currentChild = nextInQueue) {
+            nextInQueue = ko.virtualElements.nextSibling(currentChild);
+            if ((currentChild.nodeType === 1) || (currentChild.nodeType === 8))
+                ko.applyBindings(innerContext, currentChild);
+        }
+    }     
 };
 
 // "with: someExpression" is equivalent to "template: { if: someExpression, data: someExpression }"
