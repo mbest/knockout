@@ -1,4 +1,3 @@
-
 ko.utils = new (function () {
     var stringTrimRegex = /^(\s|\u00A0)+|(\s|\u00A0)+$/g;
     
@@ -94,8 +93,11 @@ ko.utils = new (function () {
         },
         
         arrayPushAll: function (array, valuesToPush) {
-            for (var i = 0, j = valuesToPush.length; i < j; i++)
-                array.push(valuesToPush[i]);	
+            if (valuesToPush instanceof Array)
+                array.push.apply(array, valuesToPush);
+            else
+                for (var i = 0, j = valuesToPush.length; i < j; i++) 
+                    array.push(valuesToPush[i]);	
             return array;
         },
 
@@ -114,12 +116,22 @@ ko.utils = new (function () {
             }
         },
 
+        moveNodesToContainerElement: function(nodes) {
+            // Ensure it's a real array, as we're about to reparent the nodes and
+            // we don't want the underlying collection to change while we're doing that.
+            var nodesArray = ko.utils.makeArray(nodes);
+
+            var container = document.createElement('div');
+            for (var i = 0, j = nodesArray.length; i < j; i++)
+                container.appendChild(nodesArray[i]);
+            return container;
+        },
+
         setDomNodeChildren: function (domNode, childNodes) {
             ko.utils.emptyDomNode(domNode);
             if (childNodes) {
-                ko.utils.arrayForEach(childNodes, function (childNode) {
-                    domNode.appendChild(childNode);
-                });
+                for (var i = 0, j = childNodes.length; i < j; i++)
+                    domNode.appendChild(childNodes[i]);
             }
         },
 
@@ -166,7 +178,7 @@ ko.utils = new (function () {
             return string.substring(0, startsWith.length) === startsWith;
         },
 
-        buildEvalFunction: function (expression, scopeLevels) {
+        buildEvalWithinScopeFunction: function (expression, scopeLevels) {
             // Build the source for a function that evaluates "expression"
             // For each scope variable, add an extra level of "with" nesting
             // Example result: with(sc[1]) { with(sc[0]) { return (expression) } }
@@ -176,7 +188,7 @@ ko.utils = new (function () {
             }
             return new Function("sc", functionBody);
         },
-        
+
         domNodeIsContainedBy: function (node, containedByNode) {
             if (containedByNode.compareDocumentPosition)
                 return (containedByNode.compareDocumentPosition(node) & 16) == 16;
@@ -275,21 +287,6 @@ ko.utils = new (function () {
             }
         },
 
-        outerHTML: function(node) {
-            // For Chrome on non-text nodes
-            // (Although IE supports outerHTML, the way it formats HTML is inconsistent - sometimes closing </li> tags are omitted, sometimes not. That caused https://github.com/SteveSanderson/knockout/issues/212.)
-            if (ieVersion === undefined) {
-                var nativeOuterHtml = node.outerHTML;
-                if (typeof nativeOuterHtml == "string")
-                    return nativeOuterHtml;
-            }
-
-            // Other browsers
-            var dummyContainer = window.document.createElement("div");
-            dummyContainer.appendChild(node.cloneNode(true));
-            return dummyContainer.innerHTML;
-        },
-
         setTextContent: function(element, textContent) {
             var value = ko.utils.unwrapObservable(textContent);
             if ((value === null) || (value === undefined))
@@ -298,9 +295,9 @@ ko.utils = new (function () {
             'innerText' in element ? element.innerText = value
                                    : element.textContent = value;
                                    
-            if (ieVersion) {
+            if (ieVersion >= 9) {
                 // Believe it or not, this actually fixes an IE9 rendering bug. Insane. https://github.com/SteveSanderson/knockout/issues/209
-                element.innerHTML = element.innerHTML;
+                element.style.display = element.style.display;
             }
         },
 
@@ -323,6 +320,7 @@ ko.utils = new (function () {
         
         isIe6 : isIe6,
         isIe7 : isIe7,
+        ieVersion : ieVersion,
         
         getFormFields: function(form, fieldName) {
             var fields = ko.utils.makeArray(form.getElementsByTagName("INPUT")).concat(ko.utils.makeArray(form.getElementsByTagName("TEXTAREA")));
@@ -396,30 +394,26 @@ ko.utils = new (function () {
     }
 })();
 
-ko.exportSymbol('ko.utils', ko.utils);
-ko.utils.arrayForEach([
-    ['arrayForEach', ko.utils.arrayForEach],
-    ['arrayFirst', ko.utils.arrayFirst],
-    ['arrayFilter', ko.utils.arrayFilter],
-    ['arrayGetDistinctValues', ko.utils.arrayGetDistinctValues],
-    ['arrayIndexOf', ko.utils.arrayIndexOf],
-    ['arrayMap', ko.utils.arrayMap],
-    ['arrayPushAll', ko.utils.arrayPushAll],
-    ['arrayRemoveItem', ko.utils.arrayRemoveItem],
-    ['extend', ko.utils.extend],
-    ['fieldsIncludedWithJsonPost', ko.utils.fieldsIncludedWithJsonPost],
-    ['getFormFields', ko.utils.getFormFields],
-    ['postJson', ko.utils.postJson],
-    ['parseJson', ko.utils.parseJson],
-    ['registerEventHandler', ko.utils.registerEventHandler],
-    ['stringifyJson', ko.utils.stringifyJson],
-    ['range', ko.utils.range],
-    ['toggleDomNodeCssClass', ko.utils.toggleDomNodeCssClass],
-    ['triggerEvent', ko.utils.triggerEvent],
-    ['unwrapObservable', ko.utils.unwrapObservable]
-], function(item) {
-    ko.exportSymbol('ko.utils.' + item[0], item[1]);
-});
+ko.exportSymbol('utils', ko.utils);
+ko.exportSymbol('utils.arrayForEach', ko.utils.arrayForEach);
+ko.exportSymbol('utils.arrayFirst', ko.utils.arrayFirst);
+ko.exportSymbol('utils.arrayFilter', ko.utils.arrayFilter);
+ko.exportSymbol('utils.arrayGetDistinctValues', ko.utils.arrayGetDistinctValues);
+ko.exportSymbol('utils.arrayIndexOf', ko.utils.arrayIndexOf);
+ko.exportSymbol('utils.arrayMap', ko.utils.arrayMap);
+ko.exportSymbol('utils.arrayPushAll', ko.utils.arrayPushAll);
+ko.exportSymbol('utils.arrayRemoveItem', ko.utils.arrayRemoveItem);
+ko.exportSymbol('utils.extend', ko.utils.extend);
+ko.exportSymbol('utils.fieldsIncludedWithJsonPost', ko.utils.fieldsIncludedWithJsonPost);
+ko.exportSymbol('utils.getFormFields', ko.utils.getFormFields);
+ko.exportSymbol('utils.postJson', ko.utils.postJson);
+ko.exportSymbol('utils.parseJson', ko.utils.parseJson);
+ko.exportSymbol('utils.registerEventHandler', ko.utils.registerEventHandler);
+ko.exportSymbol('utils.stringifyJson', ko.utils.stringifyJson);
+ko.exportSymbol('utils.range', ko.utils.range);
+ko.exportSymbol('utils.toggleDomNodeCssClass', ko.utils.toggleDomNodeCssClass);
+ko.exportSymbol('utils.triggerEvent', ko.utils.triggerEvent);
+ko.exportSymbol('utils.unwrapObservable', ko.utils.unwrapObservable);
 
 if (!Function.prototype['bind']) {
     // Function.prototype.bind is a standard part of ECMAScript 5th Edition (December 2009, http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-262.pdf)

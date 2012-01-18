@@ -15,7 +15,7 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
     }
     // By here, "options" is always non-null
     if (typeof readFunction != "function")
-        throw "Pass a function that returns the value of the dependentObservable";
+        throw "Pass a function that returns the value of the ko.computed";
 
     var writeFunction = options["write"];
     if (!evaluatorFunctionTarget)
@@ -67,24 +67,26 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
         }
 
         try {
-            var oldSubscriptions = ko.utils.arrayMap(_subscriptionsToDependencies, function(item) {return item.target;});
+            // Initially, we assume that none of the subscriptions are still being used (i.e., all are candidates for disposal). 
+            // Then, during evaluation, we cross off any that are in fact still being used.
+            var disposalCandidates = ko.utils.arrayMap(_subscriptionsToDependencies, function(item) {return item.target;});
+
             ko.dependencyDetection.begin(function(subscribable) {
                 var inOld;
-                if ((inOld = ko.utils.arrayIndexOf(oldSubscriptions, subscribable)) >= 0)
-                    oldSubscriptions[inOld] = undefined;
+                if ((inOld = ko.utils.arrayIndexOf(disposalCandidates, subscribable)) >= 0)
+                    disposalCandidates[inOld] = undefined; // Don't want to dispose this subscription, as it's still being used
                 else
-                    _subscriptionsToDependencies.push(subscribable.subscribe(evaluatePossiblyAsync));
+                    _subscriptionsToDependencies.push(subscribable.subscribe(evaluatePossiblyAsync)); // Brand new subscription - add it
             });
-            
+
             var newValue = readFunction.call(evaluatorFunctionTarget);
-            
-            for (var oldPos = 0, i = 0, len = oldSubscriptions.length; i < len; i++) {
-                if (oldSubscriptions[i])
-                    _subscriptionsToDependencies.splice(oldPos, 1)[0].dispose();
-                else
-                    oldPos++;
+
+            // For each subscription no longer being used, remove it from the active subscriptions list and dispose it
+            for (var i = disposalCandidates.length - 1; i >= 0; i--) {
+                if (disposalCandidates[i])
+                    _subscriptionsToDependencies.splice(i, 1)[0].dispose();
             }
-            
+
             dependentObservable["notifySubscribers"](_latestValue, "beforeChange");
             _latestValue = newValue;
         } finally {
@@ -97,22 +99,22 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
 
     function dependentObservable() {
         if (arguments.length > 0) {
-            dependentObservable.set.apply(dependentObservable, arguments);
+            set.apply(dependentObservable, arguments);
         } else {
-            return dependentObservable.get();             
+            return get();             
         }
     }
     
-    dependentObservable.set = function() {
+    function set() {
         if (typeof writeFunction === "function") {
             // Writing a value
             writeFunction.apply(evaluatorFunctionTarget, arguments);
         } else {
-            throw "Cannot write a value to a dependentObservable unless you specify a 'write' option. If you wish to read the current value, don't pass any parameters.";
+            throw "Cannot write a value to a ko.computed unless you specify a 'write' option. If you wish to read the current value, don't pass any parameters.";
         }
     }
-                
-    dependentObservable.get = function() {
+
+    function get() {
         // Reading the value
         if (!_hasBeenEvaluated) {
             evaluateImmediate();
@@ -120,8 +122,8 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
         }
         ko.dependencyDetection.registerDependency(dependentObservable);
         return _latestValue;
-    }        
-    
+    }
+
     dependentObservable.getDependenciesCount = function () { return _subscriptionsToDependencies.length; };
     dependentObservable.hasWriteFunction = typeof options["write"] === "function";
     dependentObservable.dispose = function () { dispose(); };
@@ -145,5 +147,5 @@ ko.dependentObservable['fn'] = {
 
 ko.dependentObservable.__ko_proto__ = ko.observable;
 
-ko.exportSymbol('ko.dependentObservable', ko.dependentObservable);
-ko.exportSymbol('ko.computed', ko.dependentObservable); // Make "ko.computed" an alias for "ko.dependentObservable"
+ko.exportSymbol('dependentObservable', ko.dependentObservable);
+ko.exportSymbol('computed', ko.dependentObservable); // Make "ko.computed" an alias for "ko.dependentObservable"

@@ -53,9 +53,6 @@
     }
 
     function applyBindingsToNodeInternal (node, bindings, viewModelOrBindingContext, isRootNodeForBindingContext) {
-        // Pre-process any anonymous template bounded by comment nodes
-        ko.virtualElements.extractAnonymousTemplateIfVirtualElement(node);
-
         // The data for each binding is wrapped in a function so that it is
         // re-evaluated on each access. parsedBindings itself doesn't change
         // once it's been initialized, but it's still shared by all the bindings.
@@ -205,10 +202,10 @@
         return context ? context['$data'] : undefined;
     };
 
-    ko.exportSymbol('ko.bindingHandlers', ko.bindingHandlers);
-    ko.exportSymbol('ko.applyBindings', ko.applyBindings);
-    ko.exportSymbol('ko.applyBindingsToDescendants', ko.applyBindingsToDescendants);
-    ko.exportSymbol('ko.applyBindingsToNode', ko.applyBindingsToNode);
-    ko.exportSymbol('ko.contextFor', ko.contextFor);
-    ko.exportSymbol('ko.dataFor', ko.dataFor);
+    ko.exportSymbol('bindingHandlers', ko.bindingHandlers);
+    ko.exportSymbol('applyBindings', ko.applyBindings);
+    ko.exportSymbol('applyBindingsToDescendants', ko.applyBindingsToDescendants);
+    ko.exportSymbol('applyBindingsToNode', ko.applyBindingsToNode);
+    ko.exportSymbol('contextFor', ko.contextFor);
+    ko.exportSymbol('dataFor', ko.dataFor);
 })();
