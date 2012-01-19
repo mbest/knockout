@@ -575,13 +575,18 @@ ko.bindingHandlers['repeat'] = {
 ko.bindingHandlers['switch'] = {
     defaultvalue: {},
     'init': function(element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
+        var value = ko.utils.unwrapObservable(valueAccessor());
+        if (value === false)
+            throw "cannot specify boolean false in switch binding";
         var node, nextInQueue = ko.virtualElements.childNodes(element)[0],
             switchSkipNext = [],
             extraBindings = {
                 $switchIndex: undefined,
                 $switchSkipNext: switchSkipNext,
                 $switchValue: valueAccessor,
-                '$default': this.defaultvalue
+                '$default': this.defaultvalue,
+                '$else': this.defaultvalue,
+                '$value': value
             };
         while (node = nextInQueue) {
             nextInQueue = ko.virtualElements.nextSibling(node);
@@ -606,9 +611,11 @@ ko.bindingHandlers['case'] = {
             var value = ko.utils.unwrapObservable(valueAccessor()), result = true;
             if (value !== bindingContext['$default']) {
                 var switchValue = ko.utils.unwrapObservable(bindingContext.$switchValue());
-                result = (value instanceof Array)
-                    ? (ko.utils.arrayIndexOf(value, switchValue) !== -1)
-                    : (value == switchValue);
+                result = (typeof value == 'boolean')
+                    ? value
+                    : (value instanceof Array)
+                        ? (ko.utils.arrayIndexOf(value, switchValue) !== -1)
+                        : (value == switchValue);
             }
             bindingContext.$switchSkipNext[index](result);
             return result;

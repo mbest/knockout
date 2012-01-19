@@ -1031,7 +1031,7 @@ describe('Binding: Switch/Case', {
         value_of(testNode).should_contain_text("xxxValue is 1");
     },
 
-    'Should display only matching case block with default case': function() {
+    'Should display only matching case block with default case (using $default)': function() {
         testNode.innerHTML = "xxx<!-- ko switch: somevalue --><!-- ko case: 1 -->Value is 1<!-- /ko --><!-- ko case: $default -->Default case<!-- /ko --><!-- /ko -->";
         var value = ko.observable(0);
         ko.applyBindings({ somevalue: value }, testNode);
@@ -1053,8 +1053,19 @@ describe('Binding: Switch/Case', {
         value_of(testNode).should_contain_text("xxxValue is 2 or 3");
     },
 
-    'Should display first true case block with default case': function() {
-        testNode.innerHTML = "xxx<!-- ko switch: true --><!-- ko case: somevalue -->Somevalue is true<!-- /ko --><!-- ko case: func() -->Func is true<!-- /ko --><!-- ko case: $default -->Default case<!-- /ko --><!-- /ko -->";
+    'Should be able to use $value variable to match in case binding': function() {
+        testNode.innerHTML = "xxx<!-- ko switch: somevalue --><!-- ko case: 1 -->Value is 1<!-- /ko --><!-- ko case: $value < 5 -->Value is less than 5<!-- /ko --><!-- /ko -->";
+        var value = ko.observable(4);
+        ko.applyBindings({ somevalue: value }, testNode);
+        // initially matches second case
+        value_of(testNode).should_contain_text("xxxValue is less than 5");
+        // change value so it matches first case 
+        value(1);
+        value_of(testNode).should_contain_text("xxxValue is 1");
+    },
+
+    'Should display first true case block with default case (using $else)': function() {
+        testNode.innerHTML = "xxx<!-- ko switch: true --><!-- ko case: somevalue -->Somevalue is true<!-- /ko --><!-- ko case: func() -->Func is true<!-- /ko --><!-- ko case: $else -->Default case<!-- /ko --><!-- /ko -->";
         var value = ko.observable(0), funcValue = ko.observable(0);
         ko.applyBindings({ somevalue: value, func: function() { return funcValue();} }, testNode);
         // initially matches default value
@@ -1101,6 +1112,13 @@ describe('Binding: Switch/Case', {
     'Should not allow nested case binding': function() {
         var threw = false;
         testNode.innerHTML = "<div data-bind='switch: 0'><div data-bind='case: 0'>Value is 0<div data-bind='case: 1'>Value is 1</div></div></div>";
+        try { ko.applyBindings({}, testNode); } catch (ex) { threw = true; }
+        value_of(threw).should_be(true);
+    },
+
+    'Should not allow switch with boolean false value': function() {
+        var threw = false;
+        testNode.innerHTML = "<input data-bind='switch: false' />";
         try { ko.applyBindings({}, testNode); } catch (ex) { threw = true; }
         value_of(threw).should_be(true);
     },
