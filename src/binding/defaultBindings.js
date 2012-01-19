@@ -302,7 +302,14 @@ ko.bindingHandlers['selectedOptions'] = {
     }
 };
 
+
 ko.bindingHandlers['text'] = {
+    'update': function (element, valueAccessor) {
+        ko.utils.setTextContent(element, valueAccessor());
+    }
+};
+
+/*ko.bindingHandlers['text'] = {
     'init': function(element) {
         if (element.childNodes.length == 1 && element.firstChild.nodeType == 3)
             return;
@@ -317,7 +324,7 @@ ko.bindingHandlers['text'] = {
             value = "";
         element.firstChild.data = value;
     }
-};
+};*/
 
 ko.bindingHandlers['html'] = {
     'init': function() {

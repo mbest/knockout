@@ -291,13 +291,16 @@ ko.utils = new (function () {
             var value = ko.utils.unwrapObservable(textContent);
             if ((value === null) || (value === undefined))
                 value = "";
-
-            'innerText' in element ? element.innerText = value
-                                   : element.textContent = value;
-                                   
-            if (ieVersion >= 9) {
-                // Believe it or not, this actually fixes an IE9 rendering bug. Insane. https://github.com/SteveSanderson/knockout/issues/209
-                element.style.display = element.style.display;
+            if (element.childNodes.length == 1 && element.firstChild.nodeType == 3) {
+                element.firstChild.data = value;
+            } else {
+                'innerText' in element ? element.innerText = value
+                                       : element.textContent = value;
+                                       
+                if (ieVersion >= 9) {
+                    // Believe it or not, this actually fixes an IE9 rendering bug. Insane. https://github.com/SteveSanderson/knockout/issues/209
+                    element.style.display = element.style.display;
+                }
             }
         },
 
