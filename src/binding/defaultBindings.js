@@ -573,16 +573,20 @@ ko.bindingHandlers['repeat'] = {
 };
 
 ko.bindingHandlers['switch'] = {
+    defaultvalue: {},
     'init': function(element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
         var node, nextInQueue = ko.virtualElements.childNodes(element)[0],
-            switchSkipNext = [];
+            switchSkipNext = [],
+            extraBindings = {
+                $switchIndex: undefined,
+                $switchSkipNext: switchSkipNext,
+                $switchValue: valueAccessor,
+                '$default': this.defaultvalue
+            };
         while (node = nextInQueue) {
             nextInQueue = ko.virtualElements.nextSibling(node);
             if (node.nodeType === 1 || node.nodeType === 8) {
-                var newContext = ko.utils.extend(new ko.bindingContext(), bindingContext);
-                newContext.$switchIndex = undefined;
-                newContext.$switchSkipNext = switchSkipNext;
-                newContext.$switchValue = valueAccessor;
+                var newContext = ko.utils.extend(ko.utils.extend(new ko.bindingContext(), bindingContext), extraBindings);
                 ko.applyBindings(newContext, node);
             }
         }
@@ -599,8 +603,9 @@ ko.bindingHandlers['case'] = {
             bindingContext.$switchSkipNext[index](true);
             return false;
         } else {
-            var switchValue = ko.utils.unwrapObservable(bindingContext.$switchValue()),
-                result = switchValue == ko.utils.unwrapObservable(valueAccessor());
+            var value = ko.utils.unwrapObservable(valueAccessor()), 
+                result = (value === bindingContext['$default']) ? true :
+                    (value == ko.utils.unwrapObservable(bindingContext.$switchValue()));
             bindingContext.$switchSkipNext[index](result);
             return result;
         }
@@ -609,6 +614,10 @@ ko.bindingHandlers['case'] = {
         return function() { return { 'if': ifValue, 'templateEngine': ko.nativeTemplateEngine.instance } };
     },
     'init': function(element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
+        if (!bindingContext.$switchSkipNext)
+            throw "case binding must only be used with a switch binding";
+        if (bindingContext.$switchIndex !== undefined)
+            throw "case binding cannot be nested";
         bindingContext.$switchIndex = bindingContext.$switchSkipNext.length;
         bindingContext.$switchSkipNext.push(ko.observable(false)); 
         return ko.bindingHandlers['template']['init'](element, this.makeTemplateValueAccessor(true));
