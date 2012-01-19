@@ -989,6 +989,20 @@ describe('Binding: Hasfocus', {
     }
 });
 
+describe('Binding: Switch/Case', {
+    before_each: prepareTestNode,
+    'Should display only matching case block with observable switch value': function() {
+        testNode.innerHTML = "<!-- ko switch: somevalue --><!-- ko case: 1 -->Value is 1<!-- /ko --><!-- ko case: 2 -->Value is 2<!-- /ko --><!-- /ko -->";
+        ko.applyBindings({ somevalue: ko.observable(1) }, testNode);
+    },
+    '': function() {
+        //
+    },
+    '': function() {
+        //
+    }
+});
+
 describe('Binding: If', {
     before_each: prepareTestNode,
 

@@ -565,6 +565,57 @@ ko.bindingHandlers['repeat'] = {
     }
 };
 
+ko.bindingHandlers['switch'] = {
+    'init': function(element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
+        var node, nextInQueue = ko.virtualElements.childNodes(element)[0],
+            switchSkipNext = [];
+        while (node = nextInQueue) {
+            nextInQueue = ko.virtualElements.nextSibling(node);
+            if (node.nodeType === 1 || node.nodeType === 8) {
+                var newContext = ko.utils.extend(new ko.bindingContext(), bindingContext);
+                newContext.$switchIndex = undefined;
+                newContext.$switchSkipNext = switchSkipNext;
+                newContext.$switchValue = valueAccessor;
+                ko.applyBindings(newContext, node);
+            }
+        }
+        return { 'controlsDescendantBindings': true };
+    }
+};
+ko.jsonExpressionRewriting.bindingRewriteValidators['switch'] = false; // Can't rewrite control flow bindings
+ko.virtualElements.allowedBindings['switch'] = true;
+
+ko.bindingHandlers['case'] = {
+    checkCase: function(valueAccessor, bindingContext) {
+        var index = bindingContext.$switchIndex;
+        if (index && bindingContext.$switchSkipNext[index-1]()) {
+            bindingContext.$switchSkipNext[index](true);
+            return false;
+        } else {
+            var switchValue = ko.utils.unwrapObservable(bindingContext.$switchValue()),
+                result = switchValue == ko.utils.unwrapObservable(valueAccessor());
+            bindingContext.$switchSkipNext[index](result);
+            return result;
+        }
+    },
+    makeTemplateValueAccessor: function(ifValue) {
+        return function() { return { 'if': ifValue, 'templateEngine': ko.nativeTemplateEngine.instance } };
+    },
+    'init': function(element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
+        bindingContext.$switchIndex = bindingContext.$switchSkipNext.length;
+        bindingContext.$switchSkipNext.push(ko.observable(false)); 
+        return ko.bindingHandlers['template']['init'](element, this.makeTemplateValueAccessor(true));
+    },
+    'update': function(element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
+        return ko.bindingHandlers['template']['update'](element, 
+            this.makeTemplateValueAccessor(this.checkCase(valueAccessor, bindingContext)), 
+            allBindingsAccessor, viewModel, bindingContext);
+    }
+};
+ko.jsonExpressionRewriting.bindingRewriteValidators['case'] = false; // Can't rewrite control flow bindings
+ko.virtualElements.allowedBindings['case'] = true;
+
+
 var withInitializedDomDataKey = "__ko_withlightInit__";
 ko.bindingHandlers['withlight'] = {
     'init': function(element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
