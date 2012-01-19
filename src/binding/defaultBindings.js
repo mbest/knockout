@@ -576,23 +576,29 @@ ko.bindingHandlers['switch'] = {
     defaultvalue: {},
     'init': function(element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
         var value = ko.utils.unwrapObservable(valueAccessor());
+        // case treats a boolean value as the result of an expression and won't match it to the control value
+        // thus a control value of false will never match anything
         if (value === false)
             throw "cannot specify boolean false in switch binding";
         var node, nextInQueue = ko.virtualElements.childNodes(element)[0],
-            switchSkipNext = [],
-            extraBindings = {
+            switchSkipNextArray = [],
+            switchBindings = {
                 $switchIndex: undefined,
-                $switchSkipNext: switchSkipNext,
-                $switchValue: valueAccessor,
+                $switchSkipNextArray: switchSkipNextArray,
+                $switchValueAccessor: valueAccessor,
                 '$default': this.defaultvalue,
                 '$else': this.defaultvalue,
                 '$value': value
             };
         while (node = nextInQueue) {
             nextInQueue = ko.virtualElements.nextSibling(node);
-            if (node.nodeType === 1 || node.nodeType === 8) {
-                var newContext = ko.utils.extend(ko.utils.extend(new ko.bindingContext(), bindingContext), extraBindings);
+            switch (node.nodeType) {
+            case 1: case 8:
+                // Each child element gets a new binding context so it has it's own $switchIndex property.
+                // The other properties are shared since they're objects. 
+                var newContext = ko.utils.extend(ko.utils.extend(new ko.bindingContext(), bindingContext), switchBindings);
                 ko.applyBindings(newContext, node);
+                break;
             }
         }
         return { 'controlsDescendantBindings': true };
@@ -604,20 +610,26 @@ ko.virtualElements.allowedBindings['switch'] = true;
 ko.bindingHandlers['case'] = {
     checkCase: function(valueAccessor, bindingContext) {
         var index = bindingContext.$switchIndex;
-        if (index && bindingContext.$switchSkipNext[index-1]()) {
-            bindingContext.$switchSkipNext[index](true);
+        if (index && bindingContext.$switchSkipNextArray[index-1]()) {
+            // an earlier case binding matched; so skip this one (and subsequent ones)
+            bindingContext.$switchSkipNextArray[index](true);
             return false;
         } else {
+            // Check value and determine result:
+            //  If value is the special object $else, the result is always true (should always be the last case)
+            //  If value is boolean, the result is the value (allows expressions instead of just simple matching)
+            //  If value is an array, the result is true if the control value matches (strict) an item in the array
+            //  Otherwise, the result is true if value matches the control value (loose)
             var value = ko.utils.unwrapObservable(valueAccessor()), result = true;
-            if (value !== bindingContext['$default']) {
-                var switchValue = ko.utils.unwrapObservable(bindingContext.$switchValue());
+            if (value !== bindingContext['$else']) {
+                var switchValue = ko.utils.unwrapObservable(bindingContext.$switchValueAccessor());
                 result = (typeof value == 'boolean')
                     ? value
                     : (value instanceof Array)
                         ? (ko.utils.arrayIndexOf(value, switchValue) !== -1)
                         : (value == switchValue);
             }
-            bindingContext.$switchSkipNext[index](result);
+            bindingContext.$switchSkipNextArray[index](result); // skip the subsequent cases if result is true
             return result;
         }
     },
@@ -625,15 +637,18 @@ ko.bindingHandlers['case'] = {
         return function() { return { 'if': ifValue, 'templateEngine': ko.nativeTemplateEngine.instance } };
     },
     'init': function(element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
-        if (!bindingContext.$switchSkipNext)
+        if (!bindingContext.$switchSkipNextArray)
             throw "case binding must only be used with a switch binding";
         if (bindingContext.$switchIndex !== undefined)
             throw "case binding cannot be nested";
-        bindingContext.$switchIndex = bindingContext.$switchSkipNext.length;
-        bindingContext.$switchSkipNext.push(ko.observable(false)); 
-        return ko.bindingHandlers['template']['init'](element, this.makeTemplateValueAccessor(true));
+        // initialize $switchIndex and push a new observable to $switchSkipNextArray
+        bindingContext.$switchIndex = bindingContext.$switchSkipNextArray.length;
+        bindingContext.$switchSkipNextArray.push(ko.observable(false));
+        // call template init(); since it doesn't need the 'if' value, just set it to undefined
+        return ko.bindingHandlers['template']['init'](element, this.makeTemplateValueAccessor(undefined));
     },
     'update': function(element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
+        // call template update() with calculated value for 'if'
         return ko.bindingHandlers['template']['update'](element, 
             this.makeTemplateValueAccessor(this.checkCase(valueAccessor, bindingContext)), 
             allBindingsAccessor, viewModel, bindingContext);
