@@ -52,6 +52,19 @@
             applyBindingsToDescendantsInternal(viewModel, nodeVerified);
     }
 
+    function outputBindings(bindings) {
+        if (typeof bindings == "object") {
+            var ret = '';
+            for (var bindingKey in bindings) {
+                if (ret.length > 0) ret += ', ';
+                ret += bindingKey;
+            }
+            return ret;
+        } else {
+            return bindings;
+        }
+    }
+
     function applyBindingsToNodeInternal (node, bindings, viewModelOrBindingContext, isRootNodeForBindingContext) {
         // The data for each binding is wrapped in a function so that it is
         // re-evaluated on each access. parsedBindings itself doesn't change
@@ -85,6 +98,7 @@
                 var binding = ko.bindingHandlers[bindingKey];
                 if (binding && typeof binding["update"] == "function") {
                     bindingUpdateObservables[bindingKey] = ko.dependentObservable(function () {
+//console.log('ns e=' + node.nodeName + '.' + node.id + '.' + node.className + '; update: ' + bindingKey);
                         binding["update"](node, makeValueAccessor(bindingKey), parsedBindingsObservableAccessor, viewModel, bindingContextInstance);
                     }, null, {'disposeWhenNodeIsRemoved': node});
                 }
@@ -122,6 +136,7 @@
             // Use evaluatedBindings if given, otherwise fall back on asking the bindings provider to give us some bindings
             var evaluatedBindings = (typeof bindings == "function") ? bindings() : bindings;
             parsedBindings = evaluatedBindings || ko.bindingProvider['instance']['getBindings'](node, bindingContextInstance);
+//console.log('e=' + node.nodeName + '.' + node.id + '.' + node.className + '; apply: ' + outputBindings(parsedBindings));
 
             var bindingHandlerThatControlsDescendantBindings;
             if (parsedBindings) {
@@ -132,6 +147,7 @@
                         validateThatBindingIsAllowedForVirtualElements(bindingKey);
 
                     if (binding && typeof binding["init"] == "function") {
+//console.log('ns e=' + node.nodeName + '.' + node.id + '.' + node.className + '; init: ' + bindingKey);
                         var initResult = binding["init"](node, makeValueAccessor(bindingKey), parsedBindingsAccessor, viewModel, bindingContextInstance);
 
                         // If this binding handler claims to control descendant bindings, make a note of this

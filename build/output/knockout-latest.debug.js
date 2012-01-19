@@ -331,13 +331,16 @@ ko.utils = new (function () {
             var value = ko.utils.unwrapObservable(textContent);
             if ((value === null) || (value === undefined))
                 value = "";
-
-            'innerText' in element ? element.innerText = value
-                                   : element.textContent = value;
-                                   
-            if (ieVersion >= 9) {
-                // Believe it or not, this actually fixes an IE9 rendering bug. Insane. https://github.com/SteveSanderson/knockout/issues/209
-                element.style.display = element.style.display;
+            if (element.childNodes.length == 1 && element.firstChild.nodeType == 3) {
+                element.firstChild.data = value;
+            } else {
+                'innerText' in element ? element.innerText = value
+                                       : element.textContent = value;
+                                       
+                if (ieVersion >= 9) {
+                    // Believe it or not, this actually fixes an IE9 rendering bug. Insane. https://github.com/SteveSanderson/knockout/issues/209
+                    element.style.display = element.style.display;
+                }
             }
         },
 
@@ -1670,13 +1673,11 @@ ko.exportSymbol('jsonExpressionRewriting.insertPropertyAccessorsIntoJson', ko.js
         },
 
         nextSibling: function(node) {
-            if (!isStartComment(node)) {
-                if (node.nextSibling && isEndComment(node.nextSibling))
-                    return undefined;
-                return node.nextSibling;
-            } else {
-                return getMatchingEndComment(node).nextSibling;
-            }
+            if (isStartComment(node))
+                node = getMatchingEndComment(node);
+            if (node.nextSibling && isEndComment(node.nextSibling))
+                return undefined;
+            return node.nextSibling;
         },
 
         virtualNodeBindingValue: function(node) {
@@ -1828,6 +1829,19 @@ ko.exportSymbol('bindingProvider', ko.bindingProvider);
             applyBindingsToDescendantsInternal(viewModel, nodeVerified);
     }
 
+    function outputBindings(bindings) {
+        if (typeof bindings == "object") {
+            var ret = '';
+            for (var bindingKey in bindings) {
+                if (ret.length > 0) ret += ', ';
+                ret += bindingKey;
+            }
+            return ret;
+        } else {
+            return bindings;
+        }
+    }
+
     function applyBindingsToNodeInternal (node, bindings, viewModelOrBindingContext, isRootNodeForBindingContext) {
         // The data for each binding is wrapped in a function so that it is
         // re-evaluated on each access. parsedBindings itself doesn't change
@@ -1861,6 +1875,7 @@ ko.exportSymbol('bindingProvider', ko.bindingProvider);
                 var binding = ko.bindingHandlers[bindingKey];
                 if (binding && typeof binding["update"] == "function") {
                     bindingUpdateObservables[bindingKey] = ko.dependentObservable(function () {
+//console.log('ns e=' + node.nodeName + '.' + node.id + '.' + node.className + '; update: ' + bindingKey);
                         binding["update"](node, makeValueAccessor(bindingKey), parsedBindingsObservableAccessor, viewModel, bindingContextInstance);
                     }, null, {'disposeWhenNodeIsRemoved': node});
                 }
@@ -1898,6 +1913,7 @@ ko.exportSymbol('bindingProvider', ko.bindingProvider);
             // Use evaluatedBindings if given, otherwise fall back on asking the bindings provider to give us some bindings
             var evaluatedBindings = (typeof bindings == "function") ? bindings() : bindings;
             parsedBindings = evaluatedBindings || ko.bindingProvider['instance']['getBindings'](node, bindingContextInstance);
+//console.log('e=' + node.nodeName + '.' + node.id + '.' + node.className + '; apply: ' + outputBindings(parsedBindings));
 
             var bindingHandlerThatControlsDescendantBindings;
             if (parsedBindings) {
@@ -1908,6 +1924,7 @@ ko.exportSymbol('bindingProvider', ko.bindingProvider);
                         validateThatBindingIsAllowedForVirtualElements(bindingKey);
 
                     if (binding && typeof binding["init"] == "function") {
+//console.log('ns e=' + node.nodeName + '.' + node.id + '.' + node.className + '; init: ' + bindingKey);
                         var initResult = binding["init"](node, makeValueAccessor(bindingKey), parsedBindingsAccessor, viewModel, bindingContextInstance);
 
                         // If this binding handler claims to control descendant bindings, make a note of this
@@ -2288,7 +2305,14 @@ ko.bindingHandlers['selectedOptions'] = {
     }
 };
 
+
 ko.bindingHandlers['text'] = {
+    'update': function (element, valueAccessor) {
+        ko.utils.setTextContent(element, valueAccessor());
+    }
+};
+
+/*ko.bindingHandlers['text'] = {
     'init': function(element) {
         if (element.childNodes.length == 1 && element.firstChild.nodeType == 3)
             return;
@@ -2303,7 +2327,7 @@ ko.bindingHandlers['text'] = {
             value = "";
         element.firstChild.data = value;
     }
-};
+};*/
 
 ko.bindingHandlers['html'] = {
     'init': function() {
@@ -2550,6 +2574,92 @@ ko.bindingHandlers['repeat'] = {
         }
     }
 };
+
+ko.bindingHandlers['switch'] = {
+    defaultvalue: {},
+    'init': function(element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
+        var value = ko.utils.unwrapObservable(valueAccessor());
+        // case treats a boolean value as the result of an expression and won't match it to the control value
+        // thus a control value of false will never match anything
+        if (value === false)
+            throw "cannot specify boolean false in switch binding";
+        var node, nextInQueue = ko.virtualElements.childNodes(element)[0],
+            switchSkipNextArray = [],
+            switchBindings = {
+                $switchIndex: undefined,
+                $switchSkipNextArray: switchSkipNextArray,
+                $switchValueAccessor: valueAccessor,
+                '$default': this.defaultvalue,
+                '$else': this.defaultvalue,
+                '$value': value
+            };
+        while (node = nextInQueue) {
+            nextInQueue = ko.virtualElements.nextSibling(node);
+            switch (node.nodeType) {
+            case 1: case 8:
+                // Each child element gets a new binding context so it has it's own $switchIndex property.
+                // The other properties are shared since they're objects. 
+                var newContext = ko.utils.extend(ko.utils.extend(new ko.bindingContext(), bindingContext), switchBindings);
+                ko.applyBindings(newContext, node);
+                break;
+            }
+        }
+        return { 'controlsDescendantBindings': true };
+    }
+};
+ko.jsonExpressionRewriting.bindingRewriteValidators['switch'] = false; // Can't rewrite control flow bindings
+ko.virtualElements.allowedBindings['switch'] = true;
+
+ko.bindingHandlers['case'] = {
+    checkCase: function(valueAccessor, bindingContext) {
+        var index = bindingContext.$switchIndex;
+        if (index && bindingContext.$switchSkipNextArray[index-1]()) {
+            // an earlier case binding matched; so skip this one (and subsequent ones)
+            bindingContext.$switchSkipNextArray[index](true);
+            return false;
+        } else {
+            // Check value and determine result:
+            //  If value is the special object $else, the result is always true (should always be the last case)
+            //  If value is boolean, the result is the value (allows expressions instead of just simple matching)
+            //  If value is an array, the result is true if the control value matches (strict) an item in the array
+            //  Otherwise, the result is true if value matches the control value (loose)
+            var value = ko.utils.unwrapObservable(valueAccessor()), result = true;
+            if (value !== bindingContext['$else']) {
+                var switchValue = ko.utils.unwrapObservable(bindingContext.$switchValueAccessor());
+                result = (typeof value == 'boolean')
+                    ? value
+                    : (value instanceof Array)
+                        ? (ko.utils.arrayIndexOf(value, switchValue) !== -1)
+                        : (value == switchValue);
+            }
+            bindingContext.$switchSkipNextArray[index](result); // skip the subsequent cases if result is true
+            return result;
+        }
+    },
+    makeTemplateValueAccessor: function(ifValue) {
+        return function() { return { 'if': ifValue, 'templateEngine': ko.nativeTemplateEngine.instance } };
+    },
+    'init': function(element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
+        if (!bindingContext.$switchSkipNextArray)
+            throw "case binding must only be used with a switch binding";
+        if (bindingContext.$switchIndex !== undefined)
+            throw "case binding cannot be nested";
+        // initialize $switchIndex and push a new observable to $switchSkipNextArray
+        bindingContext.$switchIndex = bindingContext.$switchSkipNextArray.length;
+        bindingContext.$switchSkipNextArray.push(ko.observable(false));
+        // call template init(); since it doesn't need the 'if' value, just set it to undefined
+        return ko.bindingHandlers['template']['init'](element, this.makeTemplateValueAccessor(undefined));
+    },
+    'update': function(element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
+        // call template update() with calculated value for 'if'
+        return ko.bindingHandlers['template']['update'](element, 
+            this.makeTemplateValueAccessor(this.checkCase(valueAccessor, bindingContext)), 
+            allBindingsAccessor, viewModel, bindingContext);
+    }
+};
+ko.jsonExpressionRewriting.bindingRewriteValidators['case'] = false; // Can't rewrite control flow bindings
+ko.virtualElements.allowedBindings['case'] = true;
+
 
 var withInitializedDomDataKey = "__ko_withlightInit__";
 ko.bindingHandlers['withlight'] = {
@@ -2835,14 +2945,21 @@ ko.exportSymbol('templateRewriting.applyMemoizedBindingsToNextSibling', ko.templ
     }
     
     ko.templateSources.domElement.prototype['text'] = function(/* valueToWrite */) {
+        var tagName = this.domElement.tagName.toLowerCase();
         if (arguments.length == 0) {
-            return this.domElement.tagName.toLowerCase() == "script" ? this.domElement.text : this.domElement.innerHTML;
+            return tagName == "script"
+                ? this.domElement.text
+                : tagName == "textarea"
+                    ? this.domElement.value
+                    : this.domElement.innerHTML;
         } else {
             var valueToWrite = arguments[0];
-            if (this.domElement.tagName.toLowerCase() == "script")
+            if (tagName == "script")
                 this.domElement.text = valueToWrite;
+            else if (tagName = "textarea")
+                this.domElement.value = valueToWrite;
             else
-                ko.utils.setHtml(this.domElement, valueToWrite);
+                this.domElement.innerHTML = valueToWrite;
         }
     };
     
@@ -2959,8 +3076,10 @@ ko.exportSymbol('templateRewriting.applyMemoizedBindingsToNextSibling', ko.templ
 
         if (haveAddedNodesToParent) {
             ko.activateBindingsOnTemplateRenderedNodes(renderedNodesArray, bindingContext);
-            if (options['afterRender'])
-                options['afterRender'](renderedNodesArray, bindingContext['$data']);
+            if (options['afterRender']) {
+                var toBind = options['data'] ? bindingContext['$parent'] : bindingContext['$data'];
+                options['afterRender'].bind(toBind)(renderedNodesArray, bindingContext['$data']);
+            }
         }
 
         return renderedNodesArray;
@@ -3019,8 +3138,10 @@ ko.exportSymbol('templateRewriting.applyMemoizedBindingsToNextSibling', ko.templ
         var activateBindingsCallback = function(arrayValue, addedNodesArray) {
             var bindingContext = createInnerBindingContext(arrayValue);
             ko.activateBindingsOnTemplateRenderedNodes(addedNodesArray, bindingContext);
-            if (options['afterRender'])
-                options['afterRender'](addedNodesArray, bindingContext['$data']);
+            if (options['afterRender']) {
+                var toBind = options['data'] ? bindingContext['$parent'] : bindingContext['$data'];
+                options['afterRender'].bind(toBind)(addedNodesArray, bindingContext['$data']);
+            }
         };
 
         var unwrappedArray = ko.utils.unwrapObservable(arrayOrObservableArray) || [];

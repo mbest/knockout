@@ -32,14 +32,21 @@
     }
     
     ko.templateSources.domElement.prototype['text'] = function(/* valueToWrite */) {
+        var tagName = this.domElement.tagName.toLowerCase();
         if (arguments.length == 0) {
-            return this.domElement.tagName.toLowerCase() == "script" ? this.domElement.text : this.domElement.innerHTML;
+            return tagName == "script"
+                ? this.domElement.text
+                : tagName == "textarea"
+                    ? this.domElement.value
+                    : this.domElement.innerHTML;
         } else {
             var valueToWrite = arguments[0];
-            if (this.domElement.tagName.toLowerCase() == "script")
+            if (tagName == "script")
                 this.domElement.text = valueToWrite;
+            else if (tagName = "textarea")
+                this.domElement.value = valueToWrite;
             else
-                ko.utils.setHtml(this.domElement, valueToWrite);
+                this.domElement.innerHTML = valueToWrite;
         }
     };
     
