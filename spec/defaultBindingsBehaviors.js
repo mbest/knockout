@@ -1042,6 +1042,17 @@ describe('Binding: Switch/Case', {
         value_of(testNode).should_contain_text("xxxValue is 1");
     },
 
+    'Should display only matching case block with array case': function() {
+        testNode.innerHTML = "xxx<!-- ko switch: somevalue --><!-- ko case: 1 -->Value is 1<!-- /ko --><!-- ko case: [2,3] -->Value is 2 or 3<!-- /ko --><!-- /ko -->";
+        var value = ko.observable(0);
+        ko.applyBindings({ somevalue: value }, testNode);
+        // initially matches no value
+        value_of(testNode).should_contain_text("xxx");
+        // change value so it matches second case 
+        value(3);
+        value_of(testNode).should_contain_text("xxxValue is 2 or 3");
+    },
+
     'Should display first true case block with default case': function() {
         testNode.innerHTML = "xxx<!-- ko switch: true --><!-- ko case: somevalue -->Somevalue is true<!-- /ko --><!-- ko case: func() -->Func is true<!-- /ko --><!-- ko case: $default -->Default case<!-- /ko --><!-- /ko -->";
         var value = ko.observable(0), funcValue = ko.observable(0);

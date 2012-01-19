@@ -603,9 +603,13 @@ ko.bindingHandlers['case'] = {
             bindingContext.$switchSkipNext[index](true);
             return false;
         } else {
-            var value = ko.utils.unwrapObservable(valueAccessor()), 
-                result = (value === bindingContext['$default']) ? true :
-                    (value == ko.utils.unwrapObservable(bindingContext.$switchValue()));
+            var value = ko.utils.unwrapObservable(valueAccessor()), result = true;
+            if (value !== bindingContext['$default']) {
+                var switchValue = ko.utils.unwrapObservable(bindingContext.$switchValue());
+                result = (value instanceof Array)
+                    ? (ko.utils.arrayIndexOf(value, switchValue) !== -1)
+                    : (value == switchValue);
+            }
             bindingContext.$switchSkipNext[index](result);
             return result;
         }
