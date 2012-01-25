@@ -1,6 +1,23 @@
 (function () {
     ko.bindingHandlers = {};
 
+    // Binding handlers can include a property named "type" that specifies one of these binding types.
+    // If unset, the default binding type is one-way (so it's not necessary to specify that type).
+    ko.bindingTypes = {
+        oneWay: 'one-way',
+        twoWay: 'two-way',
+        eventHandler: 'event',
+        control: 'control'
+    };
+    ko.defaultBindingType = ko.bindingTypes.oneWay;
+
+    // Binding handlers can include a property named "options" with an array of options.  
+    ko.bindingOptions = {
+        noValue: 'no-value',        // can be included without a value (will use true as the value)
+        twoLevel: 'two-level',      // two-level bindings are like attr.href: value or attr: {href: value}
+        canUseVirtual: 'containerless'  // can use comment-based bindings like <!-- ko if: value --><!-- /ko -->
+    };
+
     ko.bindingContext = function(dataItem, parentBindingContext) {
         this['$data'] = dataItem;
         if (parentBindingContext) {
@@ -17,9 +34,20 @@
         return new ko.bindingContext(dataItem, this);
     };
 
-    function validateThatBindingIsAllowedForVirtualElements(bindingName) {
-        var validator = ko.virtualElements.allowedBindings[bindingName];
-        if (!validator)
+    ko.getBindingType = function(bindingName, binding) {
+        if (!binding) binding = ko.bindingHandlers[bindingName];
+        return binding ? binding['type'] || ko.defaultBindingType : undefined;
+    };
+
+    ko.checkBindingOption = function(bindingName, options, binding) {
+        if (!binding) binding = ko.bindingHandlers[bindingName];
+        if (binding && binding['options'])
+            return ko.utils.arrayIndexOf(binding['options'], ko.bindingOptions.canUseVirtual) !== -1;
+        return false;
+    };
+    
+    function validateThatBindingIsAllowedForVirtualElements(bindingName, binding) {
+        if (!ko.checkBindingOption(bindingName, ko.bindingOptions.canUseVirtual, binding))
             throw new Error("The binding '" + bindingName + "' cannot be used with virtual elements")
     }
 
@@ -94,19 +122,19 @@
                         initPhase = 1;
                         for (var bindingKey in parsedBindings) {
                             var binding = ko.bindingHandlers[bindingKey];
-                            if (binding && node.nodeType === 8)
-                                validateThatBindingIsAllowedForVirtualElements(bindingKey);
+                            if (!binding)
+                                continue;
+                            if (node.nodeType === 8)
+                                validateThatBindingIsAllowedForVirtualElements(bindingKey, binding);
 
-                            if (binding && typeof binding["init"] == "function") {
-                                var handlerInitFn = binding["init"];
-                                var initResult = handlerInitFn(node, makeValueAccessor(bindingKey), parsedBindingsAccessor, viewModel, bindingContextInstance);
-                                
+                            if (typeof binding["init"] == "function") {
+                                binding["init"](node, makeValueAccessor(bindingKey), parsedBindingsAccessor, viewModel, bindingContextInstance);
+                            }
+                            if (binding["type"] == ko.bindingTypes.control) {
                                 // If this binding handler claims to control descendant bindings, make a note of this
-                                if (initResult && initResult['controlsDescendantBindings']) {
-                                    if (bindingHandlerThatControlsDescendantBindings !== undefined)
-                                        throw new Error("Multiple bindings (" + bindingHandlerThatControlsDescendantBindings + " and " + bindingKey + ") are trying to control descendant bindings of the same element. You cannot use these bindings together on the same element.");
-                                    bindingHandlerThatControlsDescendantBindings = bindingKey;
-                                }
+                                if (bindingHandlerThatControlsDescendantBindings !== undefined)
+                                    throw new Error("Multiple bindings (" + bindingHandlerThatControlsDescendantBindings + " and " + bindingKey + ") are trying to control descendant bindings of the same element. You cannot use these bindings together on the same element.");
+                                bindingHandlerThatControlsDescendantBindings = bindingKey;
                             }
                         }
                         initPhase = 2;
@@ -117,8 +145,7 @@
                         for (var bindingKey in parsedBindings) {
                             var binding = ko.bindingHandlers[bindingKey];
                             if (binding && typeof binding["update"] == "function") {
-                                var handlerUpdateFn = binding["update"];
-                                handlerUpdateFn(node, makeValueAccessor(bindingKey), parsedBindingsAccessor, viewModel, bindingContextInstance);
+                                binding["update"](node, makeValueAccessor(bindingKey), parsedBindingsAccessor, viewModel, bindingContextInstance);
                             }
                         }
                     }

@@ -156,6 +156,8 @@
     }
     
     ko.bindingHandlers['template'] = {
+        'type': ko.bindingTypes.control,
+        'options': [ko.bindingOptions.canUseVirtual],
         'init': function(element, valueAccessor) {
             // Support anonymous templates
             var bindingValue = ko.utils.unwrapObservable(valueAccessor());
@@ -165,7 +167,6 @@
                     container = ko.utils.moveNodesToContainerElement(templateNodes); // This also removes the nodes from their current parent
                 new ko.templateSources.anonymousTemplate(element)['nodes'](container);
             }
-            return { 'controlsDescendantBindings': true };
         },
         'update': function (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
             var bindingValue = ko.utils.unwrapObservable(valueAccessor());
@@ -207,18 +208,16 @@
     };
 
     // Anonymous templates can't be rewritten. Give a nice error message if you try to do it.
-    ko.jsonExpressionRewriting.bindingRewriteValidators['template'] = function(bindingValue) {
-        var parsedBindingValue = ko.jsonExpressionRewriting.parseObjectLiteral(bindingValue);
+    ko.templateRewriting.bindingRewriteValidators['template'] = function(bindingValue) {
+        var parsedBindingValue = ko.bindingExpressionRewriting.parseObjectLiteral(bindingValue);
 
         if ((parsedBindingValue.length == 1) && parsedBindingValue[0]['unknown'])
             return null; // It looks like a string literal, not an object literal, so treat it as a named template (which is allowed for rewriting)
 
-        if (ko.jsonExpressionRewriting.keyValueArrayContainsKey(parsedBindingValue, "name"))
+        if (ko.bindingExpressionRewriting.keyValueArrayContainsKey(parsedBindingValue, "name"))
             return null; // Named templates can be rewritten, so return "no error"
         return "This template engine does not support anonymous templates nested within its templates";
     };
-
-    ko.virtualElements.allowedBindings['template'] = true;
 })();
 
 ko.exportSymbol('setTemplateEngine', ko.setTemplateEngine);

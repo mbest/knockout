@@ -171,9 +171,9 @@ describe('Binding attribute syntax', {
         value_of(testNode).should_contain_text("My prop value");
     },
     
-    'Bindings can signal that they control descendant bindings by returning a flag from their init function': function() {
-        ko.bindingHandlers.test = {  
-            init: function() { return { controlsDescendantBindings : true } }
+    'Bindings can signal that they control descendant bindings by setting their type to "control"': function() {
+        ko.bindingHandlers.test = {
+            type: 'control'
         };
         testNode.innerHTML = "<div data-bind='test: true'>"
                            +     "<div data-bind='text: 123'>456</div>"
@@ -187,7 +187,7 @@ describe('Binding attribute syntax', {
     
     'Should not be allowed to have multiple bindings on the same element that claim to control descendant bindings': function() {
         ko.bindingHandlers.test1 = {  
-            init: function() { return { controlsDescendantBindings : true } }
+            type: 'control'
         };
         ko.bindingHandlers.test2 = ko.bindingHandlers.test1;
         testNode.innerHTML = "<div data-bind='test1: true, test2: true'></div>"

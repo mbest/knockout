@@ -4,27 +4,23 @@ ko.templateRewriting = (function () {
     var memoizeVirtualContainerBindingSyntaxRegex = /<!--\s*ko\b\s*([\s\S]*?)\s*-->/g;
 
     function validateDataBindValuesForRewriting(keyValueArray) {
-        var allValidators = ko.jsonExpressionRewriting.bindingRewriteValidators;
+        var allValidators = ko.templateRewriting.bindingRewriteValidators;
         for (var i = 0; i < keyValueArray.length; i++) {
             var key = keyValueArray[i]['key'];
             if (allValidators.hasOwnProperty(key)) {
-                var validator = allValidators[key];    
-
-                if (typeof validator === "function") {
-                    var possibleErrorMessage = validator(keyValueArray[i]['value']);
-                    if (possibleErrorMessage)
-                        throw new Error(possibleErrorMessage);
-                } else if (!validator) {
-                    throw new Error("This template engine does not support the '" + key + "' binding within its templates");
-                }                
+                var possibleErrorMessage = allValidators[key](keyValueArray[i]['value']);
+                if (possibleErrorMessage)
+                    throw new Error(possibleErrorMessage);
+            } else if (ko.getBindingType(key) === ko.bindingTypes.control) {
+                throw new Error("This template engine does not support the '" + key + "' binding within its templates");
             }
         }
     }
 
     function constructMemoizedTagReplacement(dataBindAttributeValue, tagToRetain, templateEngine) {
-        var dataBindKeyValueArray = ko.jsonExpressionRewriting.parseObjectLiteral(dataBindAttributeValue);
+        var dataBindKeyValueArray = ko.bindingExpressionRewriting.parseObjectLiteral(dataBindAttributeValue);
         validateDataBindValuesForRewriting(dataBindKeyValueArray);
-        var rewrittenDataBindAttributeValue = ko.jsonExpressionRewriting.insertPropertyAccessorsIntoJson(dataBindKeyValueArray);
+        var rewrittenDataBindAttributeValue = ko.bindingExpressionRewriting.insertPropertyAccessors(dataBindKeyValueArray);
 
         // For no obvious reason, Opera fails to evaluate rewrittenDataBindAttributeValue unless it's wrapped in an additional 
         // anonymous function, even though Opera's built-in debugger can evaluate it anyway. No other browser requires this 
@@ -36,6 +32,8 @@ ko.templateRewriting = (function () {
     }
 
     return {
+        bindingRewriteValidators: {},
+        
         ensureTemplateIsRewritten: function (template, templateEngine) {
             if (!templateEngine['isTemplateRewritten'](template))
                 templateEngine['rewriteTemplate'](template, function (htmlString) {
@@ -61,4 +59,5 @@ ko.templateRewriting = (function () {
 })();
 
 ko.exportSymbol('templateRewriting', ko.templateRewriting);
-ko.exportSymbol('templateRewriting.applyMemoizedBindingsToNextSibling', ko.templateRewriting.applyMemoizedBindingsToNextSibling); // Exported only because it has to be referenced by string lookup from within rewritten template
+// Exported only because it has to be referenced by string lookup from within rewritten template
+ko.exportSymbol('templateRewriting.applyMemoizedBindingsToNextSibling', ko.templateRewriting.applyMemoizedBindingsToNextSibling);

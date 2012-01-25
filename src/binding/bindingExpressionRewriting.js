@@ -1,5 +1,5 @@
 
-ko.jsonExpressionRewriting = (function () {
+ko.bindingExpressionRewriting = (function () {
     var restoreCapturedTokensRegex = /\@ko_token_(\d+)\@/g;
     var javaScriptAssignmentTarget = /^[\_$a-z][\_$a-z0-9]*(\[.*?\])*(\.[\_$a-z][\_$a-z0-9]*(\[.*?\])*)*$/i;
     var javaScriptReservedWords = ["true", "false"];
@@ -33,8 +33,6 @@ ko.jsonExpressionRewriting = (function () {
     }
 
     return {
-        bindingRewriteValidators: [],
-        
         parseObjectLiteral: function(objectLiteralString) {
             // A full tokeniser+lexer would add too much weight to this library, so here's a simple parser
             // that is sufficient just to split an object literal string into a set of top-level key-value pairs
@@ -121,9 +119,9 @@ ko.jsonExpressionRewriting = (function () {
             return result;            
         },
 
-        insertPropertyAccessorsIntoJson: function (objectLiteralStringOrKeyValueArray) {
+        insertPropertyAccessors: function (objectLiteralStringOrKeyValueArray) {
             var keyValueArray = typeof objectLiteralStringOrKeyValueArray === "string" 
-                ? ko.jsonExpressionRewriting.parseObjectLiteral(objectLiteralStringOrKeyValueArray)
+                ? ko.bindingExpressionRewriting.parseObjectLiteral(objectLiteralStringOrKeyValueArray)
                 : objectLiteralStringOrKeyValueArray;
             var resultStrings = [], propertyAccessorResultStrings = [];
 
@@ -165,8 +163,3 @@ ko.jsonExpressionRewriting = (function () {
         }
     };
 })();
-
-ko.exportSymbol('jsonExpressionRewriting', ko.jsonExpressionRewriting);
-ko.exportSymbol('jsonExpressionRewriting.bindingRewriteValidators', ko.jsonExpressionRewriting.bindingRewriteValidators);
-ko.exportSymbol('jsonExpressionRewriting.parseObjectLiteral', ko.jsonExpressionRewriting.parseObjectLiteral);
-ko.exportSymbol('jsonExpressionRewriting.insertPropertyAccessorsIntoJson', ko.jsonExpressionRewriting.insertPropertyAccessorsIntoJson);

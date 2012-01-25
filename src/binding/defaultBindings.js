@@ -3,19 +3,22 @@
 var eventHandlersWithShortcuts = ['click'];
 ko.utils.arrayForEach(eventHandlersWithShortcuts, function(eventName) {
     ko.bindingHandlers[eventName] = {
+        'type': ko.bindingTypes.eventHandler,
         'init': function(element, valueAccessor, allBindingsAccessor, viewModel) {
             var newValueAccessor = function () {
                 var result = {};
                 result[eventName] = valueAccessor();
                 return result;
             };
-            return ko.bindingHandlers['event']['init'].call(this, element, newValueAccessor, allBindingsAccessor, viewModel);
+            ko.bindingHandlers['event']['init'].call(this, element, newValueAccessor, allBindingsAccessor, viewModel);
         }
     }	
 });
 
 
 ko.bindingHandlers['event'] = {
+    'type': ko.bindingTypes.eventHandler,
+    'options': [ko.bindingOptions.twoLevel],
     'init' : function (element, valueAccessor, allBindingsAccessor, viewModel) {
         var eventsToHandle = valueAccessor() || {};
         for(var eventNameOutsideClosure in eventsToHandle) {
@@ -57,6 +60,7 @@ ko.bindingHandlers['event'] = {
 };
 
 ko.bindingHandlers['submit'] = {
+    'type': ko.bindingTypes.eventHandler,
     'init': function (element, valueAccessor, allBindingsAccessor, viewModel) {
         if (typeof valueAccessor() != "function")
             throw new Error("The value for a submit binding must be a function");
@@ -117,6 +121,7 @@ function ensureDropdownSelectionIsConsistentWithModelValue(element, modelValue, 
 };
 
 ko.bindingHandlers['value'] = {
+    'type': ko.bindingTypes.twoWay,
     'init': function (element, valueAccessor, allBindingsAccessor) { 
         // Always catch "change" event; possibly other events too if asked
         var eventsToCatch = ["change"];
@@ -269,6 +274,7 @@ ko.bindingHandlers['options'] = {
 ko.bindingHandlers['options'].optionValueDomDataKey = '__ko.optionValueDomData__';
 
 ko.bindingHandlers['selectedOptions'] = {
+    'type': ko.bindingTypes.twoWay,
     getSelectedValuesFromSelectNode: function (selectNode) {
         var result = [];
         var nodes = selectNode.childNodes;
@@ -314,10 +320,9 @@ ko.bindingHandlers['text'] = {
 };
 
 ko.bindingHandlers['html'] = {
-    'init': function() {
-        // Prevent binding on the dynamically-injected HTML (as developers are unlikely to expect that, and it has security implications)
-        return { 'controlsDescendantBindings': true };
-    },
+    // Use control type to prevent binding on the dynamically-injected HTML
+    // (as developers are unlikely to expect that, and it has security implications)
+    'type': ko.bindingTypes.control,
     'update': function (element, valueAccessor) {
         var value = ko.utils.unwrapObservable(valueAccessor());
         ko.utils.setHtml(element, value);
@@ -325,6 +330,7 @@ ko.bindingHandlers['html'] = {
 };
 
 ko.bindingHandlers['css'] = {
+    'options': [ko.bindingOptions.twoLevel],
     'update': function (element, valueAccessor) {
         var value = ko.utils.unwrapObservable(valueAccessor() || {});
         for (var className in value) {
@@ -337,6 +343,7 @@ ko.bindingHandlers['css'] = {
 };
 
 ko.bindingHandlers['style'] = {
+    'options': [ko.bindingOptions.twoLevel],
     'update': function (element, valueAccessor) {
         var value = ko.utils.unwrapObservable(valueAccessor() || {});
         for (var styleName in value) {
@@ -349,6 +356,7 @@ ko.bindingHandlers['style'] = {
 };
 
 ko.bindingHandlers['uniqueName'] = {
+    'options': [ko.bindingOptions.noValue],
     'init': function (element, valueAccessor) {
         if (valueAccessor()) {
             element.name = "ko_unique_" + (++ko.bindingHandlers['uniqueName'].currentIndex);
@@ -364,6 +372,7 @@ ko.bindingHandlers['uniqueName'] = {
 ko.bindingHandlers['uniqueName'].currentIndex = 0;
 
 ko.bindingHandlers['checked'] = {
+    'type': ko.bindingTypes.twoWay,
     'init': function (element, valueAccessor, allBindingsAccessor) {
         var updateHandler = function() {            
             var valueToWrite;
@@ -419,6 +428,7 @@ ko.bindingHandlers['checked'] = {
 };
 
 ko.bindingHandlers['attr'] = {
+    'options': [ko.bindingOptions.twoLevel],
     'update': function(element, valueAccessor, allBindingsAccessor) {
         var value = ko.utils.unwrapObservable(valueAccessor()) || {};
         for (var attrName in value) {
@@ -438,6 +448,7 @@ ko.bindingHandlers['attr'] = {
 };
 
 ko.bindingHandlers['hasfocus'] = {
+    'type': ko.bindingTypes.twoWay,
     'init': function(element, valueAccessor, allBindingsAccessor) {
         var writeValue = function(valueToWrite) {
             var modelValue = valueAccessor();
@@ -467,52 +478,54 @@ ko.bindingHandlers['hasfocus'] = {
 
 // "with: someExpression" is equivalent to "template: { if: someExpression, data: someExpression }"
 ko.bindingHandlers['with'] = {
+    'type': ko.bindingTypes.control,
+    'options': [ko.bindingOptions.canUseVirtual],
     makeTemplateValueAccessor: function(valueAccessor) {
         return function() { var value = valueAccessor(); return { 'if': value, 'data': value, 'templateEngine': ko.nativeTemplateEngine.instance } };
     },
     'init': function(element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
-        return ko.bindingHandlers['template']['init'](element, ko.bindingHandlers['with'].makeTemplateValueAccessor(valueAccessor));
+        ko.bindingHandlers['template']['init'](element, ko.bindingHandlers['with'].makeTemplateValueAccessor(valueAccessor));
     },
     'update': function(element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
-        return ko.bindingHandlers['template']['update'](element, ko.bindingHandlers['with'].makeTemplateValueAccessor(valueAccessor), allBindingsAccessor, viewModel, bindingContext);
+        ko.bindingHandlers['template']['update'](element, ko.bindingHandlers['with'].makeTemplateValueAccessor(valueAccessor), allBindingsAccessor, viewModel, bindingContext);
     }
 };
-ko.jsonExpressionRewriting.bindingRewriteValidators['with'] = false; // Can't rewrite control flow bindings
-ko.virtualElements.allowedBindings['with'] = true;
 
 // "if: someExpression" is equivalent to "template: { if: someExpression }"
 ko.bindingHandlers['if'] = {
+    'type': ko.bindingTypes.control,
+    'options': [ko.bindingOptions.canUseVirtual],
     makeTemplateValueAccessor: function(valueAccessor) {
         return function() { return { 'if': valueAccessor(), 'templateEngine': ko.nativeTemplateEngine.instance } };
     },	
     'init': function(element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
-        return ko.bindingHandlers['template']['init'](element, ko.bindingHandlers['if'].makeTemplateValueAccessor(valueAccessor));
+        ko.bindingHandlers['template']['init'](element, ko.bindingHandlers['if'].makeTemplateValueAccessor(valueAccessor));
     },
     'update': function(element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
-        return ko.bindingHandlers['template']['update'](element, ko.bindingHandlers['if'].makeTemplateValueAccessor(valueAccessor), allBindingsAccessor, viewModel, bindingContext);
+        ko.bindingHandlers['template']['update'](element, ko.bindingHandlers['if'].makeTemplateValueAccessor(valueAccessor), allBindingsAccessor, viewModel, bindingContext);
     }
 };
-ko.jsonExpressionRewriting.bindingRewriteValidators['if'] = false; // Can't rewrite control flow bindings
-ko.virtualElements.allowedBindings['if'] = true;
 
 // "ifnot: someExpression" is equivalent to "template: { ifnot: someExpression }"
 ko.bindingHandlers['ifnot'] = {
+    'type': ko.bindingTypes.control,
+    'options': [ko.bindingOptions.canUseVirtual],
     makeTemplateValueAccessor: function(valueAccessor) {
         return function() { return { 'ifnot': valueAccessor(), 'templateEngine': ko.nativeTemplateEngine.instance } };
     },	
     'init': function(element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
-        return ko.bindingHandlers['template']['init'](element, ko.bindingHandlers['ifnot'].makeTemplateValueAccessor(valueAccessor));
+        ko.bindingHandlers['template']['init'](element, ko.bindingHandlers['ifnot'].makeTemplateValueAccessor(valueAccessor));
     },
     'update': function(element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
-        return ko.bindingHandlers['template']['update'](element, ko.bindingHandlers['ifnot'].makeTemplateValueAccessor(valueAccessor), allBindingsAccessor, viewModel, bindingContext);
+        ko.bindingHandlers['template']['update'](element, ko.bindingHandlers['ifnot'].makeTemplateValueAccessor(valueAccessor), allBindingsAccessor, viewModel, bindingContext);
     }
 };
-ko.jsonExpressionRewriting.bindingRewriteValidators['ifnot'] = false; // Can't rewrite control flow bindings
-ko.virtualElements.allowedBindings['ifnot'] = true;
 
 // "foreach: someExpression" is equivalent to "template: { foreach: someExpression }"
 // "foreach: { data: someExpression, afterAdd: myfn }" is equivalent to "template: { foreach: someExpression, afterAdd: myfn }"
 ko.bindingHandlers['foreach'] = {
+    'type': ko.bindingTypes.control,
+    'options': [ko.bindingOptions.canUseVirtual],
     makeTemplateValueAccessor: function(valueAccessor) {
         return function() { 
             var bindingValue = ko.utils.unwrapObservable(valueAccessor());
@@ -533,12 +546,9 @@ ko.bindingHandlers['foreach'] = {
         };
     },
     'init': function(element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {		
-        return ko.bindingHandlers['template']['init'](element, ko.bindingHandlers['foreach'].makeTemplateValueAccessor(valueAccessor));
+        ko.bindingHandlers['template']['init'](element, ko.bindingHandlers['foreach'].makeTemplateValueAccessor(valueAccessor));
     },
     'update': function(element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
-        return ko.bindingHandlers['template']['update'](element, ko.bindingHandlers['foreach'].makeTemplateValueAccessor(valueAccessor), allBindingsAccessor, viewModel, bindingContext);
+        ko.bindingHandlers['template']['update'](element, ko.bindingHandlers['foreach'].makeTemplateValueAccessor(valueAccessor), allBindingsAccessor, viewModel, bindingContext);
     }
 };
-ko.jsonExpressionRewriting.bindingRewriteValidators['foreach'] = false; // Can't rewrite control flow bindings
-ko.virtualElements.allowedBindings['foreach'] = true;
-ko.exportSymbol('allowedVirtualElementBindings', ko.virtualElements.allowedBindings);
