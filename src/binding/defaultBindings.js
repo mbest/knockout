@@ -27,8 +27,8 @@ ko.bindingHandlers['event'] = {
                         var handlerFunction = valueAccessor()[eventName];
                         if (!handlerFunction)
                             return;
-                        
-                        try { 
+
+                        try {
                             // Take all the event args, and prefix with the viewmodel
                             var argsForHandler = ko.utils.makeArray(arguments);
                             argsForHandler.unshift(viewModel);
@@ -235,7 +235,7 @@ ko.bindingHandlers['options'] = {
                 else
                     optionText = optionValue;				 // Given no optionsText arg; use the data value itself
                 if ((optionText === null) || (optionText === undefined))
-                    optionText = "";                                    
+                    optionText = "";
 
                 ko.utils.setTextContent(option, optionText);
 
@@ -303,28 +303,27 @@ ko.bindingHandlers['selectedOptions'] = {
 };
 
 
-ko.bindingHandlers['text'] = {
+/*ko.bindingHandlers['text'] = {
     'update': function (element, valueAccessor) {
         ko.utils.setTextContent(element, valueAccessor());
     }
-};
+};*/
 
-/*ko.bindingHandlers['text'] = {
+ko.bindingHandlers['text'] = {
     'init': function(element) {
-        if (element.childNodes.length == 1 && element.firstChild.nodeType == 3)
+        var node = ko.virtualElements.firstChild(element);
+        if (node && node.nodeType === 3 && !ko.virtualElements.nextSibling(node))
             return;
-        while (element.firstChild) {
-            element.removeChild(element.firstChild);
-        }
-        element.appendChild(document.createTextNode(""));        
+        ko.virtualElements.setDomNodeChildren(element, [document.createTextNode("")]);
     },
     'update': function (element, valueAccessor) {
         var value = ko.utils.unwrapObservable(valueAccessor());
         if ((value === null) || (value === undefined))
             value = "";
-        element.firstChild.data = value;
+        ko.virtualElements.firstChild(element).data = value;
     }
-};*/
+};
+ko.virtualElements.allowedBindings['text'] = true;
 
 ko.bindingHandlers['html'] = {
     'init': function() {
@@ -481,94 +480,86 @@ ko.bindingHandlers['hasfocus'] = {
 ko.bindingHandlers['repeat'] = {
     'init': function(element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
         // initialize optional parameters
-        var o = {repeatIndex:'$index', repeatData:'$item'};
+        var repeatIndex = '$index', repeatData = '$item', repeatBind;
         var repeatParam = ko.utils.unwrapObservable(valueAccessor());
         if (typeof repeatParam == 'object') {
-            if ('index' in repeatParam) o.repeatIndex = repeatParam['index'];
-            if ('item' in repeatParam) o.repeatData = repeatParam['item'];
-            if ('bind' in repeatParam) o.repeatBind = repeatParam['bind'];
+            if ('index' in repeatParam) repeatIndex = repeatParam['index'];
+            if ('item' in repeatParam) repeatData = repeatParam['item'];
+            if ('bind' in repeatParam) repeatBind = repeatParam['bind'];
         }
 
         // Make a copy of the element node to be copied for each repetition
-        o.cleanNode = element.cloneNode(true);
+        var cleanNode = element.cloneNode(true);
         // IE's cloneNode copies expando properties; remove them from the new node
-        ko.utils.domData.clean(o.cleanNode);
+        ko.utils.domData.clean(cleanNode);
         // Remove node's binding (not necessary but cleaner)
-        o.cleanNode.removeAttribute('data-bind');
+        cleanNode.removeAttribute('data-bind');
 
-        // Original element node is just a placeholder; make it hidden and delete children
-        element.style.display = "none";
-        element.disabled = true;
-        while (element.firstChild)
-            element.removeChild(element.firstChild);
+        // Original element is no longer needed: delete it and create a placeholder comment
+        var parent = element.parentNode, placeholder = document.createComment('ko_repeatplaceholder');
+        parent.replaceChild(placeholder, element);
 
-        // set up persistent data         
-        o.allRepeatNodes = [];
-        o.repeatUpdate = ko.observable();
-        o.repeatArray = undefined;
-        bindingContext['$repeatOptions'] = o;
-        
-        return { 'controlsDescendantBindings': true };
-    },
-    'update': function(element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
-        var o = bindingContext['$repeatOptions'];
-        var allRepeatNodes = o.allRepeatNodes;
-        var parent = element.parentNode;
-        
-        var repeatCount = ko.utils.unwrapObservable(valueAccessor());
-        if (typeof repeatCount == 'object') {
-            if ('count' in repeatCount) {
-                repeatCount = ko.utils.unwrapObservable(repeatCount['count']);
-            } else if ('foreach' in repeatCount) {
-                o.repeatArray = ko.utils.unwrapObservable(repeatCount['foreach']); 
-                repeatCount = o.repeatArray['length'];
+        // set up persistent data
+        var allRepeatNodes = [],
+            repeatUpdate = ko.observable(),
+            repeatArray = undefined;
+
+        ko.dependentObservable(function() {
+            var repeatCount = ko.utils.unwrapObservable(valueAccessor());
+            if (typeof repeatCount == 'object') {
+                if ('count' in repeatCount) {
+                    repeatCount = ko.utils.unwrapObservable(repeatCount['count']);
+                } else if ('foreach' in repeatCount) {
+                    repeatArray = ko.utils.unwrapObservable(repeatCount['foreach']);
+                    repeatCount = repeatArray['length'];
+                }
             }
-        } 
-        o.repeatUpdate["notifySubscribers"]();
-            
-        if (allRepeatNodes.length < repeatCount) {
-            // Array is longer: add nodes to end (also initially populates nodes)
-            var endNode = allRepeatNodes.length ? allRepeatNodes[allRepeatNodes.length-1] : element;
-            var insertBefore = endNode.nextSibling;
-            var startInsert = allRepeatNodes.length; 
-            for (var i = startInsert; i < repeatCount; i++) {
-                var newNode = o.cleanNode.cloneNode(true);     
-                if (insertBefore)
+            // Remove nodes from end if array is shorter
+            if (allRepeatNodes.length > repeatCount) {
+                while (allRepeatNodes.length > repeatCount) {
+                    ko.removeNode(allRepeatNodes.pop());
+                }
+            }
+            // Notify existing nodes of change
+            repeatUpdate["notifySubscribers"]();
+
+            // Add nodes to end if array is longer (also initially populates nodes)
+            if (allRepeatNodes.length < repeatCount) {
+                var endNode = allRepeatNodes.length ? allRepeatNodes[allRepeatNodes.length-1] : placeholder;
+                var insertBefore = endNode.nextSibling;
+                var startInsert = allRepeatNodes.length;
+                for (var i = startInsert; i < repeatCount; i++) {
+                    var newNode = cleanNode.cloneNode(true);
                     parent.insertBefore(newNode, insertBefore);
-                else
-                    parent.appendChild(newNode);    
-                newNode.setAttribute('data-repeat-index', i);
-                allRepeatNodes[i] = newNode;
-            }
-            // Apply bindings to inserted nodes
-            for (i = startInsert; i < repeatCount; i++) {
-                var newContext = ko.utils.extend(new ko.bindingContext(), bindingContext);
-                delete newContext['$repeatOptions'];
-                newContext[o.repeatIndex] = i;
-                if (o.repeatArray) {
-                    newContext[o.repeatData] = (function(index) { return function() {
-                        o.repeatUpdate();   // for dependency tracking
-                        return ko.utils.unwrapObservable(o.repeatArray[index]); 
-                    }; })(i);
-                    /*newContext[repeatData] = (function(index) { return ko.dependentObservable(function() {
-                        o.repeatUpdate();   // for dependency tracking
-                        return ko.utils.unwrapObservable(o.repeatArray[index]); 
-                    }, null, {'deferEvaluation': true, 'disposeWhenNodeIsRemoved': allRepeatNodes[index]}); })(i);*/
+                    newNode.setAttribute('data-repeat-index', i);
+                    allRepeatNodes[i] = newNode;
                 }
-                var shouldBindDescendants = true;
-                if (o.repeatBind) {
-                    var binding = ko.bindingProvider['instance']['parseBindingsString'](o.repeatBind, newContext);
-                    shouldBindDescendants = ko.applyBindingsToNode(allRepeatNodes[i], binding, newContext).shouldBindDescendants;
+                // Apply bindings to inserted nodes
+                for (i = startInsert; i < repeatCount; i++) {
+                    var newContext = ko.utils.extend(new ko.bindingContext(), bindingContext);
+                    newContext[repeatIndex] = i;
+                    if (repeatArray) {
+                        newContext[repeatData] = (function(index) { return function() {
+                            repeatUpdate();   // for dependency tracking
+                            return ko.utils.unwrapObservable(repeatArray[index]);
+                        }; })(i);
+                        /*newContext[repeatData] = (function(index) { return ko.dependentObservable(function() {
+                            repeatUpdate();   // for dependency tracking
+                            return ko.utils.unwrapObservable(repeatArray[index]);
+                        }, null, {'deferEvaluation': true, 'disposeWhenNodeIsRemoved': allRepeatNodes[index]}); })(i);*/
+                    }
+                    var shouldBindDescendants = true;
+                    if (repeatBind) {
+                        var binding = ko.bindingProvider['instance']['parseBindingsString'](repeatBind, newContext);
+                        shouldBindDescendants = ko.applyBindingsToNode(allRepeatNodes[i], binding, newContext).shouldBindDescendants;
+                    }
+                    if (shouldBindDescendants)
+                        ko.applyBindingsToDescendants(newContext, allRepeatNodes[i]);
                 }
-                if (shouldBindDescendants)
-                    ko.applyBindingsToDescendants(newContext, allRepeatNodes[i]);
             }
-        } else if (allRepeatNodes.length > repeatCount) {
-            // Array is shorter: remove nodes from end
-            while (allRepeatNodes.length > repeatCount) {
-                ko.removeNode(allRepeatNodes.pop());
-            }
-        }
+        }, null, {'disposeWhenNodeIsRemoved': placeholder});
+
+        return { 'controlsDescendantBindings': true };
     }
 };
 
@@ -591,7 +582,7 @@ ko.bindingHandlers['switch'] = {
             switch (node.nodeType) {
             case 1: case 8:
                 // Each child element gets a new binding context so it has it's own $switchIndex property.
-                // The other properties are shared since they're objects. 
+                // The other properties are shared since they're objects.
                 var newContext = ko.utils.extend(ko.utils.extend(new ko.bindingContext(), bindingContext), switchBindings);
                 ko.applyBindings(newContext, node);
                 break;
@@ -605,32 +596,24 @@ ko.virtualElements.allowedBindings['switch'] = true;
 
 ko.bindingHandlers['case'] = {
     checkCase: function(valueAccessor, bindingContext) {
-        var index = bindingContext.$switchIndex;
-        if (index && bindingContext.$switchSkipNextArray[index-1]()) {
-            // an earlier case binding matched; so skip this one (and subsequent ones)
-            bindingContext.$switchSkipNextArray[index](true);
-            return false;
-        } else {
-            // Check value and determine result:
-            //  If value is the special object $else, the result is always true (should always be the last case)
-            //  If the control value is boolean, the result is the matching truthiness of the value
-            //  If value is boolean, the result is the value (allows expressions instead of just simple matching)
-            //  If value is an array, the result is true if the control value matches (strict) an item in the array
-            //  Otherwise, the result is true if value matches the control value (loose)
-            var value = ko.utils.unwrapObservable(valueAccessor()), result = true;
-            if (value !== bindingContext['$else']) {
-                var switchValue = ko.utils.unwrapObservable(bindingContext.$switchValueAccessor());
-                result = (typeof switchValue == 'boolean')
-                    ? (value ? switchValue : !switchValue)
-                    : (typeof value == 'boolean')
-                        ? value
-                        : (value instanceof Array)
-                            ? (ko.utils.arrayIndexOf(value, switchValue) !== -1)
-                            : (value == switchValue);
-            }
-            bindingContext.$switchSkipNextArray[index](result); // skip the subsequent cases if result is true
-            return result;
+        // Check value and determine result:
+        //  If value is the special object $else, the result is always true (should always be the last case)
+        //  If the control value is boolean, the result is the matching truthiness of the value
+        //  If value is boolean, the result is the value (allows expressions instead of just simple matching)
+        //  If value is an array, the result is true if the control value matches (strict) an item in the array
+        //  Otherwise, the result is true if value matches the control value (loose)
+        var value = ko.utils.unwrapObservable(valueAccessor());
+        if (value === bindingContext['$else']) {
+            return true;
         }
+        var switchValue = ko.utils.unwrapObservable(bindingContext.$switchValueAccessor());
+        return (typeof switchValue == 'boolean')
+            ? (value ? switchValue : !switchValue)
+            : (typeof value == 'boolean')
+                ? value
+                : (value instanceof Array)
+                    ? (ko.utils.arrayIndexOf(value, switchValue) !== -1)
+                    : (value == switchValue);
     },
     makeTemplateValueAccessor: function(ifValue) {
         return function() { return { 'if': ifValue, 'templateEngine': ko.nativeTemplateEngine.instance } };
@@ -647,14 +630,30 @@ ko.bindingHandlers['case'] = {
         return ko.bindingHandlers['template']['init'](element, function(){ return {}; });
     },
     'update': function(element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
+        var index = bindingContext.$switchIndex, result, skipNext;
+        if (index && bindingContext.$switchSkipNextArray[index-1]()) {
+            // an earlier case binding matched; so skip this one (and subsequent ones)
+            result = false;
+            skipNext = true;
+        } else {
+            // if result is true, will skip the subsequent cases
+            skipNext = result = this.checkCase(valueAccessor, bindingContext);
+        }
         // call template update() with calculated value for 'if'
-        return ko.bindingHandlers['template']['update'](element, 
-            this.makeTemplateValueAccessor(this.checkCase(valueAccessor, bindingContext)), 
-            allBindingsAccessor, viewModel, bindingContext);
+        ko.bindingHandlers['template']['update'](element,
+            this.makeTemplateValueAccessor(result), allBindingsAccessor, viewModel, bindingContext);
+        bindingContext.$switchSkipNextArray[index](skipNext);
     }
 };
 ko.jsonExpressionRewriting.bindingRewriteValidators['case'] = false; // Can't rewrite control flow bindings
 ko.virtualElements.allowedBindings['case'] = true;
+
+ko.bindingHandlers['casenot'] = ko.utils.extend({}, ko.bindingHandlers['case']);
+ko.bindingHandlers['casenot'].checkCase = function(valueAccessor, bindingContext) {
+    return !ko.bindingHandlers['case'].checkCase.call(this, valueAccessor, bindingContext);
+}
+ko.jsonExpressionRewriting.bindingRewriteValidators['casenot'] = false; // Can't rewrite control flow bindings
+ko.virtualElements.allowedBindings['casenot'] = true;
 
 
 var withInitializedDomDataKey = "__ko_withlightInit__";
@@ -680,7 +679,7 @@ ko.bindingHandlers['withlight'] = {
             if ((currentChild.nodeType === 1) || (currentChild.nodeType === 8))
                 ko.applyBindings(innerContext, currentChild);
         }
-    }     
+    }
 };
 
 // "with: someExpression" is equivalent to "template: { if: someExpression, data: someExpression }"

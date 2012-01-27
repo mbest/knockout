@@ -81,6 +81,13 @@ describe('Binding: Text', {
         value_of(testNode.childNodes[0].textContent || testNode.childNodes[0].innerText).should_be(model.textProp);
     },
 
+    'Should assign the value to the node, HTML-encoding the value': function () {    	
+        var model = { textProp: "'Val <with> \"special\" <i>characters</i>'" };
+        testNode.innerHTML = "<p>Begin <!-- ko text: textProp --><!-- /ko --></p>";
+        ko.applyBindings(model, testNode);
+        value_of(testNode.childNodes[0]).should_contain_text("Begin " + model.textProp);
+    },
+
     'Should assign an empty string as value if the model value is null': function () {
         testNode.innerHTML = "<span data-bind='text:(null)' ></span>";
         ko.applyBindings(null, testNode);
