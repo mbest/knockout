@@ -3,7 +3,10 @@
 var eventHandlersWithShortcuts = ['click'];
 ko.utils.arrayForEach(eventHandlersWithShortcuts, function(eventName) {
     ko.bindingHandlers[eventName] = {
-        'type': ko.bindingTypes.eventHandler,
+        bindingOptions: {
+            bindingType: ko.bindingTypes.eventHandler,
+            bindingFlags: []
+        },
         'init': function(element, valueAccessor, allBindingsAccessor, viewModel) {
             var newValueAccessor = function () {
                 var result = {};
@@ -12,13 +15,15 @@ ko.utils.arrayForEach(eventHandlersWithShortcuts, function(eventName) {
             };
             ko.bindingHandlers['event']['init'].call(this, element, newValueAccessor, allBindingsAccessor, viewModel);
         }
-    }	
+    }
 });
 
 
 ko.bindingHandlers['event'] = {
-    'type': ko.bindingTypes.eventHandler,
-    'options': [ko.bindingOptions.twoLevel],
+    bindingOptions: {
+        bindingType: ko.bindingTypes.eventHandler,
+        bindingFlags: [ko.bindingFlags.twoLevel]
+    },
     'init' : function (element, valueAccessor, allBindingsAccessor, viewModel) {
         var eventsToHandle = valueAccessor() || {};
         for(var eventNameOutsideClosure in eventsToHandle) {
@@ -31,8 +36,8 @@ ko.bindingHandlers['event'] = {
                         if (!handlerFunction)
                             return;
                         var allBindings = allBindingsAccessor();
-                        
-                        try { 
+
+                        try {
                             // Take all the event args, and prefix with the viewmodel
                             var argsForHandler = ko.utils.makeArray(arguments);
                             argsForHandler.unshift(viewModel);
@@ -45,7 +50,7 @@ ko.bindingHandlers['event'] = {
                                     event.returnValue = false;
                             }
                         }
-                        
+
                         var bubble = allBindings[eventName + 'Bubble'] !== false;
                         if (!bubble) {
                             event.cancelBubble = true;
@@ -60,7 +65,10 @@ ko.bindingHandlers['event'] = {
 };
 
 ko.bindingHandlers['submit'] = {
-    'type': ko.bindingTypes.eventHandler,
+    bindingOptions: {
+        bindingType: ko.bindingTypes.eventHandler,
+        bindingFlags: []
+    },
     'init': function (element, valueAccessor, allBindingsAccessor, viewModel) {
         if (typeof valueAccessor() != "function")
             throw new Error("The value for a submit binding must be a function");
@@ -101,10 +109,10 @@ ko.bindingHandlers['enable'] = {
     }
 };
 
-ko.bindingHandlers['disable'] = { 
-    'update': function (element, valueAccessor) { 
-        ko.bindingHandlers['enable']['update'](element, function() { return !ko.utils.unwrapObservable(valueAccessor()) }); 		
-    } 	
+ko.bindingHandlers['disable'] = {
+    'update': function (element, valueAccessor) {
+        ko.bindingHandlers['enable']['update'](element, function() { return !ko.utils.unwrapObservable(valueAccessor()) });
+    }
 };
 
 function ensureDropdownSelectionIsConsistentWithModelValue(element, modelValue, preferModelValue) {
@@ -121,8 +129,11 @@ function ensureDropdownSelectionIsConsistentWithModelValue(element, modelValue, 
 };
 
 ko.bindingHandlers['value'] = {
-    'type': ko.bindingTypes.twoWay,
-    'init': function (element, valueAccessor, allBindingsAccessor) { 
+    bindingOptions: {
+        bindingType: ko.bindingTypes.twoWay,
+        bindingFlags: []
+    },
+    'init': function (element, valueAccessor, allBindingsAccessor) {
         // Always catch "change" event; possibly other events too if asked
         var eventsToCatch = ["change"];
         var requestedEventsToCatch = allBindingsAccessor()["valueUpdate"];
@@ -132,7 +143,7 @@ ko.bindingHandlers['value'] = {
             ko.utils.arrayPushAll(eventsToCatch, requestedEventsToCatch);
             eventsToCatch = ko.utils.arrayGetDistinctValues(eventsToCatch);
         }
-        
+
         ko.utils.arrayForEach(eventsToCatch, function(eventName) {
             // The syntax "after<eventname>" means "run the handler asynchronously after the event"
             // This is useful, for example, to catch "keydown" events after the browser has updated the control
@@ -144,7 +155,7 @@ ko.bindingHandlers['value'] = {
             }
             var runEventHandler = handleEventAsynchronously ? function(handler) { setTimeout(handler, 0) }
                                                             : function(handler) { handler() };
-            
+
             ko.utils.registerEventHandler(element, eventName, function () {
                 runEventHandler(function() {
                     var modelValue = valueAccessor();
@@ -154,22 +165,22 @@ ko.bindingHandlers['value'] = {
                     else {
                         var allBindings = allBindingsAccessor();
                         if (allBindings['_ko_property_writers'] && allBindings['_ko_property_writers']['value'])
-                            allBindings['_ko_property_writers']['value'](elementValue); 
+                            allBindings['_ko_property_writers']['value'](elementValue);
                     }
                 });
-            });	    	
+            });
         });
     },
     'update': function (element, valueAccessor) {
         var newValue = ko.utils.unwrapObservable(valueAccessor());
         var elementValue = ko.selectExtensions.readValue(element);
         var valueHasChanged = (newValue != elementValue);
-        
-        // JavaScript's 0 == "" behavious is unfortunate here as it prevents writing 0 to an empty text box (loose equality suggests the values are the same). 
+
+        // JavaScript's 0 == "" behavious is unfortunate here as it prevents writing 0 to an empty text box (loose equality suggests the values are the same).
         // We don't want to do a strict equality comparison as that is more confusing for developers in certain cases, so we specifically special case 0 != "" here.
         if ((newValue === 0) && (elementValue !== 0) && (elementValue !== "0"))
             valueHasChanged = true;
-        
+
         if (valueHasChanged) {
             var applyValueAction = function () { ko.selectExtensions.writeValue(element, newValue); };
             applyValueAction();
@@ -181,7 +192,7 @@ ko.bindingHandlers['value'] = {
             if (alsoApplyAsynchronously)
                 setTimeout(applyValueAction, 0);
         }
-        
+
         // If you try to set a model value that can't be represented in an already-populated dropdown, reject that change,
         // because you're not allowed to have a model value that disagrees with a visible UI selection.
         if ((element.tagName == "SELECT") && (element.length > 0))
@@ -190,6 +201,10 @@ ko.bindingHandlers['value'] = {
 };
 
 ko.bindingHandlers['options'] = {
+    bindingOptions: {
+        bindingType: ko.bindingTypes.contentOneWay,
+        bindingFlags: []
+    },
     'update': function (element, valueAccessor, allBindingsAccessor) {
         if (element.tagName != "SELECT")
             throw new Error("options binding applies only to SELECT elements");
@@ -206,7 +221,7 @@ ko.bindingHandlers['options'] = {
         var value = ko.utils.unwrapObservable(valueAccessor());
         var selectedValue = element.value;
 
-        // Remove all existing <option>s. 
+        // Remove all existing <option>s.
         // Need to use .remove() rather than .removeChild() for <option>s otherwise IE behaves oddly (https://github.com/SteveSanderson/knockout/issues/134)
         while (element.length > 0) {
             ko.cleanNode(element.options[0]);
@@ -225,12 +240,12 @@ ko.bindingHandlers['options'] = {
             }
             for (var i = 0, j = value.length; i < j; i++) {
                 var option = document.createElement("OPTION");
-                
+
                 // Apply a value to the option element
                 var optionValue = typeof allBindings['optionsValue'] == "string" ? value[i][allBindings['optionsValue']] : value[i];
                 optionValue = ko.utils.unwrapObservable(optionValue);
                 ko.selectExtensions.writeValue(option, optionValue);
-                
+
                 // Apply some text to the option element
                 var optionsTextValue = allBindings['optionsText'];
                 var optionText;
@@ -241,7 +256,7 @@ ko.bindingHandlers['options'] = {
                 else
                     optionText = optionValue;				 // Given no optionsText arg; use the data value itself
                 if ((optionText === null) || (optionText === undefined))
-                    optionText = "";                                    
+                    optionText = "";
 
                 ko.utils.setTextContent(option, optionText);
 
@@ -258,7 +273,7 @@ ko.bindingHandlers['options'] = {
                     countSelectionsRetained++;
                 }
             }
-            
+
             if (previousScrollTop)
                 element.scrollTop = previousScrollTop;
 
@@ -274,7 +289,10 @@ ko.bindingHandlers['options'] = {
 ko.bindingHandlers['options'].optionValueDomDataKey = '__ko.optionValueDomData__';
 
 ko.bindingHandlers['selectedOptions'] = {
-    'type': ko.bindingTypes.twoWay,
+    bindingOptions: {
+        bindingType: ko.bindingTypes.twoWay,
+        bindingFlags: []
+    },
     getSelectedValuesFromSelectNode: function (selectNode) {
         var result = [];
         var nodes = selectNode.childNodes;
@@ -286,7 +304,7 @@ ko.bindingHandlers['selectedOptions'] = {
         return result;
     },
     'init': function (element, valueAccessor, allBindingsAccessor) {
-        ko.utils.registerEventHandler(element, "change", function () { 
+        ko.utils.registerEventHandler(element, "change", function () {
             var value = valueAccessor();
             if (ko.isWriteableObservable(value))
                 value(ko.bindingHandlers['selectedOptions'].getSelectedValuesFromSelectNode(this));
@@ -295,7 +313,7 @@ ko.bindingHandlers['selectedOptions'] = {
                 if (allBindings['_ko_property_writers'] && allBindings['_ko_property_writers']['value'])
                     allBindings['_ko_property_writers']['value'](ko.bindingHandlers['selectedOptions'].getSelectedValuesFromSelectNode(this));
             }
-        });    	
+        });
     },
     'update': function (element, valueAccessor) {
         if (element.tagName != "SELECT")
@@ -314,15 +332,20 @@ ko.bindingHandlers['selectedOptions'] = {
 };
 
 ko.bindingHandlers['text'] = {
+    bindingOptions: {
+        bindingType: ko.bindingTypes.contentOneWay,
+        bindingFlags: []
+    },
     'update': function (element, valueAccessor) {
         ko.utils.setTextContent(element, valueAccessor());
     }
 };
 
 ko.bindingHandlers['html'] = {
-    // Use control type to prevent binding on the dynamically-injected HTML
-    // (as developers are unlikely to expect that, and it has security implications)
-    'type': ko.bindingTypes.control,
+    bindingOptions: {
+        bindingType: ko.bindingTypes.contentOneWay,
+        bindingFlags: []
+    },
     'update': function (element, valueAccessor) {
         var value = ko.utils.unwrapObservable(valueAccessor());
         ko.utils.setHtml(element, value);
@@ -330,7 +353,10 @@ ko.bindingHandlers['html'] = {
 };
 
 ko.bindingHandlers['css'] = {
-    'options': [ko.bindingOptions.twoLevel],
+    bindingOptions: {
+        bindingType: ko.bindingTypes.oneWay,
+        bindingFlags: [ko.bindingFlags.twoLevel]
+    },
     'update': function (element, valueAccessor) {
         var value = ko.utils.unwrapObservable(valueAccessor() || {});
         for (var className in value) {
@@ -343,7 +369,10 @@ ko.bindingHandlers['css'] = {
 };
 
 ko.bindingHandlers['style'] = {
-    'options': [ko.bindingOptions.twoLevel],
+    bindingOptions: {
+        bindingType: ko.bindingTypes.oneWay,
+        bindingFlags: [ko.bindingFlags.twoLevel]
+    },
     'update': function (element, valueAccessor) {
         var value = ko.utils.unwrapObservable(valueAccessor() || {});
         for (var styleName in value) {
@@ -356,7 +385,10 @@ ko.bindingHandlers['style'] = {
 };
 
 ko.bindingHandlers['uniqueName'] = {
-    'options': [ko.bindingOptions.noValue],
+    bindingOptions: {
+        bindingType: ko.bindingTypes.oneWay,
+        bindingFlags: [ko.bindingFlags.noValue]
+    },
     'init': function (element, valueAccessor) {
         if (valueAccessor()) {
             element.name = "ko_unique_" + (++ko.bindingHandlers['uniqueName'].currentIndex);
@@ -372,9 +404,12 @@ ko.bindingHandlers['uniqueName'] = {
 ko.bindingHandlers['uniqueName'].currentIndex = 0;
 
 ko.bindingHandlers['checked'] = {
-    'type': ko.bindingTypes.twoWay,
+    bindingOptions: {
+        bindingType: ko.bindingTypes.twoWay,
+        bindingFlags: []
+    },
     'init': function (element, valueAccessor, allBindingsAccessor) {
-        var updateHandler = function() {            
+        var updateHandler = function() {
             var valueToWrite;
             if (element.type == "checkbox") {
                 valueToWrite = element.checked;
@@ -383,8 +418,8 @@ ko.bindingHandlers['checked'] = {
             } else {
                 return; // "checked" binding only responds to checkboxes and selected radio buttons
             }
-            
-            var modelValue = valueAccessor();                 
+
+            var modelValue = valueAccessor();
             if ((element.type == "checkbox") && (ko.utils.unwrapObservable(modelValue) instanceof Array)) {
                 // For checkboxes bound to an array, we add/remove the checkbox value to that array
                 // This works for both observable and non-observable arrays
@@ -393,7 +428,7 @@ ko.bindingHandlers['checked'] = {
                     modelValue.push(element.value);
                 else if ((!element.checked) && (existingEntryIndex >= 0))
                     modelValue.splice(existingEntryIndex, 1);
-            } else if (ko.isWriteableObservable(modelValue)) {            	
+            } else if (ko.isWriteableObservable(modelValue)) {
                 if (modelValue() !== valueToWrite) { // Suppress repeated events when there's nothing new to notify (some browsers raise them)
                     modelValue(valueToWrite);
                 }
@@ -412,15 +447,15 @@ ko.bindingHandlers['checked'] = {
     },
     'update': function (element, valueAccessor) {
         var value = ko.utils.unwrapObservable(valueAccessor());
-        
-        if (element.type == "checkbox") {        	
+
+        if (element.type == "checkbox") {
             if (value instanceof Array) {
                 // When bound to an array, the checkbox being checked represents its value being present in that array
                 element.checked = ko.utils.arrayIndexOf(value, element.value) >= 0;
             } else {
                 // When bound to anything other value (not an array), the checkbox being checked represents the value being trueish
-                element.checked = value;	
-            }            
+                element.checked = value;
+            }
         } else if (element.type == "radio") {
             element.checked = (element.value == value);
         }
@@ -428,19 +463,22 @@ ko.bindingHandlers['checked'] = {
 };
 
 ko.bindingHandlers['attr'] = {
-    'options': [ko.bindingOptions.twoLevel],
+    bindingOptions: {
+        bindingType: ko.bindingTypes.oneWay,
+        bindingFlags: [ko.bindingFlags.twoLevel]
+    },
     'update': function(element, valueAccessor, allBindingsAccessor) {
         var value = ko.utils.unwrapObservable(valueAccessor()) || {};
         for (var attrName in value) {
             if (typeof attrName == "string") {
                 var attrValue = ko.utils.unwrapObservable(value[attrName]);
-                
-                // To cover cases like "attr: { checked:someProp }", we want to remove the attribute entirely 
+
+                // To cover cases like "attr: { checked:someProp }", we want to remove the attribute entirely
                 // when someProp is a "no value"-like value (strictly null, false, or undefined)
-                // (because the absence of the "checked" attr is how to mark an element as not checked, etc.)                
+                // (because the absence of the "checked" attr is how to mark an element as not checked, etc.)
                 if ((attrValue === false) || (attrValue === null) || (attrValue === undefined))
                     element.removeAttribute(attrName);
-                else 
+                else
                     element.setAttribute(attrName, attrValue.toString());
             }
         }
@@ -448,7 +486,10 @@ ko.bindingHandlers['attr'] = {
 };
 
 ko.bindingHandlers['hasfocus'] = {
-    'type': ko.bindingTypes.twoWay,
+    bindingOptions: {
+        bindingType: ko.bindingTypes.twoWay,
+        bindingFlags: []
+    },
     'init': function(element, valueAccessor, allBindingsAccessor) {
         var writeValue = function(valueToWrite) {
             var modelValue = valueAccessor();
@@ -461,7 +502,7 @@ ko.bindingHandlers['hasfocus'] = {
                 var allBindings = allBindingsAccessor();
                 if (allBindings['_ko_property_writers'] && allBindings['_ko_property_writers']['hasfocus']) {
                     allBindings['_ko_property_writers']['hasfocus'](valueToWrite);
-                }                
+                }
             }
         };
         ko.utils.registerEventHandler(element, "focus", function() { writeValue(true) });
@@ -478,8 +519,10 @@ ko.bindingHandlers['hasfocus'] = {
 
 // "with: someExpression" is equivalent to "template: { if: someExpression, data: someExpression }"
 ko.bindingHandlers['with'] = {
-    'type': ko.bindingTypes.control,
-    'options': [ko.bindingOptions.canUseVirtual],
+    bindingOptions: {
+        bindingType: ko.bindingTypes.contentOneWay,
+        bindingFlags: [ko.bindingFlags.canUseVirtual, ko.bindingFlags.dontRewrite]
+    },
     makeTemplateValueAccessor: function(valueAccessor) {
         return function() { var value = valueAccessor(); return { 'if': value, 'data': value, 'templateEngine': ko.nativeTemplateEngine.instance } };
     },
@@ -493,11 +536,13 @@ ko.bindingHandlers['with'] = {
 
 // "if: someExpression" is equivalent to "template: { if: someExpression }"
 ko.bindingHandlers['if'] = {
-    'type': ko.bindingTypes.control,
-    'options': [ko.bindingOptions.canUseVirtual],
+    bindingOptions: {
+        bindingType: ko.bindingTypes.contentOneWay,
+        bindingFlags: [ko.bindingFlags.canUseVirtual, ko.bindingFlags.dontRewrite]
+    },
     makeTemplateValueAccessor: function(valueAccessor) {
         return function() { return { 'if': valueAccessor(), 'templateEngine': ko.nativeTemplateEngine.instance } };
-    },	
+    },
     'init': function(element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
         ko.bindingHandlers['template']['init'](element, ko.bindingHandlers['if'].makeTemplateValueAccessor(valueAccessor));
     },
@@ -508,11 +553,13 @@ ko.bindingHandlers['if'] = {
 
 // "ifnot: someExpression" is equivalent to "template: { ifnot: someExpression }"
 ko.bindingHandlers['ifnot'] = {
-    'type': ko.bindingTypes.control,
-    'options': [ko.bindingOptions.canUseVirtual],
+    bindingOptions: {
+        bindingType: ko.bindingTypes.contentOneWay,
+        bindingFlags: [ko.bindingFlags.canUseVirtual, ko.bindingFlags.dontRewrite]
+    },
     makeTemplateValueAccessor: function(valueAccessor) {
         return function() { return { 'ifnot': valueAccessor(), 'templateEngine': ko.nativeTemplateEngine.instance } };
-    },	
+    },
     'init': function(element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
         ko.bindingHandlers['template']['init'](element, ko.bindingHandlers['ifnot'].makeTemplateValueAccessor(valueAccessor));
     },
@@ -524,28 +571,30 @@ ko.bindingHandlers['ifnot'] = {
 // "foreach: someExpression" is equivalent to "template: { foreach: someExpression }"
 // "foreach: { data: someExpression, afterAdd: myfn }" is equivalent to "template: { foreach: someExpression, afterAdd: myfn }"
 ko.bindingHandlers['foreach'] = {
-    'type': ko.bindingTypes.control,
-    'options': [ko.bindingOptions.canUseVirtual],
+    bindingOptions: {
+        bindingType: ko.bindingTypes.contentOneWay,
+        bindingFlags: [ko.bindingFlags.canUseVirtual, ko.bindingFlags.dontRewrite]
+    },
     makeTemplateValueAccessor: function(valueAccessor) {
-        return function() { 
+        return function() {
             var bindingValue = ko.utils.unwrapObservable(valueAccessor());
-            
+
             // If bindingValue is the array, just pass it on its own
             if ((!bindingValue) || typeof bindingValue.length == "number")
                 return { 'foreach': bindingValue, 'templateEngine': ko.nativeTemplateEngine.instance };
-            
+
             // If bindingValue.data is the array, preserve all relevant options
-            return { 
-                'foreach': bindingValue['data'], 
+            return {
+                'foreach': bindingValue['data'],
                 'includeDestroyed': bindingValue['includeDestroyed'],
                 'afterAdd': bindingValue['afterAdd'],
-                'beforeRemove': bindingValue['beforeRemove'], 
+                'beforeRemove': bindingValue['beforeRemove'],
                 'afterRender': bindingValue['afterRender'],
                 'templateEngine': ko.nativeTemplateEngine.instance
             };
         };
     },
-    'init': function(element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {		
+    'init': function(element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
         ko.bindingHandlers['template']['init'](element, ko.bindingHandlers['foreach'].makeTemplateValueAccessor(valueAccessor));
     },
     'update': function(element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {

@@ -11,8 +11,10 @@ ko.templateRewriting = (function () {
                 var possibleErrorMessage = allValidators[key](keyValueArray[i]['value']);
                 if (possibleErrorMessage)
                     throw new Error(possibleErrorMessage);
-            } else if (ko.getBindingType(key) === ko.bindingTypes.control) {
-                throw new Error("This template engine does not support the '" + key + "' binding within its templates");
+            } else {
+                var binding = ko.getBindingHandler(key);
+                if (binding && ko.checkBindingFlag(binding, ko.bindingFlags.dontRewrite))
+                    throw new Error("This template engine does not support the '" + key + "' binding within its templates");
             }
         }
     }
@@ -22,18 +24,18 @@ ko.templateRewriting = (function () {
         validateDataBindValuesForRewriting(dataBindKeyValueArray);
         var rewrittenDataBindAttributeValue = ko.bindingExpressionRewriting.insertPropertyAccessors(dataBindKeyValueArray);
 
-        // For no obvious reason, Opera fails to evaluate rewrittenDataBindAttributeValue unless it's wrapped in an additional 
-        // anonymous function, even though Opera's built-in debugger can evaluate it anyway. No other browser requires this 
+        // For no obvious reason, Opera fails to evaluate rewrittenDataBindAttributeValue unless it's wrapped in an additional
+        // anonymous function, even though Opera's built-in debugger can evaluate it anyway. No other browser requires this
         // extra indirection.
         var applyBindingsToNextSiblingScript = "ko.templateRewriting.applyMemoizedBindingsToNextSibling(function() { \
             return (function() { return { " + rewrittenDataBindAttributeValue + " } })() \
         })";
-        return templateEngine['createJavaScriptEvaluatorBlock'](applyBindingsToNextSiblingScript) + tagToRetain;        
+        return templateEngine['createJavaScriptEvaluatorBlock'](applyBindingsToNextSiblingScript) + tagToRetain;
     }
 
     return {
         bindingRewriteValidators: {},
-        
+
         ensureTemplateIsRewritten: function (template, templateEngine) {
             if (!templateEngine['isTemplateRewritten'](template))
                 templateEngine['rewriteTemplate'](template, function (htmlString) {
@@ -45,7 +47,7 @@ ko.templateRewriting = (function () {
             return htmlString.replace(memoizeDataBindingAttributeSyntaxRegex, function () {
                 return constructMemoizedTagReplacement(/* dataBindAttributeValue: */ arguments[6], /* tagToRetain: */ arguments[1], templateEngine);
             }).replace(memoizeVirtualContainerBindingSyntaxRegex, function() {
-                return constructMemoizedTagReplacement(/* dataBindAttributeValue: */ arguments[1], /* tagToRetain: */ "<!-- ko -->", templateEngine);              
+                return constructMemoizedTagReplacement(/* dataBindAttributeValue: */ arguments[1], /* tagToRetain: */ "<!-- ko -->", templateEngine);
             });
         },
 
