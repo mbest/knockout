@@ -8,7 +8,7 @@
         oneWay: 'one-way',
         // two-way bindings also update the model value if the DOM property changes
         twoWay: 'two-way',
-        // content bindings modify a DOM node's contents based on the model
+        // content bindings modify a DOM node's contents based on the model;
         // importantly, content bindings are responsible for binding their contents
         contentOneWay: 'content',
         // event bindings call the given function in response to a DOM event
@@ -24,7 +24,8 @@
         twoLevel: 'two-level',
         // can use comment-based bindings like <!-- ko if: value --><!-- /ko -->
         canUseVirtual: 'container-less',
-        // prevent the binding from being used withing a template that uses rewriting
+        // prevent the binding from being used withing a template that uses rewriting;
+        // this flag must be set for any binding that binds its existing descendants
         dontRewrite: 'dont-rewrite'
     };
 

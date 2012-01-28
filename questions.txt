@@ -1,0 +1,12 @@
+Memoization:
+ * supports nesting templates using an internal template mechanism (see templatingBehaviors.js for an example)
+ * default behavior is to re-write data-bind attributes in a text-based template so that the binding objects are evaluated in the context of the internal template rendering function
+
+Questions: How important are these features? Would people miss them if they were gone? Is there another way to accomplish them?
+
+
+View model that's an observable:
+ * applyBindings accepts an observable view model (see applyBindingsToNodeInternal for evidence).
+ * Since the view model is unwrapped for each element, writing to the observable (or calling notify..) will refresh all the bindings.
+
+Questions: Does anyone use this? Maybe there's another way to accomplish refreshing all the bindings.
