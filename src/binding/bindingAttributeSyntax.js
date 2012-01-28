@@ -49,33 +49,16 @@
         return ko.utils.arrayIndexOf(binding.bindingOptions.bindingFlags, flag) !== -1;
     };
 
-    ko.bindingContext = function(dataItem, parentBindingContext) {
-        if (parentBindingContext) {
-            // copy all properties from parent binding context
-            ko.utils.extend(this, parentBindingContext);
-            this['$parent'] = parentBindingContext['$data'];
-            this['$parents'] = (this['$parents'] || []).slice(0);
-            this['$parents'].unshift(this['$parent']);
-        } else {
-            this['$parents'] = [];
-            this['$root'] = dataItem;
-        }
-        this['$data'] = dataItem;
-    }
-    ko.bindingContext.prototype['createChildContext'] = function (dataItem) {
-        return new ko.bindingContext(dataItem, this);
-    };
-
-    function applyBindingsToDescendantsInternal (viewModel, elementVerified, areRootNodesForBindingContext) {
+    function applyBindingsToDescendantsInternal (bindingContext, elementVerified, areRootNodesForBindingContext) {
         var currentChild, nextInQueue = ko.virtualElements.firstChild(elementVerified);
         while (currentChild = nextInQueue) {
             // Keep a record of the next child *before* applying bindings, in case the binding removes the current child from its position
             nextInQueue = ko.virtualElements.nextSibling(currentChild);
-            applyBindingsToNodeAndDescendantsInternal(viewModel, currentChild, areRootNodesForBindingContext);
+            applyBindingsToNodeAndDescendantsInternal(bindingContext, currentChild, areRootNodesForBindingContext);
         }
     }
 
-    function applyBindingsToNodeAndDescendantsInternal (viewModel, nodeVerified, isRootNodeForBindingContext) {
+    function applyBindingsToNodeAndDescendantsInternal (bindingContext, nodeVerified, isRootNodeForBindingContext) {
         var shouldBindDescendants = true;
 
         // Perf optimisation: Apply bindings only if...
@@ -89,13 +72,13 @@
         var shouldApplyBindings = (isElement && isRootNodeForBindingContext)                             // Case (1)
                                || ko.bindingProvider['instance']['nodeHasBindings'](nodeVerified);       // Case (2)
         if (shouldApplyBindings)
-            shouldBindDescendants = applyBindingsToNodeInternal(nodeVerified, null, viewModel, isRootNodeForBindingContext).shouldBindDescendants;
+            shouldBindDescendants = applyBindingsToNodeInternal(nodeVerified, null, bindingContext, isRootNodeForBindingContext).shouldBindDescendants;
 
         if (shouldBindDescendants)
-            applyBindingsToDescendantsInternal(viewModel, nodeVerified, (!isElement && isRootNodeForBindingContext));
+            applyBindingsToDescendantsInternal(bindingContext, nodeVerified, (!isElement && isRootNodeForBindingContext));
     }
 
-    function applyBindingsToNodeInternal (node, bindings, viewModelOrBindingContext, isRootNodeForBindingContext) {
+    function applyBindingsToNodeInternal (node, bindings, bindingContext, isRootNodeForBindingContext) {
         // Need to be sure that inits are only run once, and updates never run until all the inits have been run
         var initPhase = 0; // 0 = before all inits, 1 = during inits, 2 = after all inits
 
@@ -116,20 +99,16 @@
         var bindingHandlerThatControlsDescendantBindings;
         new ko.dependentObservable(
             function () {
-                // Ensure we have a nonnull binding context to work with
-                var bindingContextInstance = viewModelOrBindingContext && (viewModelOrBindingContext instanceof ko.bindingContext)
-                    ? viewModelOrBindingContext
-                    : new ko.bindingContext(ko.utils.unwrapObservable(viewModelOrBindingContext));
-                var viewModel = bindingContextInstance['$data'];
+                var viewModel = bindingContext['$data'];
 
                 // We only need to store the bindingContext at the root of the subtree where it applies
                 // as all descendants will be able to find it by scanning up their ancestry
                 if (isRootNodeForBindingContext)
-                    ko.storedBindingContextForNode(node, bindingContextInstance);
+                    ko.storedBindingContextForNode(node, bindingContext);
 
                 // Use evaluatedBindings if given, otherwise fall back on asking the bindings provider to give us some bindings
                 var evaluatedBindings = (typeof bindings == "function") ? bindings() : bindings;
-                parsedBindings = evaluatedBindings || ko.bindingProvider['instance']['getBindings'](node, bindingContextInstance);
+                parsedBindings = evaluatedBindings || ko.bindingProvider['instance']['getBindings'](node, bindingContext);
 
                 if (parsedBindings) {
                     // First run all the inits, so bindings can register for notification on changes
@@ -143,7 +122,7 @@
                                 throw new Error("The binding '" + bindingKey + "' cannot be used with virtual elements")
 
                             if (typeof binding["init"] == "function") {
-                                binding["init"](node, makeValueAccessor(bindingKey), parsedBindingsAccessor, viewModel, bindingContextInstance);
+                                binding["init"](node, makeValueAccessor(bindingKey), parsedBindingsAccessor, viewModel, bindingContext);
                             }
                             if (ko.getBindingType(binding) == ko.bindingTypes.contentOneWay) {
                                 // If this binding handler claims to control descendant bindings, make a note of this
@@ -160,7 +139,7 @@
                         for (var bindingKey in parsedBindings) {
                             var binding = ko.getBindingHandler(bindingKey);
                             if (binding && typeof binding["update"] == "function") {
-                                binding["update"](node, makeValueAccessor(bindingKey), parsedBindingsAccessor, viewModel, bindingContextInstance);
+                                binding["update"](node, makeValueAccessor(bindingKey), parsedBindingsAccessor, viewModel, bindingContext);
                             }
                         }
                     }
@@ -175,6 +154,32 @@
         };
     };
 
+
+    ko.bindingContext = function(dataItem, parentBindingContext) {
+        if (parentBindingContext) {
+            // copy all properties from parent binding context
+            ko.utils.extend(this, parentBindingContext);
+            this['$parent'] = parentBindingContext['$data'];
+            this['$parents'] = (this['$parents'] || []).slice(0);
+            this['$parents'].unshift(this['$parent']);
+        } else {
+            this['$parents'] = [];
+            this['$root'] = dataItem;
+        }
+        this['$data'] = dataItem;
+    }
+    ko.bindingContext.prototype['createChildContext'] = function (dataItem) {
+        return new ko.bindingContext(dataItem, this);
+    };
+
+    function getBindingContext(viewModelOrBindingContext) {
+        // In previous versions, if the "viewModel" was an observable; it was automatically unwrapped.
+        // Now, if an observable is used for the "viewModel", it will have to be unwrapped manually in the bindings: $data().property
+        return viewModelOrBindingContext && (viewModelOrBindingContext instanceof ko.bindingContext)
+            ? viewModelOrBindingContext
+            : new ko.bindingContext(viewModelOrBindingContext);
+    }
+
     var storedBindingContextDomDataKey = "__ko_bindingContext__";
     ko.storedBindingContextForNode = function (node, bindingContext) {
         if (arguments.length == 2)
@@ -183,23 +188,23 @@
             return ko.utils.domData.get(node, storedBindingContextDomDataKey);
     }
 
-    ko.applyBindingsToNode = function (node, bindings, viewModel) {
+    ko.applyBindingsToNode = function (node, bindings, viewModelOrBindingContext) {
         if (node.nodeType === 1) // If it's an element, workaround IE <= 8 HTML parsing weirdness
             ko.virtualElements.normaliseVirtualElementDomStructure(node);
-        return applyBindingsToNodeInternal(node, bindings, viewModel, true);
+        return applyBindingsToNodeInternal(node, bindings, getBindingContext(viewModelOrBindingContext), true);
     };
 
-    ko.applyBindingsToDescendants = function(viewModel, rootNode, areRootNodesForBindingContext) {
+    ko.applyBindingsToDescendants = function(viewModelOrBindingContext, rootNode, areRootNodesForBindingContext) {
         if (rootNode.nodeType === 1 || rootNode.nodeType === 8)
-            applyBindingsToDescendantsInternal(viewModel, rootNode, areRootNodesForBindingContext);
+            applyBindingsToDescendantsInternal(getBindingContext(viewModelOrBindingContext), rootNode, areRootNodesForBindingContext);
     };
 
-    ko.applyBindings = function (viewModel, rootNode) {
+    ko.applyBindings = function (viewModelOrBindingContext, rootNode) {
         if (rootNode && (rootNode.nodeType !== 1) && (rootNode.nodeType !== 8))
             throw new Error("ko.applyBindings: first parameter should be your view model; second parameter should be a DOM node");
         rootNode = rootNode || window.document.body; // Make "rootNode" parameter optional
 
-        applyBindingsToNodeAndDescendantsInternal(viewModel, rootNode, true);
+        applyBindingsToNodeAndDescendantsInternal(getBindingContext(viewModelOrBindingContext), rootNode, true);
     };
 
     // Retrieving binding context from arbitrary nodes
