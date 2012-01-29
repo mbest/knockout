@@ -173,7 +173,7 @@ describe('Binding attribute syntax', {
 
     'Bindings can signal that they control descendant bindings by setting their type to "control"': function() {
         ko.bindingHandlers.test = {
-            options: {type: 'content'}
+            flags: ko.bindingFlags.contentBind
         };
         testNode.innerHTML = "<div data-bind='test: true'>"
                            +     "<div data-bind='text: 123'>456</div>"
@@ -187,7 +187,7 @@ describe('Binding attribute syntax', {
 
     'Should not be allowed to have multiple bindings on the same element that claim to control descendant bindings': function() {
         ko.bindingHandlers.test1 = {
-            options: {type: 'content'}
+            flags: ko.bindingFlags.contentBind
         };
         ko.bindingHandlers.test2 = ko.bindingHandlers.test1;
         testNode.innerHTML = "<div data-bind='test1: true, test2: true'></div>"
@@ -239,7 +239,7 @@ describe('Binding attribute syntax', {
         testNode.innerHTML = "Hello <!-- ko test: false -->Some text<!-- /ko --> Goodbye"
         var didThrow = false, initCalls = 0;
         ko.bindingHandlers.test = {
-            options: { type: 'content', flags: ['container-less'] },
+            flags: ko.bindingFlags.canUseVirtual,
             init: function (element, valueAccessor) { initCalls++; }
         };
         try {
@@ -256,7 +256,7 @@ describe('Binding attribute syntax', {
         testNode.innerHTML = "Hello <!-- ko test: false -->Some text<!-- /ko --> Goodbye"
         var countNodes = 0;
         ko.bindingHandlers.test = {
-            options: { type: 'content', flags: ['container-less'] },
+            flags: ko.bindingFlags.canUseVirtual | ko.bindingFlags.contentUpdate,
             init: function (element, valueAccessor) {
                 for (var node = ko.virtualElements.firstChild(element); node; node = ko.virtualElements.nextSibling(node)) {
                     countNodes++;
@@ -274,7 +274,7 @@ describe('Binding attribute syntax', {
         testNode.innerHTML = "Hello <!-- if: true --><!-- ko test: false -->Some text<!-- /ko --><!-- /ko --> Goodbye"
         var initCalls = 0;
         ko.bindingHandlers.test = {
-            options: { type: 'content', flags: ['container-less'] },
+            flags: ko.bindingFlags.canUseVirtual,
             init: function (element, valueAccessor) { initCalls++; }
         };
         ko.applyBindings(null, testNode);
@@ -286,7 +286,7 @@ describe('Binding attribute syntax', {
         testNode.innerHTML = "Hello <!-- ko test: false --><div>Some text</div><!-- /ko --> Goodbye"
         var innerContext = new ko.bindingContext();
         ko.bindingHandlers.test = {
-            options: { type: 'content', flags: ['container-less'] },
+            flags: ko.bindingFlags.canUseVirtual | ko.bindingFlags.contentBind,
             init: function (element, valueAccessor) {
                 ko.applyBindingsToDescendants(innerContext, element, true);
             }
@@ -299,7 +299,7 @@ describe('Binding attribute syntax', {
         testNode.innerHTML = "Hello <div data-bind='test: false'><!-- ko dummy: false --><div>Some text</div><!-- /ko --></div> Goodbye"
         var innerContext = new ko.bindingContext();
         ko.bindingHandlers.test = {
-            options: { type: 'content' },
+            flags: ko.bindingFlags.contentBind,
             init: function (element, valueAccessor) {
                 ko.applyBindingsToDescendants(innerContext, element, true);
             }
@@ -312,9 +312,12 @@ describe('Binding attribute syntax', {
     'Should be able to access custom context variables in child context': function() {
         testNode.innerHTML = "Hello <div data-bind='test: false'><!-- ko with: data --><div>Some text</div><!-- /ko --></div> Goodbye"
         var innerContext = ko.utils.extend(new ko.bindingContext({data: {}}), {custom: true});
-        ko.bindingHandlers.test = { options: { type: 'content' }, init: function (element, valueAccessor) {
-            ko.applyBindingsToDescendants(innerContext, element, true);
-        } };
+        ko.bindingHandlers.test = { 
+            flags: ko.bindingFlags.contentBind, 
+            init: function (element, valueAccessor) {
+                ko.applyBindingsToDescendants(innerContext, element, true);
+            }
+        };
         ko.applyBindings(null, testNode);
         value_of(ko.contextFor(testNode.childNodes[1].childNodes[0])).should_be(innerContext);
         value_of(ko.contextFor(testNode.childNodes[1].childNodes[1]).$parent).should_be(innerContext.$data);

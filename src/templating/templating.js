@@ -161,10 +161,7 @@
     }
 
     ko.bindingHandlers['template'] = {
-        bindingOptions: {
-            bindingType: ko.bindingTypes.contentOneWay,
-            bindingFlags: [ko.bindingFlags.canUseVirtual]
-        },
+        'flags': bindingFlags_contentBind | bindingFlags_contentSet | bindingFlags_canUseVirtual,
         'init': function(element, valueAccessor) {
             // Support anonymous templates
             var bindingValue = ko.utils.unwrapObservable(valueAccessor());

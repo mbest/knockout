@@ -1,52 +1,43 @@
+var
+    // Two-way bindings initialliy write to the DOM from the model,
+    // but also will update the model property if the DOM changes 
+    bindingFlags_twoWay=01,
+    // Event handler bindings call the given function in response to an event
+    bindingFlags_eventHandler=02,
+    // Content-bind bindings are responsible for binding (or not) their contents 
+    bindingFlags_contentBind=04,
+    // Content-set bindings erase or set their contents
+    bindingFlags_contentSet=010,
+    // Content-update bindings modify their contents after the content nodes bindings have run 
+    bindingFlags_contentUpdate=020,
+    // No-value bindings don't require a value (default value is true)
+    bindingFlags_noValue=040,
+    // Two-level bindings are like {attr.href: value} or {attr: {href: value}}
+    bindingFlags_twoLevel=0100,
+    // Virtual element bindings can be used in comments: <!-- ko if: value --><!-- /ko -->
+    bindingFlags_canUseVirtual=0200
+;
+
 (function () {
     ko.bindingHandlers = {};
-
-    // Binding handlers can include a "type" option that specifies one of these binding types.
-    // If unset, the default binding type is one-way (so it's not necessary to specify that type).
-    ko.bindingTypes = {
-        // one-way bindings set a DOM node's property from the given value
-        oneWay: 'one-way',
-        // two-way bindings also update the model value if the DOM property changes
-        twoWay: 'two-way',
-        // content bindings modify a DOM node's contents based on the model;
-        // importantly, content bindings are responsible for binding their contents
-        contentOneWay: 'content',
-        // event bindings call the given function in response to a DOM event
-        eventHandler: 'event'
-    };
-    var defaultBindingType = ko.bindingTypes.oneWay;
-
-    // Binding handlers can include "flags" option with an array of flags.
+    
     ko.bindingFlags = {
-        // binding can be included without a value (will use true as the value)
-        noValue: 'no-value',
-        // two-level bindings are like {attr.href: value} or {attr: {href: value}}
-        twoLevel: 'two-level',
-        // can use comment-based bindings like <!-- ko if: value --><!-- /ko -->
-        canUseVirtual: 'container-less',
-        // prevent the binding from being used withing a template that uses rewriting;
-        // this flag must be set for any binding that binds its existing descendants
-        dontRewrite: 'dont-rewrite'
+        'twoWay': bindingFlags_twoWay,
+        'eventHandler': bindingFlags_eventHandler,
+        'contentBind': bindingFlags_contentBind,
+        'contentSet': bindingFlags_contentSet,
+        'contentUpdate': bindingFlags_contentUpdate,
+        'noValue': bindingFlags_noValue,
+        'twoLevel': bindingFlags_twoLevel,
+        'canUseVirtual': bindingFlags_canUseVirtual
     };
 
     ko.getBindingHandler = function(bindingName) {
-        var binding = ko.bindingHandlers[bindingName];
-        if (binding && !binding.bindingOptions) {
-            var options = binding['options'] || {};
-            binding.bindingOptions = {
-                bindingType: options['type'] || defaultBindingType,
-                bindingFlags: options['flags'] || []
-            };
-        }
-        return binding;
+        return ko.bindingHandlers[bindingName];
     }
 
-    ko.getBindingType = function(binding) {
-        return binding.bindingOptions.bindingType;
-    };
-
-    ko.checkBindingFlag = function(binding, flag) {
-        return ko.utils.arrayIndexOf(binding.bindingOptions.bindingFlags, flag) !== -1;
+    ko.checkBindingFlags = function(binding, flagsSet, flagsUnset) {
+        return (!flagsSet || (binding['flags'] & flagsSet)) && !(binding['flags'] & flagsUnset); 
     };
 
     function applyBindingsToDescendantsInternal (bindingContext, elementVerified, areRootNodesForBindingContext) {
@@ -118,13 +109,13 @@
                             var binding = ko.getBindingHandler(bindingKey);
                             if (!binding)
                                 continue;
-                            if (node.nodeType === 8 && (ko.getBindingType(binding) !== ko.bindingTypes.contentOneWay || !ko.checkBindingFlag(binding, ko.bindingFlags.canUseVirtual)))
-                                throw new Error("The binding '" + bindingKey + "' cannot be used with virtual elements")
+                            if (node.nodeType === 8 && !(binding['flags'] & bindingFlags_canUseVirtual))
+                                throw new Error("The binding '" + bindingKey + "' cannot be used with virtual elements");
 
                             if (typeof binding["init"] == "function") {
                                 binding["init"](node, makeValueAccessor(bindingKey), parsedBindingsAccessor, viewModel, bindingContext);
                             }
-                            if (ko.getBindingType(binding) == ko.bindingTypes.contentOneWay) {
+                            if (binding['flags'] & bindingFlags_contentBind) {
                                 // If this binding handler claims to control descendant bindings, make a note of this
                                 if (bindingHandlerThatControlsDescendantBindings !== undefined)
                                     throw new Error("Multiple bindings (" + bindingHandlerThatControlsDescendantBindings + " and " + bindingKey + ") are trying to control descendant bindings of the same element. You cannot use these bindings together on the same element.");
@@ -226,6 +217,7 @@
     };
 
     ko.exportSymbol('bindingHandlers', ko.bindingHandlers);
+    ko.exportSymbol('bindingFlags', ko.bindingFlags);
     ko.exportSymbol('bindingContext', ko.bindingContext);
     ko.exportSymbol('applyBindings', ko.applyBindings);
     ko.exportSymbol('applyBindingsToDescendants', ko.applyBindingsToDescendants);

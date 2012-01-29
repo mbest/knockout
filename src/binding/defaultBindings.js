@@ -3,10 +3,7 @@
 var eventHandlersWithShortcuts = ['click'];
 ko.utils.arrayForEach(eventHandlersWithShortcuts, function(eventName) {
     ko.bindingHandlers[eventName] = {
-        bindingOptions: {
-            bindingType: ko.bindingTypes.eventHandler,
-            bindingFlags: []
-        },
+        'flags': bindingFlags_eventHandler,
         'init': function(element, valueAccessor, allBindingsAccessor, viewModel) {
             var newValueAccessor = function () {
                 var result = {};
@@ -20,10 +17,7 @@ ko.utils.arrayForEach(eventHandlersWithShortcuts, function(eventName) {
 
 
 ko.bindingHandlers['event'] = {
-    bindingOptions: {
-        bindingType: ko.bindingTypes.eventHandler,
-        bindingFlags: [ko.bindingFlags.twoLevel]
-    },
+    'flags': bindingFlags_eventHandler | bindingFlags_twoLevel,
     'init' : function (element, valueAccessor, allBindingsAccessor, viewModel) {
         var eventsToHandle = valueAccessor() || {};
         for(var eventNameOutsideClosure in eventsToHandle) {
@@ -65,10 +59,7 @@ ko.bindingHandlers['event'] = {
 };
 
 ko.bindingHandlers['submit'] = {
-    bindingOptions: {
-        bindingType: ko.bindingTypes.eventHandler,
-        bindingFlags: []
-    },
+    'flags': bindingFlags_eventHandler,
     'init': function (element, valueAccessor, allBindingsAccessor, viewModel) {
         if (typeof valueAccessor() != "function")
             throw new Error("The value for a submit binding must be a function");
@@ -129,10 +120,7 @@ function ensureDropdownSelectionIsConsistentWithModelValue(element, modelValue, 
 };
 
 ko.bindingHandlers['value'] = {
-    bindingOptions: {
-        bindingType: ko.bindingTypes.twoWay,
-        bindingFlags: []
-    },
+    'flags': bindingFlags_twoWay,
     'init': function (element, valueAccessor, allBindingsAccessor) {
         // Always catch "change" event; possibly other events too if asked
         var eventsToCatch = ["change"];
@@ -201,10 +189,7 @@ ko.bindingHandlers['value'] = {
 };
 
 ko.bindingHandlers['options'] = {
-    bindingOptions: {
-        bindingType: ko.bindingTypes.contentOneWay,
-        bindingFlags: []
-    },
+    'flags': bindingFlags_contentBind | bindingFlags_contentSet,
     'update': function (element, valueAccessor, allBindingsAccessor) {
         if (element.tagName != "SELECT")
             throw new Error("options binding applies only to SELECT elements");
@@ -289,10 +274,7 @@ ko.bindingHandlers['options'] = {
 ko.bindingHandlers['options'].optionValueDomDataKey = '__ko.optionValueDomData__';
 
 ko.bindingHandlers['selectedOptions'] = {
-    bindingOptions: {
-        bindingType: ko.bindingTypes.twoWay,
-        bindingFlags: []
-    },
+    'flags': bindingFlags_twoWay,
     getSelectedValuesFromSelectNode: function (selectNode) {
         var result = [];
         var nodes = selectNode.childNodes;
@@ -332,20 +314,14 @@ ko.bindingHandlers['selectedOptions'] = {
 };
 
 ko.bindingHandlers['text'] = {
-    bindingOptions: {
-        bindingType: ko.bindingTypes.contentOneWay,
-        bindingFlags: []
-    },
+    'flags': bindingFlags_contentBind | bindingFlags_contentSet,
     'update': function (element, valueAccessor) {
         ko.utils.setTextContent(element, valueAccessor());
     }
 };
 
 ko.bindingHandlers['html'] = {
-    bindingOptions: {
-        bindingType: ko.bindingTypes.contentOneWay,
-        bindingFlags: []
-    },
+    'flags': bindingFlags_contentBind | bindingFlags_contentSet,
     'update': function (element, valueAccessor) {
         var value = ko.utils.unwrapObservable(valueAccessor());
         ko.utils.setHtml(element, value);
@@ -353,10 +329,7 @@ ko.bindingHandlers['html'] = {
 };
 
 ko.bindingHandlers['css'] = {
-    bindingOptions: {
-        bindingType: ko.bindingTypes.oneWay,
-        bindingFlags: [ko.bindingFlags.twoLevel]
-    },
+    'flags': bindingFlags_twoLevel,
     'update': function (element, valueAccessor) {
         var value = ko.utils.unwrapObservable(valueAccessor() || {});
         for (var className in value) {
@@ -369,10 +342,7 @@ ko.bindingHandlers['css'] = {
 };
 
 ko.bindingHandlers['style'] = {
-    bindingOptions: {
-        bindingType: ko.bindingTypes.oneWay,
-        bindingFlags: [ko.bindingFlags.twoLevel]
-    },
+    'flags': bindingFlags_twoLevel,
     'update': function (element, valueAccessor) {
         var value = ko.utils.unwrapObservable(valueAccessor() || {});
         for (var styleName in value) {
@@ -385,10 +355,7 @@ ko.bindingHandlers['style'] = {
 };
 
 ko.bindingHandlers['uniqueName'] = {
-    bindingOptions: {
-        bindingType: ko.bindingTypes.oneWay,
-        bindingFlags: [ko.bindingFlags.noValue]
-    },
+    'flags': bindingFlags_noValue,
     'init': function (element, valueAccessor) {
         if (valueAccessor()) {
             element.name = "ko_unique_" + (++ko.bindingHandlers['uniqueName'].currentIndex);
@@ -404,10 +371,7 @@ ko.bindingHandlers['uniqueName'] = {
 ko.bindingHandlers['uniqueName'].currentIndex = 0;
 
 ko.bindingHandlers['checked'] = {
-    bindingOptions: {
-        bindingType: ko.bindingTypes.twoWay,
-        bindingFlags: []
-    },
+    'flags': bindingFlags_twoWay,
     'init': function (element, valueAccessor, allBindingsAccessor) {
         var updateHandler = function() {
             var valueToWrite;
@@ -463,10 +427,7 @@ ko.bindingHandlers['checked'] = {
 };
 
 ko.bindingHandlers['attr'] = {
-    bindingOptions: {
-        bindingType: ko.bindingTypes.oneWay,
-        bindingFlags: [ko.bindingFlags.twoLevel]
-    },
+    'flags': bindingFlags_twoLevel,
     'update': function(element, valueAccessor, allBindingsAccessor) {
         var value = ko.utils.unwrapObservable(valueAccessor()) || {};
         for (var attrName in value) {
@@ -486,10 +447,7 @@ ko.bindingHandlers['attr'] = {
 };
 
 ko.bindingHandlers['hasfocus'] = {
-    bindingOptions: {
-        bindingType: ko.bindingTypes.twoWay,
-        bindingFlags: []
-    },
+    'flags': bindingFlags_twoWay,
     'init': function(element, valueAccessor, allBindingsAccessor) {
         var writeValue = function(valueToWrite) {
             var modelValue = valueAccessor();
@@ -519,10 +477,7 @@ ko.bindingHandlers['hasfocus'] = {
 
 // "with: someExpression" is equivalent to "template: { if: someExpression, data: someExpression }"
 ko.bindingHandlers['with'] = {
-    bindingOptions: {
-        bindingType: ko.bindingTypes.contentOneWay,
-        bindingFlags: [ko.bindingFlags.canUseVirtual, ko.bindingFlags.dontRewrite]
-    },
+    'flags': bindingFlags_contentBind | bindingFlags_canUseVirtual,
     makeTemplateValueAccessor: function(valueAccessor) {
         return function() { var value = valueAccessor(); return { 'if': value, 'data': value, 'templateEngine': ko.nativeTemplateEngine.instance } };
     },
@@ -536,10 +491,7 @@ ko.bindingHandlers['with'] = {
 
 // "if: someExpression" is equivalent to "template: { if: someExpression }"
 ko.bindingHandlers['if'] = {
-    bindingOptions: {
-        bindingType: ko.bindingTypes.contentOneWay,
-        bindingFlags: [ko.bindingFlags.canUseVirtual, ko.bindingFlags.dontRewrite]
-    },
+    'flags': bindingFlags_contentBind | bindingFlags_canUseVirtual,
     makeTemplateValueAccessor: function(valueAccessor) {
         return function() { return { 'if': valueAccessor(), 'templateEngine': ko.nativeTemplateEngine.instance } };
     },
@@ -553,10 +505,7 @@ ko.bindingHandlers['if'] = {
 
 // "ifnot: someExpression" is equivalent to "template: { ifnot: someExpression }"
 ko.bindingHandlers['ifnot'] = {
-    bindingOptions: {
-        bindingType: ko.bindingTypes.contentOneWay,
-        bindingFlags: [ko.bindingFlags.canUseVirtual, ko.bindingFlags.dontRewrite]
-    },
+    'flags': bindingFlags_contentBind | bindingFlags_canUseVirtual,
     makeTemplateValueAccessor: function(valueAccessor) {
         return function() { return { 'ifnot': valueAccessor(), 'templateEngine': ko.nativeTemplateEngine.instance } };
     },
@@ -571,10 +520,7 @@ ko.bindingHandlers['ifnot'] = {
 // "foreach: someExpression" is equivalent to "template: { foreach: someExpression }"
 // "foreach: { data: someExpression, afterAdd: myfn }" is equivalent to "template: { foreach: someExpression, afterAdd: myfn }"
 ko.bindingHandlers['foreach'] = {
-    bindingOptions: {
-        bindingType: ko.bindingTypes.contentOneWay,
-        bindingFlags: [ko.bindingFlags.canUseVirtual, ko.bindingFlags.dontRewrite]
-    },
+    'flags': bindingFlags_contentBind | bindingFlags_canUseVirtual,
     makeTemplateValueAccessor: function(valueAccessor) {
         return function() {
             var bindingValue = ko.utils.unwrapObservable(valueAccessor());

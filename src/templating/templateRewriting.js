@@ -13,7 +13,8 @@ ko.templateRewriting = (function () {
                     throw new Error(possibleErrorMessage);
             } else {
                 var binding = ko.getBindingHandler(key);
-                if (binding && ko.checkBindingFlag(binding, ko.bindingFlags.dontRewrite))
+                // Don't rewrite bindings that bind their contents unless they also set their contents
+                if (binding && ko.checkBindingFlags(binding, bindingFlags_contentBind, bindingFlags_contentSet))
                     throw new Error("This template engine does not support the '" + key + "' binding within its templates");
             }
         }
