@@ -171,6 +171,30 @@ describe('Binding attribute syntax', {
         value_of(testNode).should_contain_text("My prop value");
     },
 
+    'Should be able to update bindings (including callbacks) using an observable view model': function() {
+        testNode.innerHTML = "<input data-bind='value:someProp' />";
+        var input = testNode.childNodes[0]
+
+        var vm = ko.observable({ someProp: 'My prop value' });
+        ko.applyBindings(vm, testNode);
+        value_of(input.value).should_be("My prop value");
+
+        // a change to the input value should be written to the model
+        input.value = "some user-entered value";
+        ko.utils.triggerEvent(input, "change");
+        value_of(vm().someProp).should_be("some user-entered value");
+
+        // set the view-model to a new object
+        vm({ someProp: ko.observable('My new prop value') });
+        value_of(input.value).should_be("My new prop value");
+
+        // a change to the input value should be written to the new model
+        var input = testNode.childNodes[0]
+        input.value = "some new user-entered value";
+        ko.utils.triggerEvent(input, "change");
+        value_of(vm().someProp()).should_be("some new user-entered value");
+    },
+
     'Bindings can signal that they control descendant bindings by setting their type to "control"': function() {
         ko.bindingHandlers.test = {
             flags: ko.bindingFlags.contentBind
@@ -312,8 +336,8 @@ describe('Binding attribute syntax', {
     'Should be able to access custom context variables in child context': function() {
         testNode.innerHTML = "Hello <div data-bind='test: false'><!-- ko with: data --><div>Some text</div><!-- /ko --></div> Goodbye"
         var innerContext = ko.utils.extend(new ko.bindingContext({data: {}}), {custom: true});
-        ko.bindingHandlers.test = { 
-            flags: ko.bindingFlags.contentBind, 
+        ko.bindingHandlers.test = {
+            flags: ko.bindingFlags.contentBind,
             init: function (element, valueAccessor) {
                 ko.applyBindingsToDescendants(innerContext, element, true);
             }

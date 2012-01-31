@@ -1,14 +1,14 @@
-var
+/** @const */ var
     // Two-way bindings initialliy write to the DOM from the model,
-    // but also will update the model property if the DOM changes 
+    // but also will update the model property if the DOM changes
     bindingFlags_twoWay=01,
     // Event handler bindings call the given function in response to an event
     bindingFlags_eventHandler=02,
-    // Content-bind bindings are responsible for binding (or not) their contents 
+    // Content-bind bindings are responsible for binding (or not) their contents
     bindingFlags_contentBind=04,
     // Content-set bindings erase or set their contents
     bindingFlags_contentSet=010,
-    // Content-update bindings modify their contents after the content nodes bindings have run 
+    // Content-update bindings modify their contents after the content nodes bindings have run
     bindingFlags_contentUpdate=020,
     // No-value bindings don't require a value (default value is true)
     bindingFlags_noValue=040,
@@ -20,7 +20,7 @@ var
 
 (function () {
     ko.bindingHandlers = {};
-    
+
     ko.bindingFlags = {
         'twoWay': bindingFlags_twoWay,
         'eventHandler': bindingFlags_eventHandler,
@@ -37,7 +37,7 @@ var
     }
 
     ko.checkBindingFlags = function(binding, flagsSet, flagsUnset) {
-        return (!flagsSet || (binding['flags'] & flagsSet)) && !(binding['flags'] & flagsUnset); 
+        return (!flagsSet || (binding['flags'] & flagsSet)) && !(binding['flags'] & flagsUnset);
     };
 
     function applyBindingsToDescendantsInternal (bindingContext, elementVerified, areRootNodesForBindingContext) {
@@ -102,6 +102,10 @@ var
                 parsedBindings = evaluatedBindings || ko.bindingProvider['instance']['getBindings'](node, bindingContext);
 
                 if (parsedBindings) {
+                    // If the context includes an observable, add a dependency to it
+                    if (bindingContext['$observable'])
+                        ko.dependencyDetection.registerDependency(bindingContext['$observable']);
+
                     // First run all the inits, so bindings can register for notification on changes
                     if (initPhase === 0) {
                         initPhase = 1;
@@ -137,7 +141,7 @@ var
                 }
             },
             null,
-            { 'disposeWhenNodeIsRemoved' : node }
+            { disposeWhenNodeIsRemoved : node }
         );
 
         return {
@@ -146,29 +150,38 @@ var
     };
 
 
-    ko.bindingContext = function(dataItem, parentBindingContext) {
+    ko.bindingContext = function(dataItem, parentBindingContext, node) {
+        var self = this;
         if (parentBindingContext) {
             // copy all properties from parent binding context
-            ko.utils.extend(this, parentBindingContext);
-            this['$parent'] = parentBindingContext['$data'];
-            this['$parents'] = (this['$parents'] || []).slice(0);
-            this['$parents'].unshift(this['$parent']);
+            ko.utils.extend(self, parentBindingContext);
+            self['$parent'] = parentBindingContext['$data'];
+            self['$parents'] = (self['$parents'] || []).slice(0);
+            self['$parents'].unshift(self['$parent']);
         } else {
-            this['$parents'] = [];
-            this['$root'] = dataItem;
+            self['$parents'] = [];
+            self['$root'] = dataItem;
         }
-        this['$data'] = dataItem;
+        if (ko.isObservable(dataItem)) {
+            // In previous versions, an observable view-model was unwrapped before creating the context object.
+            // Now, it's unwrapped here, but we also store the 'wrapped' value so bindings can subscribe to it.
+            self['$observable'] = dataItem;
+            ko.dependentObservable(function() {
+                self['$data'] = dataItem();
+            }, null, {disposeWhenNodeIsRemoved: node});
+        } else {
+            self['$observable'] = undefined;
+            self['$data'] = dataItem;
+        }
     }
     ko.bindingContext.prototype['createChildContext'] = function (dataItem) {
         return new ko.bindingContext(dataItem, this);
     };
 
-    function getBindingContext(viewModelOrBindingContext) {
-        // In previous versions, if the "viewModel" was an observable; it was automatically unwrapped.
-        // Now, if an observable is used for the "viewModel", it will have to be unwrapped manually in the bindings: $data().property
+    function getBindingContext(viewModelOrBindingContext, node) {
         return viewModelOrBindingContext && (viewModelOrBindingContext instanceof ko.bindingContext)
             ? viewModelOrBindingContext
-            : new ko.bindingContext(viewModelOrBindingContext);
+            : new ko.bindingContext(viewModelOrBindingContext, undefined, node);
     }
 
     var storedBindingContextDomDataKey = "__ko_bindingContext__";
@@ -182,12 +195,12 @@ var
     ko.applyBindingsToNode = function (node, bindings, viewModelOrBindingContext) {
         if (node.nodeType === 1) // If it's an element, workaround IE <= 8 HTML parsing weirdness
             ko.virtualElements.normaliseVirtualElementDomStructure(node);
-        return applyBindingsToNodeInternal(node, bindings, getBindingContext(viewModelOrBindingContext), true);
+        return applyBindingsToNodeInternal(node, bindings, getBindingContext(viewModelOrBindingContext, node), true);
     };
 
     ko.applyBindingsToDescendants = function(viewModelOrBindingContext, rootNode, areRootNodesForBindingContext) {
         if (rootNode.nodeType === 1 || rootNode.nodeType === 8)
-            applyBindingsToDescendantsInternal(getBindingContext(viewModelOrBindingContext), rootNode, areRootNodesForBindingContext);
+            applyBindingsToDescendantsInternal(getBindingContext(viewModelOrBindingContext, rootNode), rootNode, areRootNodesForBindingContext);
     };
 
     ko.applyBindings = function (viewModelOrBindingContext, rootNode) {
@@ -195,7 +208,7 @@ var
             throw new Error("ko.applyBindings: first parameter should be your view model; second parameter should be a DOM node");
         rootNode = rootNode || window.document.body; // Make "rootNode" parameter optional
 
-        applyBindingsToNodeAndDescendantsInternal(getBindingContext(viewModelOrBindingContext), rootNode, true);
+        applyBindingsToNodeAndDescendantsInternal(getBindingContext(viewModelOrBindingContext, rootNode), rootNode, true);
     };
 
     // Retrieving binding context from arbitrary nodes

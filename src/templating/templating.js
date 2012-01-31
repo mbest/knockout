@@ -110,7 +110,7 @@
                     }
                 },
                 null,
-                { 'disposeWhen': whenToDispose, 'disposeWhenNodeIsRemoved': activelyDisposeWhenNodeIsRemoved }
+                { disposeWhen: whenToDispose, disposeWhenNodeIsRemoved: activelyDisposeWhenNodeIsRemoved }
             );
         } else {
             // We don't yet have a DOM node to evaluate, so use a memo and render the template later when there is a DOM node
@@ -149,7 +149,7 @@
                 return executeTemplate(null, "ignoreTargetNode", templateName, createInnerBindingContext(arrayValue), options);
             }, options, activateBindingsCallback);
 
-        }, null, { 'disposeWhenNodeIsRemoved': targetNode });
+        }, null, { disposeWhenNodeIsRemoved: targetNode });
     };
 
     var templateSubscriptionDomDataKey = '__ko__templateSubscriptionDomDataKey__';
