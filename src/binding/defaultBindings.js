@@ -479,12 +479,17 @@ ko.bindingHandlers['hasfocus'] = {
     }
 };
 
-/**
- * @constructor
- */
-function templateBasedBinding(valueAccessorFunction) {
+function templateBasedBinding(makeOptionsFunction) {
     this['flags'] = bindingFlags_contentBind | bindingFlags_canUseVirtual;
-    this.makeTemplateValueAccessor = valueAccessorFunction;
+    this.makeOptions = makeOptionsFunction;
+};
+templateBasedBinding.prototype.makeTemplateValueAccessor = function(valueAccessor) {
+    var self = this;
+    return function() {
+        var value = self.makeOptions(valueAccessor());
+        value['templateEngine'] = ko.nativeTemplateEngine.instance;
+        return value;
+    };
 };
 templateBasedBinding.prototype['init'] = function(element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
     ko.bindingHandlers['template']['init'](element, this.makeTemplateValueAccessor(valueAccessor));
@@ -494,42 +499,28 @@ templateBasedBinding.prototype['update'] = function(element, valueAccessor, allB
 };
 
 // "with: someExpression" is equivalent to "template: { if: someExpression, data: someExpression }"
-ko.bindingHandlers['with'] = new templateBasedBinding(
-    function(valueAccessor) {
-        return function() { var value = valueAccessor(); return { 'if': value, 'data': value, 'templateEngine': ko.nativeTemplateEngine.instance } };
-    });
+ko.bindingHandlers['with'] = new templateBasedBinding( function(value) { return { 'if': value, 'data': value }; });
 
 // "if: someExpression" is equivalent to "template: { if: someExpression }"
-ko.bindingHandlers['if'] = new templateBasedBinding(
-    function(valueAccessor) {
-        return function() { return { 'if': valueAccessor(), 'templateEngine': ko.nativeTemplateEngine.instance } };
-    });
+ko.bindingHandlers['if'] = new templateBasedBinding( function(value) { return { 'if': value }; });
 
 // "ifnot: someExpression" is equivalent to "template: { ifnot: someExpression }"
-ko.bindingHandlers['ifnot'] = new templateBasedBinding(
-    function(valueAccessor) {
-        return function() { return { 'ifnot': valueAccessor(), 'templateEngine': ko.nativeTemplateEngine.instance } };
-    });
+ko.bindingHandlers['ifnot'] = new templateBasedBinding( function(value) { return { 'ifnot': value }; });
 
 // "foreach: someExpression" is equivalent to "template: { foreach: someExpression }"
 // "foreach: { data: someExpression, afterAdd: myfn }" is equivalent to "template: { foreach: someExpression, afterAdd: myfn }"
 ko.bindingHandlers['foreach'] = new templateBasedBinding(
-    function(valueAccessor) {
-        return function() {
-            var bindingValue = ko.utils.unwrapObservable(valueAccessor());
-    
-            // If bindingValue is the array, just pass it on its own
-            if ((!bindingValue) || typeof bindingValue.length == "number")
-                return { 'foreach': bindingValue, 'templateEngine': ko.nativeTemplateEngine.instance };
-    
-            // If bindingValue.data is the array, preserve all relevant options
-            return {
-                'foreach': bindingValue['data'],
-                'includeDestroyed': bindingValue['includeDestroyed'],
-                'afterAdd': bindingValue['afterAdd'],
-                'beforeRemove': bindingValue['beforeRemove'],
-                'afterRender': bindingValue['afterRender'],
-                'templateEngine': ko.nativeTemplateEngine.instance
-            };
+    function(bindingValue) {
+        // If bindingValue is the array, just pass it on its own
+        if ((!bindingValue) || typeof bindingValue.length == "number")
+            return { 'foreach': bindingValue };
+
+        // If bindingValue.data is the array, preserve all relevant options
+        return {
+            'foreach': bindingValue['data'],
+            'includeDestroyed': bindingValue['includeDestroyed'],
+            'afterAdd': bindingValue['afterAdd'],
+            'beforeRemove': bindingValue['beforeRemove'],
+            'afterRender': bindingValue['afterRender']
         };
     });
