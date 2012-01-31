@@ -486,9 +486,9 @@ function templateBasedBinding(makeOptionsFunction) {
 templateBasedBinding.prototype.makeTemplateValueAccessor = function(valueAccessor) {
     var self = this;
     return function() {
-        var value = self.makeOptions(valueAccessor());
-        value['templateEngine'] = ko.nativeTemplateEngine.instance;
-        return value;
+        var options = {'templateEngine': ko.nativeTemplateEngine.instance};
+        self.makeOptions(valueAccessor(), options);
+        return options;
     };
 };
 templateBasedBinding.prototype['init'] = function(element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
@@ -499,28 +499,25 @@ templateBasedBinding.prototype['update'] = function(element, valueAccessor, allB
 };
 
 // "with: someExpression" is equivalent to "template: { if: someExpression, data: someExpression }"
-ko.bindingHandlers['with'] = new templateBasedBinding( function(value) { return { 'if': value, 'data': value }; });
+ko.bindingHandlers['with'] = new templateBasedBinding( function(value, options) { options['if'] = value; options['data'] = value; });
 
 // "if: someExpression" is equivalent to "template: { if: someExpression }"
-ko.bindingHandlers['if'] = new templateBasedBinding( function(value) { return { 'if': value }; });
+ko.bindingHandlers['if'] = new templateBasedBinding( function(value, options) { options['if'] = value; });
 
 // "ifnot: someExpression" is equivalent to "template: { ifnot: someExpression }"
-ko.bindingHandlers['ifnot'] = new templateBasedBinding( function(value) { return { 'ifnot': value }; });
+ko.bindingHandlers['ifnot'] = new templateBasedBinding( function(value, options) { options['ifnot'] = value; });
 
 // "foreach: someExpression" is equivalent to "template: { foreach: someExpression }"
 // "foreach: { data: someExpression, afterAdd: myfn }" is equivalent to "template: { foreach: someExpression, afterAdd: myfn }"
 ko.bindingHandlers['foreach'] = new templateBasedBinding(
-    function(bindingValue) {
-        // If bindingValue is the array, just pass it on its own
-        if ((!bindingValue) || typeof bindingValue.length == "number")
-            return { 'foreach': bindingValue };
-
-        // If bindingValue.data is the array, preserve all relevant options
-        return {
-            'foreach': bindingValue['data'],
-            'includeDestroyed': bindingValue['includeDestroyed'],
-            'afterAdd': bindingValue['afterAdd'],
-            'beforeRemove': bindingValue['beforeRemove'],
-            'afterRender': bindingValue['afterRender']
-        };
+    function(value, options) {
+        if ((!value) || typeof value.length == "number") {
+            // If bindingValue is the array, just pass it on its own
+            options['foreach'] = value;
+        } else {
+            // If bindingValue is a object with options, copy it and set foreach to the data value
+            ko.utils.extend(options, value);
+            options['foreach'] = options['data'];
+            delete options['name'];   // don't allow named templates
+        }
     });
