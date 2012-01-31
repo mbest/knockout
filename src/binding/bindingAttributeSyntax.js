@@ -21,6 +21,35 @@
 (function () {
     ko.bindingHandlers = {};
 
+    ko.bindingContext = function(dataItem, parentBindingContext) {
+        var self = this;
+        if (parentBindingContext) {
+            // copy all properties from parent binding context
+            ko.utils.extend(self, parentBindingContext);
+            self['$parent'] = parentBindingContext['$data'];
+            self['$parents'] = (self['$parents'] || []).slice(0);
+            self['$parents'].unshift(self['$parent']);
+        } else {
+            self['$parents'] = [];
+            // if dataItem is an observable, $root will point to the observable and not the unwrapped value
+            self['$root'] = dataItem;
+        }
+        if (ko.isObservable(dataItem)) {
+            // In previous versions, an observable view-model was unwrapped before creating the context object.
+            // Now, it's unwrapped here, but we also store the 'wrapped' value so bindings can subscribe to it.
+            self['$observable'] = dataItem;
+            self._subscription = ko.dependentObservable(function() {
+                self['$data'] = dataItem();
+            });
+        } else {
+            self['$observable'] = undefined;
+            self['$data'] = dataItem;
+        }
+    }
+    ko.bindingContext.prototype['createChildContext'] = function (dataItem) {
+        return new ko.bindingContext(dataItem, this);
+    };
+
     ko.bindingFlags = {
         'twoWay': bindingFlags_twoWay,
         'eventHandler': bindingFlags_eventHandler,
@@ -153,63 +182,12 @@
     ko.storedBindingContextForNode = function (node, bindingContext) {
         if (arguments.length == 2) {
             ko.utils.domData.set(node, storedBindingContextDomDataKey, bindingContext);
-            bindingContext._addRootNode(node);
+            if (bindingContext._subscription)
+                bindingContext._subscription.addDisposeWhenNodeIsRemoved(node);
         }
         else
             return ko.utils.domData.get(node, storedBindingContextDomDataKey);
     }
-
-    ko.bindingContext = function(dataItem, parentBindingContext) {
-        var self = this;
-        if (parentBindingContext) {
-            // copy all properties from parent binding context
-            ko.utils.extend(self, parentBindingContext);
-            self['$parent'] = parentBindingContext['$data'];
-            self['$parents'] = (self['$parents'] || []).slice(0);
-            self['$parents'].unshift(self['$parent']);
-        } else {
-            self['$parents'] = [];
-            self['$root'] = dataItem;
-        }
-        if (ko.isObservable(dataItem)) {
-            // In previous versions, an observable view-model was unwrapped before creating the context object.
-            // Now, it's unwrapped here, but we also store the 'wrapped' value so bindings can subscribe to it.
-            self['$observable'] = dataItem;
-            // get initial value of observable
-            self['$data'] = ko.dependencyDetection.getWithoutDependency(dataItem);
-            // subscribe to the observable to get updates
-            self._rootNodes = [];
-            self._subscription = dataItem.subscribe(function(value) {
-                self._checkRootNodes() ? self._dispose() : (self['$data'] = value);
-            });
-        } else {
-            self['$observable'] = undefined;
-            self['$data'] = dataItem;
-        }
-    }
-    ko.bindingContext.prototype = {
-        _addRootNode: function(node) {
-            if (this._subscription) {
-                this._rootNodes.push(node);
-                ko.utils.domNodeDisposal.addDisposeCallback(node, this._removeRootNode.bind(this));
-            }
-        },
-        _removeRootNode: function(node) {
-            ko.utils.arrayRemoveItem(this._rootNodes, node);
-            if (!this._rootNodes.length && this._subscription)
-                this._dispose();
-        },
-        _dispose: function() {
-            this._subscription.dispose();
-            this._subscription = undefined;
-        },
-        _checkRootNodes: function() {
-            return !ko.utils.arrayFirst(this._rootNodes, ko.utils.domNodeIsAttachedToDocument);
-        }
-    }
-    ko.bindingContext.prototype['createChildContext'] = function (dataItem) {
-        return new ko.bindingContext(dataItem, this);
-    };
 
     function getBindingContext(viewModelOrBindingContext) {
         return viewModelOrBindingContext && (viewModelOrBindingContext instanceof ko.bindingContext)
@@ -255,8 +233,8 @@
     };
 
     ko.exportSymbol('bindingHandlers', ko.bindingHandlers);
-    ko.exportSymbol('bindingFlags', ko.bindingFlags);
     ko.exportSymbol('bindingContext', ko.bindingContext);
+    ko.exportSymbol('bindingFlags', ko.bindingFlags);
     ko.exportSymbol('applyBindings', ko.applyBindings);
     ko.exportSymbol('applyBindingsToDescendants', ko.applyBindingsToDescendants);
     ko.exportSymbol('applyBindingsToNode', ko.applyBindingsToNode);

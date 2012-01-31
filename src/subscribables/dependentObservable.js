@@ -29,23 +29,26 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
         _subscriptionsToDependencies = [];
     }
     var dispose = disposeAllSubscriptionsToDependencies;
+    var disposeCallback = function() { dispose(); };
 
     // Build "disposeWhenNodeIsRemoved" and "disposeWhenNodeIsRemovedCallback" option values
     // (Note: "disposeWhenNodeIsRemoved" option both proactively disposes as soon as the node is removed using ko.removeNode(),
     // plus adds a "disposeWhen" callback that, on each evaluation, disposes if the node was removed by some other means.)
-    var disposeWhenNodeIsRemoved = options.disposeWhenNodeIsRemoved || options["disposeWhenNodeIsRemoved"];
     var disposeWhen = options.disposeWhen || options["disposeWhen"] || function() { return false; };
-    if (typeof disposeWhenNodeIsRemoved == "object") {
+    function addDisposeWhenNodeIsRemoved(node) {
+        var existingDispose = dispose, existingDisposeWhen = disposeWhen;
         dispose = function() {
-            ko.utils.domNodeDisposal.removeDisposeCallback(disposeWhenNodeIsRemoved, arguments.callee);
-            disposeAllSubscriptionsToDependencies();
+            ko.utils.domNodeDisposal.removeDisposeCallback(node, arguments.callee);
+            existingDispose();
         };
-        ko.utils.domNodeDisposal.addDisposeCallback(disposeWhenNodeIsRemoved, dispose);
-        var existingDisposeWhenFunction = disposeWhen;
+        ko.utils.domNodeDisposal.addDisposeCallback(node, disposeCallback);
         disposeWhen = function () {
-            return !ko.utils.domNodeIsAttachedToDocument(disposeWhenNodeIsRemoved) || existingDisposeWhenFunction();
+            return !ko.utils.domNodeIsAttachedToDocument(node) || existingDisposeWhen();
         }
-    }
+    } 
+    var disposeWhenNodeIsRemoved = options.disposeWhenNodeIsRemoved || options["disposeWhenNodeIsRemoved"];
+    if (typeof disposeWhenNodeIsRemoved == "object")
+        addDisposeWhenNodeIsRemoved(disposeWhenNodeIsRemoved);
 
     var evaluationTimeoutInstance = null;
     function evaluatePossiblyAsync() {
@@ -124,7 +127,8 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
 
     dependentObservable.getDependenciesCount = function () { return _subscriptionsToDependencies.length; };
     dependentObservable.hasWriteFunction = typeof options["write"] === "function";
-    dependentObservable.dispose = function () { dispose(); };
+    dependentObservable.dispose = disposeCallback;
+    dependentObservable.addDisposeWhenNodeIsRemoved = addDisposeWhenNodeIsRemoved;
 
     ko.subscribable.call(dependentObservable);
     ko.utils.extend(dependentObservable, ko.dependentObservable['fn']);
