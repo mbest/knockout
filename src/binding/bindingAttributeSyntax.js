@@ -88,7 +88,7 @@
         }
 
         var bindingHandlerThatControlsDescendantBindings;
-        new ko.dependentObservable(
+        ko.dependentObservable(
             function () {
                 var viewModel = bindingContext['$data'];
 
