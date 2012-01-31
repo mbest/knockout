@@ -176,7 +176,7 @@ describe('Binding attribute syntax', {
         var input = testNode.childNodes[0]
 
         var vm = ko.observable({ someProp: 'My prop value' });
-        ko.applyBindings(vm, testNode);
+        ko.applyBindings(vm, input);
         value_of(input.value).should_be("My prop value");
 
         // a change to the input value should be written to the model
@@ -193,6 +193,10 @@ describe('Binding attribute syntax', {
         input.value = "some new user-entered value";
         ko.utils.triggerEvent(input, "change");
         value_of(vm().someProp()).should_be("some new user-entered value");
+        
+        // clear the element and the view-model (shouldn't be any errors)
+        testNode.innerHTML = "";
+        vm(null);
     },
 
     'Bindings can signal that they control descendant bindings by setting their type to "control"': function() {

@@ -87,15 +87,15 @@
             return parsedBindings;
         }
 
+        // We only need to store the bindingContext at the root of the subtree where it applies
+        // as all descendants will be able to find it by scanning up their ancestry
+        if (isRootNodeForBindingContext)
+            ko.storedBindingContextForNode(node, bindingContext);
+
         var bindingHandlerThatControlsDescendantBindings;
         ko.dependentObservable(
             function () {
                 var viewModel = bindingContext['$data'];
-
-                // We only need to store the bindingContext at the root of the subtree where it applies
-                // as all descendants will be able to find it by scanning up their ancestry
-                if (isRootNodeForBindingContext)
-                    ko.storedBindingContextForNode(node, bindingContext);
 
                 // Use evaluatedBindings if given, otherwise fall back on asking the bindings provider to give us some bindings
                 var evaluatedBindings = (typeof bindings == "function") ? bindings() : bindings;
@@ -149,8 +149,17 @@
         };
     };
 
+    var storedBindingContextDomDataKey = "__ko_bindingContext__";
+    ko.storedBindingContextForNode = function (node, bindingContext) {
+        if (arguments.length == 2) {
+            ko.utils.domData.set(node, storedBindingContextDomDataKey, bindingContext);
+            bindingContext._addRootNode(node);
+        }
+        else
+            return ko.utils.domData.get(node, storedBindingContextDomDataKey);
+    }
 
-    ko.bindingContext = function(dataItem, parentBindingContext, node) {
+    ko.bindingContext = function(dataItem, parentBindingContext) {
         var self = this;
         if (parentBindingContext) {
             // copy all properties from parent binding context
@@ -166,41 +175,57 @@
             // In previous versions, an observable view-model was unwrapped before creating the context object.
             // Now, it's unwrapped here, but we also store the 'wrapped' value so bindings can subscribe to it.
             self['$observable'] = dataItem;
-            ko.dependentObservable(function() {
-                self['$data'] = dataItem();
-            }, null, {disposeWhenNodeIsRemoved: node});
+            // get initial value of observable
+            self['$data'] = ko.dependencyDetection.getWithoutDependency(dataItem);
+            // subscribe to the observable to get updates
+            self._rootNodes = [];
+            self._subscription = dataItem.subscribe(function(value) {
+                self._checkRootNodes() ? self._dispose() : (self['$data'] = value);
+            });
         } else {
             self['$observable'] = undefined;
             self['$data'] = dataItem;
+        }
+    }
+    ko.bindingContext.prototype = {
+        _addRootNode: function(node) {
+            if (this._subscription) {
+                this._rootNodes.push(node);
+                ko.utils.domNodeDisposal.addDisposeCallback(node, this._removeRootNode.bind(this));
+            }
+        },
+        _removeRootNode: function(node) {
+            ko.utils.arrayRemoveItem(this._rootNodes, node);
+            if (!this._rootNodes.length && this._subscription)
+                this._dispose();
+        },
+        _dispose: function() {
+            this._subscription.dispose();
+            this._subscription = undefined;
+        },
+        _checkRootNodes: function() {
+            return !ko.utils.arrayFirst(this._rootNodes, ko.utils.domNodeIsAttachedToDocument);
         }
     }
     ko.bindingContext.prototype['createChildContext'] = function (dataItem) {
         return new ko.bindingContext(dataItem, this);
     };
 
-    function getBindingContext(viewModelOrBindingContext, node) {
+    function getBindingContext(viewModelOrBindingContext) {
         return viewModelOrBindingContext && (viewModelOrBindingContext instanceof ko.bindingContext)
             ? viewModelOrBindingContext
-            : new ko.bindingContext(viewModelOrBindingContext, undefined, node);
-    }
-
-    var storedBindingContextDomDataKey = "__ko_bindingContext__";
-    ko.storedBindingContextForNode = function (node, bindingContext) {
-        if (arguments.length == 2)
-            ko.utils.domData.set(node, storedBindingContextDomDataKey, bindingContext);
-        else
-            return ko.utils.domData.get(node, storedBindingContextDomDataKey);
+            : new ko.bindingContext(viewModelOrBindingContext);
     }
 
     ko.applyBindingsToNode = function (node, bindings, viewModelOrBindingContext) {
         if (node.nodeType === 1) // If it's an element, workaround IE <= 8 HTML parsing weirdness
             ko.virtualElements.normaliseVirtualElementDomStructure(node);
-        return applyBindingsToNodeInternal(node, bindings, getBindingContext(viewModelOrBindingContext, node), true);
+        return applyBindingsToNodeInternal(node, bindings, getBindingContext(viewModelOrBindingContext), true);
     };
 
     ko.applyBindingsToDescendants = function(viewModelOrBindingContext, rootNode, areRootNodesForBindingContext) {
         if (rootNode.nodeType === 1 || rootNode.nodeType === 8)
-            applyBindingsToDescendantsInternal(getBindingContext(viewModelOrBindingContext, rootNode), rootNode, areRootNodesForBindingContext);
+            applyBindingsToDescendantsInternal(getBindingContext(viewModelOrBindingContext), rootNode, areRootNodesForBindingContext);
     };
 
     ko.applyBindings = function (viewModelOrBindingContext, rootNode) {
@@ -208,7 +233,7 @@
             throw new Error("ko.applyBindings: first parameter should be your view model; second parameter should be a DOM node");
         rootNode = rootNode || window.document.body; // Make "rootNode" parameter optional
 
-        applyBindingsToNodeAndDescendantsInternal(getBindingContext(viewModelOrBindingContext, rootNode), rootNode, true);
+        applyBindingsToNodeAndDescendantsInternal(getBindingContext(viewModelOrBindingContext), rootNode, true);
     };
 
     // Retrieving binding context from arbitrary nodes

@@ -167,41 +167,39 @@
             var bindingValue = ko.utils.unwrapObservable(valueAccessor());
             if ((typeof bindingValue != "string") && (!bindingValue['name']) && (element.nodeType == 1 || element.nodeType == 8)) {
                 // It's an anonymous template - store the element contents, then clear the element
-                var templateNodes = element.nodeType == 1 ? element.childNodes : ko.virtualElements.childNodes(element),
+                var templateNodes = ko.virtualElements.childNodes(element),
                     container = ko.utils.moveNodesToContainerElement(templateNodes); // This also removes the nodes from their current parent
                 new ko.templateSources.anonymousTemplate(element)['nodes'](container);
             }
         },
         'update': function (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
             var bindingValue = ko.utils.unwrapObservable(valueAccessor());
-            var templateName;
             var shouldDisplay = true;
 
             if (typeof bindingValue == "string") {
-                templateName = bindingValue;
+                bindingValue = {'name': bindingValue};
             } else {
-                templateName = bindingValue['name'];
-
                 // Support "if"/"ifnot" conditions
                 if ('if' in bindingValue)
                     shouldDisplay = shouldDisplay && ko.utils.unwrapObservable(bindingValue['if']);
                 if ('ifnot' in bindingValue)
                     shouldDisplay = shouldDisplay && !ko.utils.unwrapObservable(bindingValue['ifnot']);
             }
+            var template = bindingValue['name'] || element;
 
             var templateSubscription = null;
 
-            if ((typeof bindingValue === 'object') && ('foreach' in bindingValue)) { // Note: can't use 'in' operator on strings
+            if ('foreach' in bindingValue) {
                 // Render once for each data point (treating data set as empty if shouldDisplay==false)
                 var dataArray = (shouldDisplay && bindingValue['foreach']) || [];
-                templateSubscription = ko.renderTemplateForEach(templateName || element, dataArray, /* options: */ bindingValue, element, bindingContext);
+                templateSubscription = ko.renderTemplateForEach(template, dataArray, /* options: */ bindingValue, element, bindingContext);
             } else {
                 if (shouldDisplay) {
                     // Render once for this single data point (or use the viewModel if no data was provided)
-                    var innerBindingContext = (typeof bindingValue == 'object') && ('data' in bindingValue)
-                        ? bindingContext['createChildContext'](ko.utils.unwrapObservable(bindingValue['data'])) // Given an explitit 'data' value, we create a child binding context for it
-                        : bindingContext;                                                                       // Given no explicit 'data' value, we retain the same binding context
-                    templateSubscription = ko.renderTemplate(templateName || element, innerBindingContext, /* options: */ bindingValue, element);
+                    var innerBindingContext = ('data' in bindingValue)
+                        ? bindingContext['createChildContext'](bindingValue['data'])    // Given an explitit 'data' value, we create a child binding context for it
+                        : bindingContext;                                               // Given no explicit 'data' value, we retain the same binding context
+                    templateSubscription = ko.renderTemplate(template, innerBindingContext, /* options: */ bindingValue, element);
                 } else
                     ko.virtualElements.emptyNode(element);
             }
