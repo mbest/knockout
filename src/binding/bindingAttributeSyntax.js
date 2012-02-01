@@ -56,12 +56,41 @@
         'canUseVirtual': bindingFlags_canUseVirtual
     };
 
-    ko.getBindingHandler = function(bindingName) {
-        return ko.bindingHandlers[bindingName];
-    }
-
     ko.checkBindingFlags = function(binding, flagsSet, flagsUnset) {
         return (!flagsSet || (binding['flags'] & flagsSet)) && !(binding['flags'] & flagsUnset);
+    };
+
+    ko.getTwoLevelBindingData = function(bindingKey) {
+        var dotPos = bindingKey.indexOf(".");
+        if (dotPos > 0) {
+            var realKey = bindingKey.substring(0, dotPos), binding = ko.bindingHandlers[realKey];
+            if (binding) {
+                if (!(binding['flags'] & bindingFlags_twoLevel))
+                    throw new Error(realKey + " does not support two-level binding");
+                return {
+                    key: realKey,
+                    subKey: bindingKey.substring(dotPos + 1),
+                    handler: binding
+                };
+            }
+        }
+        return {};
+    }
+
+    ko.getBindingHandler = function(bindingKey) {
+        return ko.bindingHandlers[bindingKey] || ko.getTwoLevelBindingData(bindingKey).handler;
+    }
+
+    ko.bindingValueWrap = function(valueFunction) {
+        function bindingValueWrap() {
+            return valueFunction();
+        }
+        bindingValueWrap.__ko_proto__ = ko.bindingValueWrap;
+        return bindingValueWrap;
+    };
+
+    unwrapBindingValue = function (value) {
+        return (value && value.__ko_proto__ && value.__ko_proto__ === ko.bindingValueWrap) ? value() : value;
     };
 
     function applyBindingsToDescendantsInternal (bindingContext, elementVerified, areRootNodesForBindingContext) {
@@ -105,10 +134,21 @@
         // associated with this node's bindings) that all the closures can access.
         var parsedBindings;
         function makeValueAccessor(bindingKey) {
-            return function () { return ko.utils.unwrapProxyObservable(parsedBindings[bindingKey]); }
+            return function () { return unwrapBindingValue(parsedBindings[bindingKey]); }
         }
         function parsedBindingsAccessor() {
             return parsedBindings;
+        }
+        function getBindingHandlerAndValueAccessor(bindingKey) {
+            var binding = ko.bindingHandlers[bindingKey];
+            binding = binding ? { handler: binding } : ko.getTwoLevelBindingData(bindingKey);
+            if (binding.handler) {
+                var valueAccessor = makeValueAccessor(bindingKey), subKey = binding.subKey;
+                binding.valueAccessor = subKey
+                    ? function() { var _z={}; _z[subKey] = valueAccessor(); return _z; }
+                    : valueAccessor;
+                return binding;
+            }
         }
 
         // We only need to store the bindingContext at the root of the subtree where it applies
@@ -134,14 +174,15 @@
                     if (initPhase === 0) {
                         initPhase = 1;
                         for (var bindingKey in parsedBindings) {
-                            var binding = ko.getBindingHandler(bindingKey);
-                            if (!binding)
+                            var bindingData = getBindingHandlerAndValueAccessor(bindingKey);
+                            if (!bindingData)
                                 continue;
+                            var binding = bindingData.handler, valueAccessor = bindingData.valueAccessor;
                             if (node.nodeType === 8 && !(binding['flags'] & bindingFlags_canUseVirtual))
                                 throw new Error("The binding '" + bindingKey + "' cannot be used with virtual elements");
 
                             if (typeof binding["init"] == "function") {
-                                binding["init"](node, makeValueAccessor(bindingKey), parsedBindingsAccessor, viewModel, bindingContext);
+                                binding["init"](node, valueAccessor, parsedBindingsAccessor, viewModel, bindingContext);
                             }
                             if (binding['flags'] & bindingFlags_contentBind) {
                                 // If this binding handler claims to control descendant bindings, make a note of this
@@ -156,9 +197,9 @@
                     // ... then run all the updates, which might trigger changes even on the first evaluation
                     if (initPhase === 2) {
                         for (var bindingKey in parsedBindings) {
-                            var binding = ko.getBindingHandler(bindingKey);
-                            if (binding && typeof binding["update"] == "function") {
-                                binding["update"](node, makeValueAccessor(bindingKey), parsedBindingsAccessor, viewModel, bindingContext);
+                            var bindingData = getBindingHandlerAndValueAccessor(bindingKey);
+                            if (bindingData && typeof bindingData.handler["update"] == "function") {
+                                bindingData.handler["update"](node, bindingData.valueAccessor, parsedBindingsAccessor, viewModel, bindingContext);
                             }
                         }
                     }
@@ -230,6 +271,7 @@
     ko.exportSymbol('bindingHandlers', ko.bindingHandlers);
     ko.exportSymbol('bindingContext', ko.bindingContext);
     ko.exportSymbol('bindingFlags', ko.bindingFlags);
+    ko.exportSymbol('bindingValueWrap', ko.bindingValueWrap);
     ko.exportSymbol('applyBindings', ko.applyBindings);
     ko.exportSymbol('applyBindingsToDescendants', ko.applyBindingsToDescendants);
     ko.exportSymbol('applyBindingsToNode', ko.applyBindingsToNode);

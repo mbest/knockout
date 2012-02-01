@@ -135,17 +135,8 @@ ko.bindingExpressionRewriting = (function () {
 
                 if (keyValueEntry['key']) {
                     var key = keyValueEntry['key'], val = keyValueEntry['value'],
-                        quotedKey = ensureQuoted(key), binding = parentBinding || ko.bindingHandlers[key];
-                    if (!binding) {
-                        // check if binding uses key1.key2: value format
-                        var dotPos = key.indexOf(".");
-                        if (dotPos > 0) {
-                            var realKey = key.substring(0, dotPos);
-                            binding = ko.bindingHandlers[realKey];
-                            if (!binding || !(binding['flags'] & bindingFlags_twoLevel))
-                                throw new Error(realKey + " does not support two-level binding");
-                        }
-                    }
+                        quotedKey = ensureQuoted(key),
+                        binding = parentBinding || ko.getBindingHandler(key);
                     if (binding) {
                         if ((binding['flags'] & bindingFlags_twoLevel) && val.charAt(0) === "{") {
                             val = '{' + ko.bindingExpressionRewriting.insertPropertyAccessors(val, binding) + '}';
@@ -161,7 +152,7 @@ ko.bindingExpressionRewriting = (function () {
                             }
                         }
                         else if (!(binding['flags'] & bindingFlags_eventHandler) && isPossiblyUnwrappedObservable(val)) {
-                            val = 'ko.proxyObservable(function(){return ' + val + '})';
+                            val = 'ko.bindingValueWrap(function(){return ' + val + '})';
                         }
                     }
                     resultStrings.push(quotedKey);

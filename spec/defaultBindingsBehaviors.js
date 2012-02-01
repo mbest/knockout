@@ -602,13 +602,13 @@ describe('Binding: Event', {
         value_of(model.outerWasCalled).should_be(false);
     },
 
-    /*'Should be able to supply event type as event.type': function() {
+    'Should be able to supply event type as event.type': function() {
         var model = { clickCalled: false };
         testNode.innerHTML = "<button data-bind='event.click: function() { clickCalled = true; }'>hey</button>";
         ko.applyBindings(model, testNode);
         ko.utils.triggerEvent(testNode.childNodes[0], "click");
         value_of(model.clickCalled).should_be(true);
-    },*/
+    },
 
     'Should call function in correct context': function() {
         var model = { subModel: { wasCalled: false, clickFunc: function() {this.wasCalled = true} } };
