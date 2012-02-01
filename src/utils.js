@@ -277,6 +277,11 @@ ko.utils = new (function () {
             return ko.isObservable(value) ? value() : value;
         },
 
+        possiblyWrap: function(readFunction) {
+            var obs = ko.dependentObservable(readFunction);
+            return obs.getDependenciesCount() ? obs : obs.getWithoutDependency();
+        },
+
         domNodeHasCssClass: function (node, className) {
             var currentClassNames = (node.className || "").split(/\s+/);
             return ko.utils.arrayIndexOf(currentClassNames, className) >= 0;

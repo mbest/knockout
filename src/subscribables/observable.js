@@ -5,8 +5,8 @@ ko.observable = function (initialValue) {
 
     function observable() {
         if (arguments.length > 0) {
-            // Write            
-            
+            // Write
+
             // Ignore writes if the value hasn't changed
             if ((!observable['equalityComparer']) || !observable['equalityComparer'](_latestValue, arguments[0])) {
                 observable.valueWillMutate();
@@ -24,11 +24,12 @@ ko.observable = function (initialValue) {
     ko.subscribable.call(observable);
     observable.valueHasMutated = function () { observable["notifySubscribers"](_latestValue); }
     observable.valueWillMutate = function () { observable["notifySubscribers"](_latestValue, "beforeChange"); }
+    observable.getWithoutDependency = function() { return _latestValue; }
     ko.utils.extend(observable, ko.observable['fn']);
 
     ko.exportProperty(observable, "valueHasMutated", observable.valueHasMutated);
     ko.exportProperty(observable, "valueWillMutate", observable.valueWillMutate);
-    
+
     return observable;
 }
 

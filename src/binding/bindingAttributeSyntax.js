@@ -23,8 +23,8 @@
 
     ko.bindingContext = function(dataItem, parent) {
         var self = this, isOb = ko.isObservable(dataItem) || typeof(dataItem) == "function";
-        self._subscription = null;  // set so it isn't set by merge call below
-        self._subscription = ko.dependentObservable(parent ?
+        self._subscription = undefined;  // set so it isn't set by merge call below
+        self._subscription = ko.utils.possiblyWrap(parent ?
             function() {
                 if (parent._subscription)
                     ko.dependencyDetection.registerDependency(parent._subscription);
@@ -40,8 +40,6 @@
                 self['$root'] = self['$data'] = isOb ? dataItem() : dataItem;
             }
         );
-        if (!self._subscription.getDependenciesCount())
-            self._subscription = null;
     }
     ko.bindingContext.prototype['createChildContext'] = function (dataItem) {
         return new ko.bindingContext(dataItem, this);
@@ -107,7 +105,7 @@
         // associated with this node's bindings) that all the closures can access.
         var parsedBindings;
         function makeValueAccessor(bindingKey) {
-            return function () { return parsedBindings[bindingKey] }
+            return function () { return ko.utils.unwrapProxyObservable(parsedBindings[bindingKey]); }
         }
         function parsedBindingsAccessor() {
             return parsedBindings;

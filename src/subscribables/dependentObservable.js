@@ -45,7 +45,7 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
         disposeWhen = function () {
             return !ko.utils.domNodeIsAttachedToDocument(node) || existingDisposeWhen();
         }
-    } 
+    }
     var disposeWhenNodeIsRemoved = options.disposeWhenNodeIsRemoved || options["disposeWhenNodeIsRemoved"];
     if (typeof disposeWhenNodeIsRemoved == "object")
         addDisposeWhenNodeIsRemoved(disposeWhenNodeIsRemoved);
@@ -129,6 +129,7 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
     dependentObservable.hasWriteFunction = typeof options["write"] === "function";
     dependentObservable.dispose = disposeCallback;
     dependentObservable.addDisposeWhenNodeIsRemoved = addDisposeWhenNodeIsRemoved;
+    dependentObservable.getWithoutDependency = function() { if (!_hasBeenEvaluated) evaluateImmediate(); return _latestValue; }
 
     ko.subscribable.call(dependentObservable);
     ko.utils.extend(dependentObservable, ko.dependentObservable['fn']);

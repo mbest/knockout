@@ -13,6 +13,7 @@ knockoutDebugCallback([
     'src/subscribables/observable.js',
     'src/subscribables/observableArray.js',
     'src/subscribables/dependentObservable.js',
+    'src/subscribables/proxyObservable.js',
     'src/subscribables/mappingHelpers.js',
     'src/binding/selectExtensions.js',
     'src/binding/bindingExpressionRewriting.js',

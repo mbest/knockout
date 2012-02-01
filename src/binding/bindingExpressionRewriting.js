@@ -21,6 +21,10 @@ ko.bindingExpressionRewriting = (function () {
         return expression.match(javaScriptAssignmentTarget) !== null;
     }
 
+    function isPossiblyUnwrappedObservable(expression) {
+        return expression.indexOf("(") != -1;
+    }
+
     function ensureQuoted(key) {
         switch (key.length && key.charAt(0)) {
             case "'":
@@ -146,13 +150,18 @@ ko.bindingExpressionRewriting = (function () {
                         if (binding['flags']&bindingFlags_twoLevel && val.charAt(0) === "{") {
                             val = '{' + ko.bindingExpressionRewriting.insertPropertyAccessors(val, binding) + '}';
                         }
-                        else if (binding['flags']&bindingFlags_eventHandler && isWriteableValue(val)) {
-                            val = 'function(_x,_y,_z){(' + val + ')(_x,_y,_z);}';
+                        else if (isWriteableValue(val)) {
+                            if (binding['flags']&bindingFlags_eventHandler) {
+                                val = 'function(_x,_y,_z){(' + val + ')(_x,_y,_z);}';
+                            }
+                            else if (binding['flags']&bindingFlags_twoWay) {
+                                if (propertyAccessorResultStrings.length > 0)
+                                    propertyAccessorResultStrings.push(",");
+                                propertyAccessorResultStrings.push(quotedKey + ":function(_z){" + val + "=_z;}");
+                            }
                         }
-                        else if (binding['flags']&bindingFlags_twoWay && isWriteableValue(val)) {
-                            if (propertyAccessorResultStrings.length > 0)
-                                propertyAccessorResultStrings.push(",");
-                            propertyAccessorResultStrings.push(quotedKey + ":function(_z){" + val + "=_z;}");
+                        else if (!binding['flags']&bindingFlags_eventHandler && isPossiblyUnwrappedObservable(val)) {
+                            val = 'ko.proxyObservable(function(){return ' + val + '})';
                         }
                     }
                     resultStrings.push(quotedKey);
