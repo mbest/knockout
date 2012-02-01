@@ -142,25 +142,25 @@ ko.bindingExpressionRewriting = (function () {
                         if (dotPos > 0) {
                             var realKey = key.substring(0, dotPos);
                             binding = ko.bindingHandlers[realKey];
-                            if (!binding || !binding['flags']&bindingFlags_twoLevel)
+                            if (!binding || !(binding['flags'] & bindingFlags_twoLevel))
                                 throw new Error(realKey + " does not support two-level binding");
                         }
                     }
                     if (binding) {
-                        if (binding['flags']&bindingFlags_twoLevel && val.charAt(0) === "{") {
+                        if ((binding['flags'] & bindingFlags_twoLevel) && val.charAt(0) === "{") {
                             val = '{' + ko.bindingExpressionRewriting.insertPropertyAccessors(val, binding) + '}';
                         }
                         else if (isWriteableValue(val)) {
-                            if (binding['flags']&bindingFlags_eventHandler) {
+                            if (binding['flags'] & bindingFlags_eventHandler) {
                                 val = 'function(_x,_y,_z){(' + val + ')(_x,_y,_z);}';
                             }
-                            else if (binding['flags']&bindingFlags_twoWay) {
+                            else if (binding['flags'] & bindingFlags_twoWay) {
                                 if (propertyAccessorResultStrings.length > 0)
                                     propertyAccessorResultStrings.push(",");
                                 propertyAccessorResultStrings.push(quotedKey + ":function(_z){" + val + "=_z;}");
                             }
                         }
-                        else if (!binding['flags']&bindingFlags_eventHandler && isPossiblyUnwrappedObservable(val)) {
+                        else if (!(binding['flags'] & bindingFlags_eventHandler) && isPossiblyUnwrappedObservable(val)) {
                             val = 'ko.proxyObservable(function(){return ' + val + '})';
                         }
                     }
@@ -170,7 +170,7 @@ ko.bindingExpressionRewriting = (function () {
                 } else if (keyValueEntry['unknown']) {
                     // handle bindings that can be included without a value
                     var key = keyValueEntry['unknown'], binding = ko.bindingHandlers[key];
-                    if (binding && binding['flags']&bindingFlags_noValue)
+                    if (binding && (binding['flags'] & bindingFlags_noValue))
                         resultStrings.push(ensureQuoted(key)+ ":true");
                     else
                         resultStrings.push(key);
