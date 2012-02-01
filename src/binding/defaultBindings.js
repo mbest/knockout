@@ -150,11 +150,8 @@ ko.bindingHandlers['value'] = {
                     var elementValue = ko.selectExtensions.readValue(element);
                     if (ko.isWriteableObservable(modelValue))
                         modelValue(elementValue);
-                    else {
-                        var allBindings = allBindingsAccessor();
-                        if (allBindings['_ko_property_writers'] && allBindings['_ko_property_writers']['value'])
-                            allBindings['_ko_property_writers']['value'](elementValue);
-                    }
+                    else
+                        ko.bindingExpressionRewriting.writeValueToProperty(allBindingsAccessor, 'value', elementValue);
                 });
             });
         });
@@ -291,14 +288,11 @@ ko.bindingHandlers['selectedOptions'] = {
     },
     'init': function (element, valueAccessor, allBindingsAccessor) {
         ko.utils.registerEventHandler(element, "change", function () {
-            var value = valueAccessor();
+            var value = valueAccessor(), valueToWrite = ko.bindingHandlers['selectedOptions'].getSelectedValuesFromSelectNode(this);
             if (ko.isWriteableObservable(value))
-                value(ko.bindingHandlers['selectedOptions'].getSelectedValuesFromSelectNode(this));
-            else {
-                var allBindings = allBindingsAccessor();
-                if (allBindings['_ko_property_writers'] && allBindings['_ko_property_writers']['value'])
-                    allBindings['_ko_property_writers']['value'](ko.bindingHandlers['selectedOptions'].getSelectedValuesFromSelectNode(this));
-            }
+                value(valueToWrite);
+            else
+                ko.bindingExpressionRewriting.writeValueToProperty(allBindingsAccessor, 'value', valueToWrite);
         });
     },
     'update': function (element, valueAccessor) {
@@ -401,10 +395,7 @@ ko.bindingHandlers['checked'] = {
                     modelValue(valueToWrite);
                 }
             } else {
-                var allBindings = allBindingsAccessor();
-                if (allBindings['_ko_property_writers'] && allBindings['_ko_property_writers']['checked']) {
-                    allBindings['_ko_property_writers']['checked'](valueToWrite);
-                }
+                ko.bindingExpressionRewriting.writeValueToProperty(allBindingsAccessor, 'checked', valueToWrite);
             }
         };
         ko.utils.registerEventHandler(element, "click", updateHandler);
@@ -460,12 +451,8 @@ ko.bindingHandlers['hasfocus'] = {
 
             if (ko.isWriteableObservable(modelValue))
                 modelValue(valueToWrite);
-            else {
-                var allBindings = allBindingsAccessor();
-                if (allBindings['_ko_property_writers'] && allBindings['_ko_property_writers']['hasfocus']) {
-                    allBindings['_ko_property_writers']['hasfocus'](valueToWrite);
-                }
-            }
+            else
+                ko.bindingExpressionRewriting.writeValueToProperty(allBindingsAccessor, 'hasfocus', valueToWrite);
         };
         ko.utils.registerEventHandler(element, "focus", function() { writeValue(true) });
         ko.utils.registerEventHandler(element, "focusin", function() { writeValue(true) }); // For IE
@@ -476,6 +463,17 @@ ko.bindingHandlers['hasfocus'] = {
         var value = ko.utils.unwrapObservable(valueAccessor());
         value ? element.focus() : element.blur();
         ko.utils.triggerEvent(element, value ? "focusin" : "focusout"); // For IE, which doesn't reliably fire "focus" or "blur" events synchronously
+    }
+};
+
+
+ko.bindingHandlers['withlight'] = {
+    'flags': bindingFlags_contentBind | bindingFlags_canUseVirtual,
+    'init': function(element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
+        var innerContext = bindingContext['createChildContext'](function() {
+            return ko.utils.unwrapObservable(valueAccessor());
+        });
+        ko.applyBindingsToDescendants(innerContext, element, true);
     }
 };
 

@@ -110,6 +110,15 @@ ko.utils = new (function () {
             return target;
         },
 
+        merge: function (target, source) {
+            for(var prop in source) {
+                if (source.hasOwnProperty(prop) && !(prop in target)) {
+                    target[prop] = source[prop];
+                }
+            }
+            return target;
+        },
+
         emptyDomNode: function (domNode) {
             while (domNode.firstChild) {
                 ko.removeNode(domNode.firstChild);

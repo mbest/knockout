@@ -21,30 +21,27 @@
 (function () {
     ko.bindingHandlers = {};
 
-    ko.bindingContext = function(dataItem, parentBindingContext) {
-        var self = this;
-        if (parentBindingContext) {
-            // copy all properties from parent binding context
-            ko.utils.extend(self, parentBindingContext);
-            self['$parent'] = parentBindingContext['$data'];
-            self['$parents'] = (self['$parents'] || []).slice(0);
-            self['$parents'].unshift(self['$parent']);
-        } else {
-            self['$parents'] = [];
-            // if dataItem is an observable, $root will point to the observable and not the unwrapped value
-            self['$root'] = dataItem;
-        }
-        if (ko.isObservable(dataItem)) {
-            // In previous versions, an observable view-model was unwrapped before creating the context object.
-            // Now, it's unwrapped here, but we also store the 'wrapped' value so bindings can subscribe to it.
-            self['$observable'] = dataItem;
-            self._subscription = ko.dependentObservable(function() {
-                self['$data'] = dataItem();
-            });
-        } else {
-            self['$observable'] = undefined;
-            self['$data'] = dataItem;
-        }
+    ko.bindingContext = function(dataItem, parent) {
+        var self = this, isOb = ko.isObservable(dataItem) || typeof(dataItem) == "function";
+        self._subscription = null;  // set so it isn't set by merge call below
+        self._subscription = ko.dependentObservable(parent ?
+            function() {
+                if (parent._subscription)
+                    ko.dependencyDetection.registerDependency(parent._subscription);
+                // set our properties
+                self['$parents'] = (parent['$parents'] || []).slice(0);
+                self['$parents'].unshift(self['$parent'] = parent['$data']);
+                self['$data'] = isOb ? dataItem() : dataItem;
+                // copy $root and any custom properties from parent binding context
+                ko.utils.merge(self, parent);
+            } :
+            function() {
+                self['$parents'] = [];
+                self['$root'] = self['$data'] = isOb ? dataItem() : dataItem;
+            }
+        );
+        if (!self._subscription.getDependenciesCount())
+            self._subscription = null;
     }
     ko.bindingContext.prototype['createChildContext'] = function (dataItem) {
         return new ko.bindingContext(dataItem, this);
@@ -131,9 +128,9 @@
                 parsedBindings = evaluatedBindings || ko.bindingProvider['instance']['getBindings'](node, bindingContext);
 
                 if (parsedBindings) {
-                    // If the context includes an observable, add a dependency to it
-                    if (bindingContext['$observable'])
-                        ko.dependencyDetection.registerDependency(bindingContext['$observable']);
+                    // If the context includes an subscription, add a dependency to it
+                    if (bindingContext._subscription)
+                        ko.dependencyDetection.registerDependency(bindingContext._subscription);
 
                     // First run all the inits, so bindings can register for notification on changes
                     if (initPhase === 0) {

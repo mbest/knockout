@@ -2,7 +2,7 @@
 ko.bindingExpressionRewriting = (function () {
     var restoreCapturedTokensRegex = /\@ko_token_(\d+)\@/g;
     var javaScriptAssignmentTarget = /^[\_$a-z][\_$a-z0-9]*(\[.*?\])*(\.[\_$a-z][\_$a-z0-9]*(\[.*?\])*)*$/i;
-    var javaScriptReservedWords = ["true", "false"];
+    var javaScriptReservedWords = ["true", "false", "null"];
 
     function restoreTokens(string, tokens) {
         var prevValue = null;
@@ -12,23 +12,22 @@ ko.bindingExpressionRewriting = (function () {
                 return tokens[tokenIndex];
             });
         }
-        return string;
+        return ko.utils.stringTrim(string);
     }
 
     function isWriteableValue(expression) {
-        if (ko.utils.arrayIndexOf(javaScriptReservedWords, ko.utils.stringTrim(expression).toLowerCase()) >= 0)
+        if (ko.utils.arrayIndexOf(javaScriptReservedWords, expression.toLowerCase()) >= 0)
             return false;
         return expression.match(javaScriptAssignmentTarget) !== null;
     }
 
     function ensureQuoted(key) {
-        var trimmedKey = ko.utils.stringTrim(key);
-        switch (trimmedKey.length && trimmedKey.charAt(0)) {
+        switch (key.length && key.charAt(0)) {
             case "'":
-            case '"': 
+            case '"':
                 return key;
             default:
-                return "'" + trimmedKey + "'";
+                return "'" + key + "'";
         }
     }
 
@@ -97,7 +96,7 @@ ko.bindingExpressionRewriting = (function () {
                         var replacement = "@ko_token_" + (tokens.length - 1) + "@";
                         str = str.substring(0, tokenStart) + replacement + str.substring(position + 1);
                         position -= (token.length - replacement.length);
-                        tokenStart = null;                            
+                        tokenStart = null;
                     }
                 }
             }
@@ -116,11 +115,11 @@ ko.bindingExpressionRewriting = (function () {
                     result.push({ 'unknown': restoreTokens(pair, tokens) });
                 }
             }
-            return result;            
+            return result;
         },
 
-        insertPropertyAccessors: function (objectLiteralStringOrKeyValueArray) {
-            var keyValueArray = typeof objectLiteralStringOrKeyValueArray === "string" 
+        insertPropertyAccessors: function (objectLiteralStringOrKeyValueArray, parentBinding) {
+            var keyValueArray = typeof objectLiteralStringOrKeyValueArray === "string"
                 ? ko.bindingExpressionRewriting.parseObjectLiteral(objectLiteralStringOrKeyValueArray)
                 : objectLiteralStringOrKeyValueArray;
             var resultStrings = [], propertyAccessorResultStrings = [];
@@ -131,25 +130,49 @@ ko.bindingExpressionRewriting = (function () {
                     resultStrings.push(",");
 
                 if (keyValueEntry['key']) {
-                    var quotedKey = ensureQuoted(keyValueEntry['key']), val = keyValueEntry['value'];
+                    var key = keyValueEntry['key'], val = keyValueEntry['value'],
+                        quotedKey = ensureQuoted(key), binding = parentBinding || ko.bindingHandlers[key];
+                    if (!binding) {
+                        // check if binding uses key1.key2: value format
+                        var dotPos = key.indexOf(".");
+                        if (dotPos > 0) {
+                            var realKey = key.substring(0, dotPos);
+                            binding = ko.bindingHandlers[realKey];
+                            if (!binding || !binding['flags']&bindingFlags_twoLevel)
+                                throw new Error(realKey + " does not support two-level binding");
+                        }
+                    }
+                    if (binding) {
+                        if (binding['flags']&bindingFlags_twoLevel && val.charAt(0) === "{") {
+                            val = '{' + ko.bindingExpressionRewriting.insertPropertyAccessors(val, binding) + '}';
+                        }
+                        else if (binding['flags']&bindingFlags_eventHandler && isWriteableValue(val)) {
+                            val = 'function(_x,_y,_z){(' + val + ')(_x,_y,_z);}';
+                        }
+                        else if (binding['flags']&bindingFlags_twoWay && isWriteableValue(val)) {
+                            if (propertyAccessorResultStrings.length > 0)
+                                propertyAccessorResultStrings.push(",");
+                            propertyAccessorResultStrings.push(quotedKey + ":function(_z){" + val + "=_z;}");
+                        }
+                    }
                     resultStrings.push(quotedKey);
-                    resultStrings.push(":");              
+                    resultStrings.push(":");
                     resultStrings.push(val);
-
-                    if (isWriteableValue(ko.utils.stringTrim(val))) {
-                        if (propertyAccessorResultStrings.length > 0)
-                            propertyAccessorResultStrings.push(", ");
-                        propertyAccessorResultStrings.push(quotedKey + " : function(__ko_value) { " + val + " = __ko_value; }");
-                    }                    
                 } else if (keyValueEntry['unknown']) {
-                    resultStrings.push(keyValueEntry['unknown']);
+                    // handle bindings that can be included without a value
+                    var key = keyValueEntry['unknown'], binding = ko.bindingHandlers[key];
+                    if (binding && binding['flags']&bindingFlags_noValue)
+                        resultStrings.push(ensureQuoted(key)+ ":true");
+                    else
+                        resultStrings.push(key);
+
                 }
             }
 
             var combinedResult = resultStrings.join("");
             if (propertyAccessorResultStrings.length > 0) {
                 var allPropertyAccessors = propertyAccessorResultStrings.join("");
-                combinedResult = combinedResult + ", '_ko_property_writers' : { " + allPropertyAccessors + " } ";                
+                combinedResult = combinedResult + ",'_ko_property_writers':{" + allPropertyAccessors + "}";
             }
 
             return combinedResult;
@@ -157,9 +180,15 @@ ko.bindingExpressionRewriting = (function () {
 
         keyValueArrayContainsKey: function(keyValueArray, key) {
             for (var i = 0; i < keyValueArray.length; i++)
-                if (ko.utils.stringTrim(keyValueArray[i]['key']) == key)
-                    return true;            
+                if (keyValueArray[i]['key'] == key)
+                    return true;
             return false;
+        },
+
+        writeValueToProperty: function(allBindingsAccessor, key, value) {
+            var propWriters = allBindingsAccessor()['_ko_property_writers'];
+            if (propWriters && propWriters[key])
+                propWriters[key](value);
         }
     };
 })();
