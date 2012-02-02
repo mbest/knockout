@@ -143,6 +143,8 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
 
     ko.exportProperty(dependentObservable, 'dispose', dependentObservable.dispose);
     ko.exportProperty(dependentObservable, 'getDependenciesCount', dependentObservable.getDependenciesCount);
+    ko.exportProperty(dependentObservable, 'addDisposeWhenNodesAreRemoved', dependentObservable.addDisposeWhenNodesAreRemoved);
+    ko.exportProperty(dependentObservable, 'replaceDisposeWhenNodesAreRemoved', dependentObservable.replaceDisposeWhenNodesAreRemoved);
 
     return dependentObservable;
 };

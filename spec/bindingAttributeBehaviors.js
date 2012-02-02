@@ -310,6 +310,21 @@ describe('Binding attribute syntax', {
         value_of(testNode).should_contain_text("Hello Some text Goodbye");
     },
 
+    'Bindings in containerless binding in templates should be bound only once': function() {
+        delete ko.bindingHandlers.nonexistentHandler;
+        var initCalls = 0;
+        ko.bindingHandlers.test = { init: function () { initCalls++; } };
+        testNode.innerHTML = "<div data-bind='template: {\"if\":true}'>xxx<!-- ko nonexistentHandler: true --><span data-bind='test: true'></span><!-- /ko --></div>";
+        ko.applyBindings({}, testNode);
+        value_of(initCalls).should_be(1);
+    },
+
+    'Should automatically bind virtual descendants of containerless markers if no binding controlsDescendantBindings': function() {
+          testNode.innerHTML = "Hello <!-- ko dummy: false --><span data-bind='text: \"WasBound\"'>Some text</span><!-- /ko --> Goodbye";
+          ko.applyBindings(null, testNode);
+          value_of(testNode).should_contain_text("Hello WasBound Goodbye");
+    },
+
     'Should be able to set and access correct context in custom containerless binding': function() {
         testNode.innerHTML = "Hello <!-- ko test: false --><div>Some text</div><!-- /ko --> Goodbye"
         var innerContext = new ko.bindingContext();

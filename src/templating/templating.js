@@ -21,7 +21,7 @@
         }
     }
 
-    ko.activateBindingsOnTemplateRenderedNodes = function(nodeArray, bindingContext) {
+    ko.activateBindingsOnTemplateRenderedNodes = function(nodeArray, bindingContext, subscription) {
         // To be used on any nodes that have been rendered by a template and have been inserted into some parent element.
         // Safely iterates through nodeArray (being tolerant of any changes made to it during binding, e.g.,
         // if a binding inserts siblings), and for each:
@@ -35,6 +35,8 @@
 
         invokeForEachNodeOrCommentInParent(nodeArrayClone, function(node) {
             ko.applyBindings(bindingContext, node);
+            if (subscription)
+                subscription.addDisposeWhenNodesAreRemoved(node);
         });
         invokeForEachNodeOrCommentInParent(nodeArrayClone, function(node) {
             ko.memoization.unmemoizeDomNodeAndDescendants(node, [bindingContext]);
@@ -117,9 +119,9 @@
         };
 
         // This will be called whenever setDomNodeChildrenFromArrayMapping has added nodes to targetNode
-        var activateBindingsCallback = function(arrayValue, addedNodesArray) {
+        var activateBindingsCallback = function(arrayValue, addedNodesArray, subscription) {
             var bindingContext = (lastContext && arrayValue == lastArrayValue) ? lastContext : createInnerBindingContext(arrayValue);
-            ko.activateBindingsOnTemplateRenderedNodes(addedNodesArray, bindingContext);
+            ko.activateBindingsOnTemplateRenderedNodes(addedNodesArray, bindingContext, subscription);
             if (options['afterRender'])
                 options['afterRender'](addedNodesArray, bindingContext['$data']);
         };

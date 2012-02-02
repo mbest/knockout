@@ -102,21 +102,20 @@
     }
 
     function applyBindingsToNodeAndDescendantsInternal (bindingContext, node, isRootNodeForBindingContext, bindingsToApply) {
-        var isElement = (node.nodeType === 1);
+        var isElement = (node.nodeType === 1), shouldBindDescendants = !bindingsToApply,
+            hasBindings = bindingsToApply || ko.bindingProvider['instance']['nodeHasBindings'](node);
+
         if (isElement) // Workaround IE <= 8 HTML parsing weirdness
             ko.virtualElements.normaliseVirtualElementDomStructure(node);
 
-        // Perf optimisation: Apply bindings only if...
-        // (1) It's a root element for this binding context, as we will need to store the binding context on this node
-        //     Note that we can't store binding contexts on non-elements (e.g., text nodes), as IE doesn't allow expando properties for those
-        // (2) It might have bindings (e.g., it has a data-bind attribute, or it's a marker for a containerless template)
-        var shouldApplyBindings = bindingsToApply ||                        // Case (2)
-            (isElement && isRootNodeForBindingContext) ||                   // Case (1)
-            ko.bindingProvider['instance']['nodeHasBindings'](node);        // Case (2)
+        // We only need to store the bindingContext at the root of the subtree where it applies
+        // as all descendants will be able to find it by scanning up their ancestry
+        if (isRootNodeForBindingContext && (isElement || hasBindings))
+            ko.storedBindingContextForNode(node, bindingContext);
 
-        if (!shouldApplyBindings) {
-            if (!bindingsToApply)
-                applyBindingsToDescendantsInternal(bindingContext, node, (!isElement && isRootNodeForBindingContext));
+        if (!hasBindings) {
+            if (shouldBindDescendants)
+                applyBindingsToDescendantsInternal(bindingContext, node, !isElement);
             return;
         }
 
@@ -174,11 +173,6 @@
             ko.utils.arrayForEach(bindings, callHandlers);
         }
 
-        // We only need to store the bindingContext at the root of the subtree where it applies
-        // as all descendants will be able to find it by scanning up their ancestry
-        if (isRootNodeForBindingContext)
-            ko.storedBindingContextForNode(node, bindingContext);
-
         var viewModel = bindingContext['$data'];
 
         // parse bindings; track observables so that the bindng are reparsed if needed
@@ -223,8 +217,8 @@
 
         if (contentBindBinding)
             callHandlers(contentBindBinding);
-        else if (!bindingsToApply)
-            applyBindingsToDescendantsInternal(bindingContext, node, (!isElement && isRootNodeForBindingContext));
+        else if (shouldBindDescendants)
+            applyBindingsToDescendantsInternal(bindingContext, node, !isElement);
 
         applyListedBindings(contentUpdateBindings);
     };
@@ -252,9 +246,9 @@
         applyBindingsToNodeAndDescendantsInternal(getBindingContext(viewModelOrBindingContext), node, true, bindings);
     };
 
-    ko.applyBindingsToDescendants = function(viewModelOrBindingContext, rootNode, areRootNodesForBindingContext) {
+    ko.applyBindingsToDescendants = function(viewModelOrBindingContext, rootNode) {
         if (rootNode.nodeType === 1 || rootNode.nodeType === 8)
-            applyBindingsToDescendantsInternal(getBindingContext(viewModelOrBindingContext), rootNode, areRootNodesForBindingContext);
+            applyBindingsToDescendantsInternal(getBindingContext(viewModelOrBindingContext), rootNode, true);
     };
 
     ko.applyBindings = function (viewModelOrBindingContext, rootNode) {

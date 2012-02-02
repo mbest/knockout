@@ -8,7 +8,8 @@
     //   previously mapped - retain those nodes, and just insert/delete other ones
 
     // "callbackAfterAddingNodes" will be invoked after any "mapping"-generated nodes are inserted into the container node
-    // You can use this, for example, to activate bindings on those nodes.
+    // You can use this, for example, to activate bindings on those nodes. Your function must also call
+    // addDisposeWhenNodesAreRemoved with the given mappedNodes and subscription.
 
     function fixUpVirtualElements(contiguousNodeArray) {
         // Ensures that contiguousNodeArray really *is* an array of contiguous siblings, even if some of the interior
@@ -32,6 +33,10 @@
         }
     }
 
+    function defaultCallbackAfterAddingNodes(value, mappedNodes, subscription) {
+        subscription.addDisposeWhenNodesAreRemoved(mappedNodes);
+    }
+
     function mapNodeAndRefreshWhenChanged(containerNode, mapping, valueToMap, callbackAfterAddingNodes) {
         // Map this array value inside a dependentObservable so we re-map when any dependency changes
         var mappedNodes = [];
@@ -41,10 +46,9 @@
             // On subsequent evaluations, just replace the previously-inserted DOM nodes
             if (mappedNodes.length > 0) {
                 fixUpVirtualElements(mappedNodes);
-                dependentObservable.replaceDisposeWhenNodesAreRemoved(newMappedNodes);    // must be called before replaceDomNodes
+                dependentObservable.replaceDisposeWhenNodesAreRemoved();    // must clear before calling replaceDomNodes
                 ko.utils.replaceDomNodes(mappedNodes, newMappedNodes);
-                if (callbackAfterAddingNodes)
-                    callbackAfterAddingNodes(valueToMap, newMappedNodes);
+                callbackAfterAddingNodes(valueToMap, newMappedNodes, dependentObservable);
             }
 
             // Replace the contents of the mappedNodes array, thereby updating the record
@@ -52,7 +56,6 @@
             mappedNodes.splice(0, mappedNodes.length);
             ko.utils.arrayPushAll(mappedNodes, newMappedNodes);
         });
-        dependentObservable.addDisposeWhenNodesAreRemoved(mappedNodes);
         return { mappedNodes : mappedNodes, dependentObservable : dependentObservable };
     }
 
@@ -62,6 +65,7 @@
         // Compare the provided array against the previous one
         array = array || [];
         options = options || {};
+        callbackAfterAddingNodes = callbackAfterAddingNodes || defaultCallbackAfterAddingNodes;
         var isFirstExecution = ko.utils.domData.get(domNode, lastMappingResultDomDataKey) === undefined;
         var lastMappingResult = ko.utils.domData.get(domNode, lastMappingResultDomDataKey) || [];
         var lastArray = ko.utils.arrayMap(lastMappingResult, function (x) { return x.arrayEntry; });
@@ -124,8 +128,7 @@
                         }
                         insertAfterNode = node;
                     }
-                    if (callbackAfterAddingNodes)
-                        callbackAfterAddingNodes(valueToMap, mappedNodes);
+                    callbackAfterAddingNodes(valueToMap, mappedNodes, mapData.dependentObservable);
                     break;
             }
         }

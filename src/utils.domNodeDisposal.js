@@ -52,8 +52,10 @@ ko.utils.domNodeDisposal = new (function () {
     function newDisposeCallback(nodeOrNodes, disposeCallback, disposeWhen) {
         var nodes = [];
         function addNode(node) {
-            nodes.push(node);
-            getDisposeCallbacksCollection(node, true).push(cleanNodeCallback);
+            if (node.nodeType !== 3) {
+                nodes.push(node);
+                getDisposeCallbacksCollection(node, true).push(cleanNodeCallback);
+            }
         }
         function cleanNodeCallback(node) {
             ko.utils.arrayRemoveItem(nodes, node);
