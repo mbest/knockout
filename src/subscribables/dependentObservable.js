@@ -108,12 +108,15 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
     }
 
     var disposer;
-    function addDisposeWhenNodeIsRemoved(node) {
-        if (!disposer)
-            disposer = ko.utils.domNodeDisposal.addDisposeCallback(null, disposeAllSubscriptionsToDependencies, disposeWhen);
-        disposer.addNodeOrNodes(node);
-        dependentObservable.dispose = disposer.dispose;
-        disposeWhen = disposer.shouldDispose;
+    function addDisposeWhenNodeIsRemoved(nodeOrNodes) {
+        if (nodeOrNodes) {
+            if (!disposer)
+                disposer = ko.utils.domNodeDisposal.addDisposeCallback(null, disposeAllSubscriptionsToDependencies, disposeWhen);
+            disposer.addNodeOrNodes(nodeOrNodes);
+            dependentObservable.dispose = disposer.dispose;
+            disposeWhen = disposer.shouldDispose;
+        }
+        return dependentObservable;
     }
 
     dependentObservable.getDependenciesCount = function () { return _subscriptionsToDependencies.length; };
@@ -130,9 +133,7 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
 
     // set up node disposal callbacks after initial evaluation
     disposeWhen = options.disposeWhen || options["disposeWhen"];
-    var disposeWhenNodeIsRemoved = options.disposeWhenNodeIsRemoved || options["disposeWhenNodeIsRemoved"];
-    if (disposeWhenNodeIsRemoved)
-        addDisposeWhenNodeIsRemoved(disposeWhenNodeIsRemoved);
+    addDisposeWhenNodeIsRemoved(options.disposeWhenNodeIsRemoved || options["disposeWhenNodeIsRemoved"]);
 
     ko.exportProperty(dependentObservable, 'dispose', dependentObservable.dispose);
     ko.exportProperty(dependentObservable, 'getDependenciesCount', dependentObservable.getDependenciesCount);

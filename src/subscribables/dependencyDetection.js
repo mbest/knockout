@@ -11,10 +11,6 @@ ko.dependencyDetection = (function () {
             _frames.pop();
         },
 
-        beginIgnore: function() {
-            _frames.push(null);
-        },
-
         registerDependency: function (subscribable) {
             if (!ko.isSubscribable(subscribable))
                 throw new Error("Only subscribable things can act as dependencies");
@@ -24,6 +20,15 @@ ko.dependencyDetection = (function () {
                     return;
                 topFrame.distinctDependencies.push(subscribable);
                 topFrame.callback(subscribable);
+            }
+        },
+
+        ignore: function(callback) {
+            try {
+                _frames.push(null);
+                callback();
+            } finally {
+                _frames.pop();
             }
         }
     };

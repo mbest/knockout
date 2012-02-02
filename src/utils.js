@@ -268,9 +268,11 @@ ko.utils = new (function () {
             return ko.isObservable(value) ? value() : value;
         },
 
-        possiblyWrap: function(readFunction) {
+        possiblyWrap: function(readFunction, nodeOrNodes) {
             var obs = ko.dependentObservable(readFunction);
-            return obs.getDependenciesCount() ? obs : obs.getWithoutDependency();
+            return obs.getDependenciesCount()
+                ? obs.addDisposeWhenNodeIsRemoved(nodeOrNodes)
+                : obs.getWithoutDependency();
         },
 
         domNodeHasCssClass: function (node, className) {

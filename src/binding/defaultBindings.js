@@ -106,21 +106,8 @@ ko.bindingHandlers['disable'] = {
     }
 };
 
-function ensureDropdownSelectionIsConsistentWithModelValue(element, modelValue, preferModelValue) {
-    if (preferModelValue) {
-        if (modelValue !== ko.selectExtensions.readValue(element))
-            ko.selectExtensions.writeValue(element, modelValue);
-    }
-
-    // No matter which direction we're syncing in, we want the end result to be equality between dropdown value and model value.
-    // If they aren't equal, either we prefer the dropdown value, or the model value couldn't be represented, so either way,
-    // change the model value to match the dropdown.
-    if (modelValue !== ko.selectExtensions.readValue(element))
-        ko.utils.triggerEvent(element, "change");
-};
-
 ko.bindingHandlers['value'] = {
-    'flags': bindingFlags_twoWay,
+    'flags': bindingFlags_twoWay | bindingFlags_contentUpdate,
     'init': function (element, valueAccessor, allBindingsAccessor) {
         // Always catch "change" event; possibly other events too if asked
         var eventsToCatch = ["change"];
@@ -173,15 +160,15 @@ ko.bindingHandlers['value'] = {
             // Workaround for IE6 bug: It won't reliably apply values to SELECT nodes during the same execution thread
             // right after you've changed the set of OPTION nodes on it. So for that node type, we'll schedule a second thread
             // to apply the value as well.
-            var alsoApplyAsynchronously = element.tagName == "SELECT";
-            if (alsoApplyAsynchronously)
+            var valueIsSelectOption = element.tagName == "SELECT";
+            if (valueIsSelectOption) {
+                // If you try to set a model value that can't be represented in an already-populated dropdown, reject that change,
+                // because you're not allowed to have a model value that disagrees with a visible UI selection.
+                if (newValue !== ko.selectExtensions.readValue(element))
+                    ko.utils.triggerEvent(element, "change");
                 setTimeout(applyValueAction, 0);
+            }
         }
-
-        // If you try to set a model value that can't be represented in an already-populated dropdown, reject that change,
-        // because you're not allowed to have a model value that disagrees with a visible UI selection.
-        if ((element.tagName == "SELECT") && (element.length > 0))
-            ensureDropdownSelectionIsConsistentWithModelValue(element, newValue, /* preferModelValue */ false);
     }
 };
 
@@ -258,20 +245,13 @@ ko.bindingHandlers['options'] = {
 
             if (previousScrollTop)
                 element.scrollTop = previousScrollTop;
-
-            if (selectWasPreviouslyEmpty && ('value' in allBindings)) {
-                // Ensure consistency between model value and selected option.
-                // If the dropdown is being populated for the first time here (or was otherwise previously empty),
-                // the dropdown selection state is meaningless, so we preserve the model value.
-                ensureDropdownSelectionIsConsistentWithModelValue(element, ko.utils.unwrapObservable(allBindings['value']), /* preferModelValue */ true);
-            }
         }
     }
 };
 ko.bindingHandlers['options'].optionValueDomDataKey = '__ko.optionValueDomData__';
 
 ko.bindingHandlers['selectedOptions'] = {
-    'flags': bindingFlags_twoWay,
+    'flags': bindingFlags_twoWay | bindingFlags_contentUpdate,
     getSelectedValuesFromSelectNode: function (selectNode) {
         var result = [];
         var nodes = selectNode.childNodes;
