@@ -271,7 +271,7 @@ ko.utils = new (function () {
         possiblyWrap: function(readFunction, nodeOrNodes) {
             var obs = ko.dependentObservable(readFunction);
             return obs.getDependenciesCount()
-                ? obs.addDisposeWhenNodeIsRemoved(nodeOrNodes)
+                ? obs.addDisposeWhenNodesAreRemoved(nodeOrNodes)
                 : obs.getWithoutDependency();
         },
 

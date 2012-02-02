@@ -234,7 +234,7 @@
         if (arguments.length == 2) {
             ko.utils.domData.set(node, storedBindingContextDomDataKey, bindingContext);
             if (bindingContext._subscription)
-                bindingContext._subscription.addDisposeWhenNodeIsRemoved(node);
+                bindingContext._subscription.addDisposeWhenNodesAreRemoved(node);
         }
         else
             return ko.utils.domData.get(node, storedBindingContextDomDataKey);

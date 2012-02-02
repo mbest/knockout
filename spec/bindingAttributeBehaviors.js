@@ -400,5 +400,19 @@ describe('Binding attribute syntax', {
 
         ko.applyBindings({ myObservable: observable }, testNode);
         value_of(hasUpdatedSecondBinding).should_be(true);
+    },
+
+    'Should not subscribe to observables accessed in init function': function() {
+        var observable = ko.observable('A');
+        ko.bindingHandlers.test = {
+            init: function(element, valueAccessor) {
+                var value = valueAccessor();
+                value();
+            }
+        }
+        testNode.innerHTML = "<div data-bind='if: true'><div data-bind='test: myObservable'></div></div>";
+
+        ko.applyBindings({ myObservable: observable }, testNode);
+        value_of(observable.getSubscriptionsCount()).should_be(0);
     }
 });

@@ -364,6 +364,16 @@ describe('Binding: Value', {
         value_of(observable()).should_not_be('D');
     },
 
+    'For empty select boxes, should reject model values that don\'t match any option value, resetting the model value to undefined': function() {
+        var observable = new ko.observable('B');
+        testNode.innerHTML = "<select data-bind='options:[], value:myObservable'></select>";
+        ko.applyBindings({ myObservable: observable }, testNode);
+        value_of(testNode.childNodes[0].selectedIndex).should_be(-1);   // nothing selected
+        
+        observable('D'); // This change should be rejected, as there's no corresponding option in the UI
+        value_of(observable()).should_be(undefined);
+    },
+    
     'For select boxes, option values can be numerical, and are not implicitly converted to strings': function() {
         var observable = new ko.observable(30);
         testNode.innerHTML = "<select data-bind='options:[10,20,30,40], value:myObservable'></select>";

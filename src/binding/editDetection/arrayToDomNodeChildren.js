@@ -41,7 +41,7 @@
             // On subsequent evaluations, just replace the previously-inserted DOM nodes
             if (mappedNodes.length > 0) {
                 fixUpVirtualElements(mappedNodes);
-                dependentObservable.replaceDisposeWhenNodeIsRemoved(newMappedNodes);    // must be called before replaceDomNodes
+                dependentObservable.replaceDisposeWhenNodesAreRemoved(newMappedNodes);    // must be called before replaceDomNodes
                 ko.utils.replaceDomNodes(mappedNodes, newMappedNodes);
                 if (callbackAfterAddingNodes)
                     callbackAfterAddingNodes(valueToMap, newMappedNodes);
@@ -52,7 +52,7 @@
             mappedNodes.splice(0, mappedNodes.length);
             ko.utils.arrayPushAll(mappedNodes, newMappedNodes);
         });
-        dependentObservable.addDisposeWhenNodeIsRemoved(mappedNodes);
+        dependentObservable.addDisposeWhenNodesAreRemoved(mappedNodes);
         return { mappedNodes : mappedNodes, dependentObservable : dependentObservable };
     }
 
