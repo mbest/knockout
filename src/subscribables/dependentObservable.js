@@ -42,15 +42,11 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
     }
 
 
-    var baseDisposeWhen = options.disposeWhen || options["disposeWhen"];
-    var dispose = disposeAllSubscriptionsToDependencies, disposeWhen = baseDisposeWhen;
-
+    var disposeWhen;
     function evaluateImmediate() {
-        // Don't dispose on first evaluation, because the "disposeWhen" callback might
-        // e.g., dispose when the associated DOM element isn't in the doc, and it's not
-        // going to be in the doc until *after* the first evaluation
-        if (_hasBeenEvaluated && disposeWhen && disposeWhen()) {
-            dispose();
+        // disposeWhen won't be set until after initial evaluation
+        if (disposeWhen && disposeWhen()) {
+            dependentObservable.dispose();
             return;
         }
 
@@ -114,17 +110,17 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
     var disposer;
     function addDisposeWhenNodeIsRemoved(node) {
         if (!disposer)
-            disposer = ko.utils.domNodeDisposal.addDisposeCallback(null, disposeAllSubscriptionsToDependencies, baseDisposeWhen);
+            disposer = ko.utils.domNodeDisposal.addDisposeCallback(null, disposeAllSubscriptionsToDependencies, disposeWhen);
         disposer.addNodeOrNodes(node);
-        dependentObservable.dispose = dispose = disposer.dispose;
+        dependentObservable.dispose = disposer.dispose;
         disposeWhen = disposer.shouldDispose;
     }
 
-    dependentObservable.dispose = dispose;
-    dependentObservable.addDisposeWhenNodeIsRemoved = addDisposeWhenNodeIsRemoved;
     dependentObservable.getDependenciesCount = function () { return _subscriptionsToDependencies.length; };
     dependentObservable.hasWriteFunction = typeof options["write"] === "function";
     dependentObservable.getWithoutDependency = get;
+    dependentObservable.dispose = disposeAllSubscriptionsToDependencies;
+    dependentObservable.addDisposeWhenNodeIsRemoved = addDisposeWhenNodeIsRemoved;
 
     ko.subscribable.call(dependentObservable);
     ko.utils.extend(dependentObservable, ko.dependentObservable['fn']);
@@ -132,6 +128,8 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
     if (options['deferEvaluation'] !== true)
         evaluateImmediate();
 
+    // set up node disposal callbacks after initial evaluation
+    disposeWhen = options.disposeWhen || options["disposeWhen"];
     var disposeWhenNodeIsRemoved = options.disposeWhenNodeIsRemoved || options["disposeWhenNodeIsRemoved"];
     if (disposeWhenNodeIsRemoved)
         addDisposeWhenNodeIsRemoved(disposeWhenNodeIsRemoved);
