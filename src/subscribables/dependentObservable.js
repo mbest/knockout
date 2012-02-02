@@ -118,12 +118,18 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
         }
         return dependentObservable;
     }
+    function replaceDisposeWhenNodeIsRemoved(nodeOrNodes) {
+        if (disposer)
+            disposer.deleteAll();
+        return addDisposeWhenNodeIsRemoved(nodeOrNodes);
+    }
 
     dependentObservable.getDependenciesCount = function () { return _subscriptionsToDependencies.length; };
     dependentObservable.hasWriteFunction = typeof options["write"] === "function";
     dependentObservable.getWithoutDependency = get;
     dependentObservable.dispose = disposeAllSubscriptionsToDependencies;
     dependentObservable.addDisposeWhenNodeIsRemoved = addDisposeWhenNodeIsRemoved;
+    dependentObservable.replaceDisposeWhenNodeIsRemoved = replaceDisposeWhenNodeIsRemoved;
 
     ko.subscribable.call(dependentObservable);
     ko.utils.extend(dependentObservable, ko.dependentObservable['fn']);

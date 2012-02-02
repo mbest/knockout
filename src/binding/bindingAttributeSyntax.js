@@ -1,24 +1,33 @@
-/** @const */ var
-    // Two-way bindings initialliy write to the DOM from the model,
-    // but also will update the model property if the DOM changes
-    bindingFlags_twoWay=01,
-    // Event handler bindings call the given function in response to an event
-    bindingFlags_eventHandler=02,
-    // Content-bind bindings are responsible for binding (or not) their contents
-    bindingFlags_contentBind=04,
-    // Content-set bindings erase or set their contents
-    bindingFlags_contentSet=010,
-    // Content-update bindings modify their contents after the content nodes bindings have run
-    bindingFlags_contentUpdate=020,
-    // No-value bindings don't require a value (default value is true)
-    bindingFlags_noValue=040,
-    // Two-level bindings are like {attr.href: value} or {attr: {href: value}}
-    bindingFlags_twoLevel=0100,
-    // Virtual element bindings can be used in comments: <!-- ko if: value --><!-- /ko -->
-    bindingFlags_canUseVirtual=0200
-;
+/** @const */ var bindingFlags_twoWay=01;
+/** @const */ var bindingFlags_eventHandler=02;
+/** @const */ var bindingFlags_contentBind=04;
+/** @const */ var bindingFlags_contentSet=010;
+/** @const */ var bindingFlags_contentUpdate=020;
+/** @const */ var bindingFlags_noValue=040;
+/** @const */ var bindingFlags_twoLevel=0100;
+/** @const */ var bindingFlags_canUseVirtual=0200;
 
 (function () {
+    ko.bindingFlags = {
+        'twoWay': bindingFlags_twoWay,
+            // Two-way bindings initialliy write to the DOM from the model,
+            // but also will update the model property if the DOM changes
+        'eventHandler': bindingFlags_eventHandler,
+            // Event handler bindings call the given function in response to an event
+        'contentBind': bindingFlags_contentBind,
+            // Content-bind bindings are responsible for binding (or not) their contents
+        'contentSet': bindingFlags_contentSet,
+            // Content-set bindings erase or set their contents
+        'contentUpdate': bindingFlags_contentUpdate,
+            // Content-update bindings modify their contents after the content nodes bindings have run
+        'noValue': bindingFlags_noValue,
+            // No-value bindings don't require a value (default value is true)
+        'twoLevel': bindingFlags_twoLevel,
+            // Two-level bindings are like {attr.href: value} or {attr: {href: value}}
+        'canUseVirtual': bindingFlags_canUseVirtual
+            // Virtual element bindings can be used in comments: <!-- ko if: value --><!-- /ko -->
+    };
+
     ko.bindingHandlers = {};
 
     ko.bindingContext = function(dataItem, parent) {
@@ -43,17 +52,6 @@
     }
     ko.bindingContext.prototype['createChildContext'] = function (dataItem) {
         return new ko.bindingContext(dataItem, this);
-    };
-
-    ko.bindingFlags = {
-        'twoWay': bindingFlags_twoWay,
-        'eventHandler': bindingFlags_eventHandler,
-        'contentBind': bindingFlags_contentBind,
-        'contentSet': bindingFlags_contentSet,
-        'contentUpdate': bindingFlags_contentUpdate,
-        'noValue': bindingFlags_noValue,
-        'twoLevel': bindingFlags_twoLevel,
-        'canUseVirtual': bindingFlags_canUseVirtual
     };
 
     ko.checkBindingFlags = function(binding, flagsSet, flagsUnset) {
@@ -89,7 +87,7 @@
         return bindingValueWrap;
     };
 
-    function unwrapBindingValue(value) {
+    ko.unwrapBindingValue = function(value) {
         return (value && value.__ko_proto__ && value.__ko_proto__ === ko.bindingValueWrap) ? value() : value;
     };
 
@@ -129,8 +127,16 @@
         // so we need a single parsedBindings variable (shared by all callbacks
         // associated with this node's bindings) that all the closures can access.
         var parsedBindings;
-        function makeValueAccessor(bindingKey) {
-            return function () { return unwrapBindingValue(parsedBindings[bindingKey]); }
+        function makeValueAccessor(key) {
+            return function () {
+                return ko.unwrapBindingValue(parsedBindings[key]);
+            };
+        }
+        function makeSubKeyValueAccessor(fullKey, subKey) {
+            var _z = {};
+            return function() {
+                _z[subKey] = ko.unwrapBindingValue(parsedBindings[fullKey]); return _z;
+            };
         }
         function parsedBindingsAccessor() {
             return parsedBindings;
@@ -139,10 +145,9 @@
             var binding = ko.bindingHandlers[bindingKey];
             binding = binding ? { handler: binding, key: bindingKey } : ko.getTwoLevelBindingData(bindingKey);
             if (binding.handler) {
-                var valueAccessor = makeValueAccessor(bindingKey), subKey = binding.subKey;
-                binding.valueAccessor = subKey
-                    ? function() { var _z={}; _z[subKey] = valueAccessor(); return _z; }
-                    : valueAccessor;
+                binding.valueAccessor = binding.subKey
+                    ? makeSubKeyValueAccessor(bindingKey, binding.subKey)
+                    : makeValueAccessor(bindingKey);
                 binding.flags = binding.handler['flags'];
                 return binding;
             }
@@ -281,7 +286,7 @@
     ko.exportSymbol('bindingHandlers', ko.bindingHandlers);
     ko.exportSymbol('bindingContext', ko.bindingContext);
     ko.exportSymbol('bindingFlags', ko.bindingFlags);
-    ko.exportSymbol('bindingValueWrap', ko.bindingValueWrap);
+    ko.exportSymbol('bindingValueWrap', ko.bindingValueWrap);       // must be exported because it's used in binding parser (which uses eval)
     ko.exportSymbol('applyBindings', ko.applyBindings);
     ko.exportSymbol('applyBindingsToDescendants', ko.applyBindingsToDescendants);
     ko.exportSymbol('applyBindingsToNode', ko.applyBindingsToNode);

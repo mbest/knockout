@@ -8,7 +8,7 @@
 
     function invokeForEachNodeOrCommentInParent(nodeArray, action) {
         if (!nodeArray.length)
-            return; 
+            return;
         var node, nextInQueue = nodeArray[0],
             endNode = ko.virtualElements.nextSibling(nodeArray[nodeArray.length-1]);
         while ((node = nextInQueue) != endNode) {
@@ -18,7 +18,7 @@
                 action(node);
                 break;
             }
-        }        
+        }
     }
 
     ko.activateBindingsOnTemplateRenderedNodes = function(nodeArray, bindingContext) {
@@ -39,12 +39,6 @@
         invokeForEachNodeOrCommentInParent(nodeArrayClone, function(node) {
             ko.memoization.unmemoizeDomNodeAndDescendants(node, [bindingContext]);
         });
-    }
-
-    function getFirstNodeFromPossibleArray(nodeOrNodeArray) {
-        return nodeOrNodeArray.nodeType ? nodeOrNodeArray
-                                        : nodeOrNodeArray.length > 0 ? nodeOrNodeArray[0]
-                                        : null;
     }
 
     function executeTemplate(targetNodeOrNodeArray, renderMode, template, bindingContext, options) {
@@ -88,12 +82,7 @@
         renderMode = renderMode || "replaceChildren";
 
         if (targetNodeOrNodeArray) {
-            var firstTargetNode = getFirstNodeFromPossibleArray(targetNodeOrNodeArray);
-
-            var whenToDispose = function () { return (!firstTargetNode) || !ko.utils.domNodeIsAttachedToDocument(firstTargetNode); }; // Passive disposal (on next evaluation)
-            var activelyDisposeWhenNodeIsRemoved = (firstTargetNode && renderMode == "replaceNode") ? firstTargetNode.parentNode : firstTargetNode;
-            
-            return ko.dependentObservable( // So the DOM is automatically updated when any dependency changes
+            var subscription = ko.dependentObservable( // So the DOM is automatically updated when any dependency changes
                 function () {
                     // Ensure we've got a proper binding context to work with
                     var bindingContext = (dataOrBindingContext && (dataOrBindingContext instanceof ko.bindingContext))
@@ -106,12 +95,13 @@
                     var renderedNodesArray = executeTemplate(targetNodeOrNodeArray, renderMode, templateName, bindingContext, options);
                     if (renderMode == "replaceNode") {
                         targetNodeOrNodeArray = renderedNodesArray;
-                        firstTargetNode = getFirstNodeFromPossibleArray(targetNodeOrNodeArray);
+                        if (subscription)
+                            subscription.replaceDisposeWhenNodeIsRemoved(targetNodeOrNodeArray);
                     }
-                },
-                null,
-                { disposeWhen: whenToDispose, disposeWhenNodeIsRemoved: activelyDisposeWhenNodeIsRemoved }
+                }
             );
+            subscription.addDisposeWhenNodeIsRemoved(targetNodeOrNodeArray);
+            return subscription;
         } else {
             // We don't yet have a DOM node to evaluate, so use a memo and render the template later when there is a DOM node
             return ko.memoization.memoize(function (domNode) {
@@ -121,13 +111,15 @@
     };
 
     ko.renderTemplateForEach = function (template, arrayOrObservableArray, options, targetNode, parentBindingContext) {
+        var lastContext, lastArrayValue;
         var createInnerBindingContext = function(arrayValue) {
-            return parentBindingContext['createChildContext'](ko.utils.unwrapObservable(arrayValue));
+            lastArrayValue = arrayValue;
+            return (lastContext = parentBindingContext['createChildContext'](ko.utils.unwrapObservable(arrayValue)));
         };
 
         // This will be called whenever setDomNodeChildrenFromArrayMapping has added nodes to targetNode
         var activateBindingsCallback = function(arrayValue, addedNodesArray) {
-            var bindingContext = createInnerBindingContext(arrayValue);
+            var bindingContext = (lastContext && arrayValue == lastArrayValue) ? lastContext : createInnerBindingContext(arrayValue);
             ko.activateBindingsOnTemplateRenderedNodes(addedNodesArray, bindingContext);
             if (options['afterRender'])
                 options['afterRender'](addedNodesArray, bindingContext['$data']);
