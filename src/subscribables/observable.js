@@ -24,7 +24,6 @@ ko.observable = function (initialValue) {
     ko.subscribable.call(observable);
     observable.valueHasMutated = function () { observable["notifySubscribers"](_latestValue); }
     observable.valueWillMutate = function () { observable["notifySubscribers"](_latestValue, "beforeChange"); }
-    observable.getWithoutDependency = function() { return _latestValue; }
     ko.utils.extend(observable, ko.observable['fn']);
 
     ko.exportProperty(observable, "valueHasMutated", observable.valueHasMutated);

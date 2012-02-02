@@ -269,10 +269,8 @@ ko.utils = new (function () {
         },
 
         possiblyWrap: function(readFunction, nodeOrNodes) {
-            var obs = ko.dependentObservable(readFunction);
-            return obs.getDependenciesCount()
-                ? obs.addDisposeWhenNodesAreRemoved(nodeOrNodes)
-                : obs.getWithoutDependency();
+            return ko.dependentObservable(readFunction, null,
+                { returnValueIfNoDependencies: true, disposeWhenNodeIsRemoved: nodeOrNodes });
         },
 
         domNodeHasCssClass: function (node, className) {

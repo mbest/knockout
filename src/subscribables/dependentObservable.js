@@ -81,11 +81,23 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
         _hasBeenEvaluated = true;
     }
 
+    function evaluateInitial() {
+        try {
+            ko.dependencyDetection.begin(function(subscribable) {
+                _subscriptionsToDependencies.push(subscribable.subscribe(evaluatePossiblyAsync));
+            });
+            _latestValue = readFunction.call(evaluatorFunctionTarget);
+        } finally {
+            ko.dependencyDetection.end();
+        }
+        _hasBeenEvaluated = true;
+    }
+
     function dependentObservable() {
         if (arguments.length > 0) {
             set.apply(dependentObservable, arguments);
         } else {
-            return get(true);
+            return get();
         }
     }
 
@@ -98,12 +110,11 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
         }
     }
 
-    function get(registerDependecy) {
+    function get() {
         // Reading the value
         if (!_hasBeenEvaluated)
             evaluateImmediate();
-        if (registerDependecy)
-            ko.dependencyDetection.registerDependency(dependentObservable);
+        ko.dependencyDetection.registerDependency(dependentObservable);
         return _latestValue;
     }
 
@@ -124,22 +135,28 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
         return addDisposeWhenNodesAreRemoved(nodeOrNodes);
     }
 
+    // Evaluate, unless deferEvaluation is true, unless returnValueIfNoDependencies is true
+    if (options['deferEvaluation'] !== true || options.returnValueIfNoDependencies)
+        evaluateInitial();
+
+    // just return the value if returnValueIfNoDependencies is true and there are no dependencies
+    if (options.returnValueIfNoDependencies && !_subscriptionsToDependencies.length)
+        return _latestValue;
+
     dependentObservable.getDependenciesCount = function () { return _subscriptionsToDependencies.length; };
     dependentObservable.hasWriteFunction = typeof options["write"] === "function";
-    dependentObservable.getWithoutDependency = get;
-    dependentObservable.dispose = disposeAllSubscriptionsToDependencies;
     dependentObservable.addDisposeWhenNodesAreRemoved = addDisposeWhenNodesAreRemoved;
     dependentObservable.replaceDisposeWhenNodesAreRemoved = replaceDisposeWhenNodesAreRemoved;
 
+    dependentObservable.dispose = disposeAllSubscriptionsToDependencies;
+    disposeWhen = options.disposeWhen || options["disposeWhen"];
+
+    // addDisposeWhenNodesAreRemoved might replace the disposeWhen and dependentObservable.dispose functions
+    // So it needs to be called after they've been initialized with their default values.
+    addDisposeWhenNodesAreRemoved(options.disposeWhenNodeIsRemoved || options["disposeWhenNodeIsRemoved"]);
+
     ko.subscribable.call(dependentObservable);
     ko.utils.extend(dependentObservable, ko.dependentObservable['fn']);
-
-    if (options['deferEvaluation'] !== true)
-        evaluateImmediate();
-
-    // set up node disposal callbacks after initial evaluation
-    disposeWhen = options["disposeWhen"];
-    addDisposeWhenNodesAreRemoved(options["disposeWhenNodeIsRemoved"]);
 
     ko.exportProperty(dependentObservable, 'dispose', dependentObservable.dispose);
     ko.exportProperty(dependentObservable, 'getDependenciesCount', dependentObservable.getDependenciesCount);
