@@ -23,7 +23,7 @@
 
     ko.bindingContext = function(dataItem, parent) {
         var self = this, isOb = ko.isObservable(dataItem) || typeof(dataItem) == "function";
-        self._subscription = undefined;  // set so it isn't set by merge call below
+        self._subscription = undefined;  // set so it isn't set by extend call below
         self._subscription = ko.utils.possiblyWrap(parent ?
             function() {
                 if (parent._subscription)
@@ -33,7 +33,7 @@
                 self['$parents'].unshift(self['$parent'] = parent['$data']);
                 self['$data'] = isOb ? dataItem() : dataItem;
                 // copy $root and any custom properties from parent binding context
-                ko.utils.merge(self, parent);
+                ko.utils.extend(self, parent, true);
             } :
             function() {
                 self['$parents'] = [];
@@ -89,7 +89,7 @@
         return bindingValueWrap;
     };
 
-    unwrapBindingValue = function (value) {
+    function unwrapBindingValue(value) {
         return (value && value.__ko_proto__ && value.__ko_proto__ === ko.bindingValueWrap) ? value() : value;
     };
 

@@ -25,14 +25,6 @@ ko.dependencyDetection = (function () {
                 topFrame.distinctDependencies.push(subscribable);
                 topFrame.callback(subscribable);
             }
-        },
-
-        getWithoutDependency: function(observable) {
-            _frames.push(null);
-            var value = observable();
-            _frames.pop();
-            return value;
         }
-        
     };
 })();

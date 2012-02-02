@@ -25,14 +25,19 @@ ko.bindingExpressionRewriting = (function () {
         return expression.indexOf("(") != -1;
     }
 
-    function ensureQuoted(key) {
+    function stripQuotes(key) {
         switch (key.length && key.charAt(0)) {
             case "'":
             case '"':
-                return key;
+                return key.substring(1, key.length - 1);
             default:
-                return "'" + key + "'";
+                return key;
         }
+
+    }
+
+    function ensureQuoted(key) {
+        return "'" + key + "'";
     }
 
     return {
@@ -114,9 +119,9 @@ ko.bindingExpressionRewriting = (function () {
                 if ((colonPos > 0) && (colonPos < pair.length - 1)) {
                     var key = pair.substring(0, colonPos);
                     var value = pair.substring(colonPos + 1);
-                    result.push({ 'key': restoreTokens(key, tokens), 'value': restoreTokens(value, tokens) });
+                    result.push({ 'key': stripQuotes(restoreTokens(key, tokens)), 'value': restoreTokens(value, tokens) });
                 } else {
-                    result.push({ 'unknown': restoreTokens(pair, tokens) });
+                    result.push({ 'unknown': stripQuotes(restoreTokens(pair, tokens)) });
                 }
             }
             return result;

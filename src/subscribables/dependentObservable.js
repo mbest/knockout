@@ -21,6 +21,7 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
     if (!evaluatorFunctionTarget)
         evaluatorFunctionTarget = options["owner"];
 
+
     var _subscriptionsToDependencies = [];
     function disposeAllSubscriptionsToDependencies() {
         ko.utils.arrayForEach(_subscriptionsToDependencies, function (subscription) {
@@ -28,27 +29,7 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
         });
         _subscriptionsToDependencies = [];
     }
-    var dispose = disposeAllSubscriptionsToDependencies;
-    var disposeCallback = function() { dispose(); };
 
-    // Build "disposeWhenNodeIsRemoved" and "disposeWhenNodeIsRemovedCallback" option values
-    // (Note: "disposeWhenNodeIsRemoved" option both proactively disposes as soon as the node is removed using ko.removeNode(),
-    // plus adds a "disposeWhen" callback that, on each evaluation, disposes if the node was removed by some other means.)
-    var disposeWhen = options.disposeWhen || options["disposeWhen"] || function() { return false; };
-    function addDisposeWhenNodeIsRemoved(node) {
-        var existingDispose = dispose, existingDisposeWhen = disposeWhen;
-        dispose = function() {
-            ko.utils.domNodeDisposal.removeDisposeCallback(node, arguments.callee);
-            existingDispose();
-        };
-        ko.utils.domNodeDisposal.addDisposeCallback(node, disposeCallback);
-        disposeWhen = function () {
-            return !ko.utils.domNodeIsAttachedToDocument(node) || existingDisposeWhen();
-        }
-    }
-    var disposeWhenNodeIsRemoved = options.disposeWhenNodeIsRemoved || options["disposeWhenNodeIsRemoved"];
-    if (typeof disposeWhenNodeIsRemoved == "object")
-        addDisposeWhenNodeIsRemoved(disposeWhenNodeIsRemoved);
 
     var evaluationTimeoutInstance = null;
     function evaluatePossiblyAsync() {
@@ -60,11 +41,15 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
             evaluateImmediate();
     }
 
+
+    var baseDisposeWhen = options.disposeWhen || options["disposeWhen"];
+    var dispose = disposeAllSubscriptionsToDependencies, disposeWhen = baseDisposeWhen;
+
     function evaluateImmediate() {
         // Don't dispose on first evaluation, because the "disposeWhen" callback might
         // e.g., dispose when the associated DOM element isn't in the doc, and it's not
         // going to be in the doc until *after* the first evaluation
-        if (_hasBeenEvaluated && disposeWhen()) {
+        if (_hasBeenEvaluated && disposeWhen && disposeWhen()) {
             dispose();
             return;
         }
@@ -104,7 +89,7 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
         if (arguments.length > 0) {
             set.apply(dependentObservable, arguments);
         } else {
-            return get();
+            return get(true);
         }
     }
 
@@ -117,25 +102,39 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
         }
     }
 
-    function get() {
+    function get(registerDependecy) {
         // Reading the value
         if (!_hasBeenEvaluated)
             evaluateImmediate();
-        ko.dependencyDetection.registerDependency(dependentObservable);
+        if (registerDependecy)
+            ko.dependencyDetection.registerDependency(dependentObservable);
         return _latestValue;
     }
 
+    var disposer;
+    function addDisposeWhenNodeIsRemoved(node) {
+        if (!disposer)
+            disposer = ko.utils.domNodeDisposal.addDisposeCallback(null, disposeAllSubscriptionsToDependencies, baseDisposeWhen);
+        disposer.addNodeOrNodes(node);
+        dependentObservable.dispose = dispose = disposer.dispose;
+        disposeWhen = disposer.shouldDispose;
+    }
+
+    dependentObservable.dispose = dispose;
+    dependentObservable.addDisposeWhenNodeIsRemoved = addDisposeWhenNodeIsRemoved;
     dependentObservable.getDependenciesCount = function () { return _subscriptionsToDependencies.length; };
     dependentObservable.hasWriteFunction = typeof options["write"] === "function";
-    dependentObservable.dispose = disposeCallback;
-    dependentObservable.addDisposeWhenNodeIsRemoved = addDisposeWhenNodeIsRemoved;
-    dependentObservable.getWithoutDependency = function() { if (!_hasBeenEvaluated) evaluateImmediate(); return _latestValue; }
+    dependentObservable.getWithoutDependency = get;
 
     ko.subscribable.call(dependentObservable);
     ko.utils.extend(dependentObservable, ko.dependentObservable['fn']);
 
     if (options['deferEvaluation'] !== true)
         evaluateImmediate();
+
+    var disposeWhenNodeIsRemoved = options.disposeWhenNodeIsRemoved || options["disposeWhenNodeIsRemoved"];
+    if (disposeWhenNodeIsRemoved)
+        addDisposeWhenNodeIsRemoved(disposeWhenNodeIsRemoved);
 
     ko.exportProperty(dependentObservable, 'dispose', dependentObservable.dispose);
     ko.exportProperty(dependentObservable, 'getDependenciesCount', dependentObservable.getDependenciesCount);

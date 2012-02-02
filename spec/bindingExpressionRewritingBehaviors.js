@@ -8,9 +8,9 @@ describe('Binding Expression Rewriting', {
         value_of(result[0].value).should_be("1");
         value_of(result[1].key).should_be("b");
         value_of(result[1].value).should_be("2");
-        value_of(result[2].key).should_be("\"quotedKey\"");
+        value_of(result[2].key).should_be("quotedKey");
         value_of(result[2].value).should_be("3");
-        value_of(result[3].key).should_be("'aposQuotedKey'");
+        value_of(result[3].key).should_be("aposQuotedKey");
         value_of(result[3].value).should_be("4");
     },
 
@@ -49,7 +49,7 @@ describe('Binding Expression Rewriting', {
         var result = ko.bindingExpressionRewriting.parseObjectLiteral("malformed1, 'mal:formed2', good:3, { malformed: 4 }");
         value_of(result.length).should_be(4);
         value_of(result[0].unknown).should_be("malformed1");
-        value_of(result[1].unknown).should_be("'mal:formed2'");
+        value_of(result[1].unknown).should_be("mal:formed2");
         value_of(result[2].key).should_be("good");
         value_of(result[2].value).should_be("3");
         value_of(result[3].unknown).should_be("{ malformed: 4 }");
@@ -57,7 +57,7 @@ describe('Binding Expression Rewriting', {
 
     'Should ensure all keys are wrapped in quotes': function() {
         var rewritten = ko.bindingExpressionRewriting.insertPropertyAccessors("a: 1, 'b': 2, \"c\": 3");
-        value_of(rewritten).should_be("'a':1,'b':2,\"c\":3");
+        value_of(rewritten).should_be("'a':1,'b':2,'c':3");
     },
 
     'Should convert keys without values to key:true': function() {
@@ -71,7 +71,7 @@ describe('Binding Expression Rewriting', {
 
     'Should convert values to property accessors': function () {
         ko.bindingHandlers['b'] = { flags:bindingFlags_twoWay };
-        var rewritten = ko.bindingExpressionRewriting.insertPropertyAccessors('a : 1, b : firstName, c : function() { return "returnValue"; }');
+        var rewritten = ko.bindingExpressionRewriting.insertPropertyAccessors('a : 1, "b" : firstName, c : function() { return "returnValue"; }');
 
         var model = { firstName: "bob", lastName: "smith" };
         with (model) {

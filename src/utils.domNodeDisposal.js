@@ -15,7 +15,7 @@ ko.utils.domNodeDisposal = new (function () {
     function destroyCallbacksCollection(node) {
         ko.utils.domData.set(node, domDataKey, undefined);
     }
-    
+
     function cleanSingleNode(node) {
         // Run all the dispose callbacks
         var callbacks = getDisposeCallbacksCollection(node, false);
@@ -24,10 +24,10 @@ ko.utils.domNodeDisposal = new (function () {
             for (var i = 0; i < callbacks.length; i++)
                 callbacks[i](node);
         }
-        
+
         // Also erase the DOM data
         ko.utils.domData.clear(node);
-        
+
         // Special support for jQuery here because it's so commonly used.
         // Many jQuery plugins (including jquery.tmpl) store data using jQuery's equivalent of domData
         // so notify it to tear down any resources associated with the node & descendants here.
@@ -48,28 +48,60 @@ ko.utils.domNodeDisposal = new (function () {
                 cleanSingleNode(child);
         }
     }
-    
-    return {
-        addDisposeCallback : function(node, callback) {
-            if (typeof callback != "function")
-                throw new Error("Callback must be a function");
-            getDisposeCallbacksCollection(node, true).push(callback);
-        },
-        
-        removeDisposeCallback : function(node, callback) {
+
+    function newDisposeCallback(nodeOrNodes, disposeCallback, disposeWhen) {
+        var nodes = [];
+        function addNode(node) {
+            nodes.push(node);
+            getDisposeCallbacksCollection(node, true).push(cleanNodeCallback);
+        };
+        function cleanNodeCallback(node) {
+            ko.utils.arrayRemoveItem(nodes, node);
+            if (!nodes.length)
+                disposeCallback();
+        };
+        function addNodeOrNodes(nodeOrNodes) {
+            nodeOrNodes.nodeType ? addNode(nodeOrNodes) : ko.utils.arrayForEach(nodeOrNodes, addNode);
+        }
+        function deleteNode(node) {
+            ko.utils.arrayRemoveItem(nodes, node);
             var callbacksCollection = getDisposeCallbacksCollection(node, false);
             if (callbacksCollection) {
-                ko.utils.arrayRemoveItem(callbacksCollection, callback);
-                if (callbacksCollection.length == 0)
+                ko.utils.arrayRemoveItem(callbacksCollection, cleanNodeCallback);
+                if (!callbacksCollection.length)
                     destroyCallbacksCollection(node);
             }
-        },
-        
+        }
+        function dispose() {
+            while (nodes.length)
+                deleteNode(nodes[0]);
+            disposeCallback();
+        };
+        function shouldDispose() {
+            return !ko.utils.arrayFirst(nodes, ko.utils.domNodeIsAttachedToDocument) || (disposeWhen && disposeWhen());
+        }
+
+        if (typeof disposeCallback != "function")
+            throw new Error("Callback must be a function");
+        if (nodeOrNodes)
+            addNodeOrNodes(nodeOrNodes);
+
+        return {
+            addNodeOrNodes: addNodeOrNodes,
+            deleteNode: deleteNode,
+            dispose: dispose,
+            shouldDispose: shouldDispose
+        };
+    };
+
+    return {
+        addDisposeCallback : newDisposeCallback,
+
         cleanNode : function(node) {
             // First clean this node, where applicable
             if (cleanableNodeTypes[node.nodeType]) {
                 cleanSingleNode(node);
-                
+
                 // ... then its descendants, where applicable
                 if (cleanableNodeTypesWithDescendants[node.nodeType]) {
                     // Clone the descendants list in case it changes during iteration
@@ -80,7 +112,7 @@ ko.utils.domNodeDisposal = new (function () {
                 }
             }
         },
-        
+
         removeNode : function(node) {
             ko.cleanNode(node);
             if (node.parentNode)
@@ -90,8 +122,5 @@ ko.utils.domNodeDisposal = new (function () {
 })();
 ko.cleanNode = ko.utils.domNodeDisposal.cleanNode; // Shorthand name for convenience
 ko.removeNode = ko.utils.domNodeDisposal.removeNode; // Shorthand name for convenience
-ko.exportSymbol('cleanNode', ko.cleanNode); 
+ko.exportSymbol('cleanNode', ko.cleanNode);
 ko.exportSymbol('removeNode', ko.removeNode);
-ko.exportSymbol('utils.domNodeDisposal', ko.utils.domNodeDisposal);
-ko.exportSymbol('utils.domNodeDisposal.addDisposeCallback', ko.utils.domNodeDisposal.addDisposeCallback);
-ko.exportSymbol('utils.domNodeDisposal.removeDisposeCallback', ko.utils.domNodeDisposal.removeDisposeCallback);
