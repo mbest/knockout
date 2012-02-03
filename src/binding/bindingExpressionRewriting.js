@@ -127,53 +127,62 @@ ko.bindingExpressionRewriting = (function () {
             return result;
         },
 
-        insertPropertyAccessors: function (objectLiteralStringOrKeyValueArray, parentBinding, parentBindingKey) {
-            var keyValueArray = typeof objectLiteralStringOrKeyValueArray === "string"
-                ? ko.bindingExpressionRewriting.parseObjectLiteral(objectLiteralStringOrKeyValueArray)
-                : objectLiteralStringOrKeyValueArray;
+        insertPropertyAccessors: function (objectLiteralStringOrKeyValueArray) {
             var resultStrings = [], propertyAccessorResultStrings = [];
 
-            var keyValueEntry;
-            for (var i = 0; keyValueEntry = keyValueArray[i]; i++) {
-                if (resultStrings.length > 0)
-                    resultStrings.push(",");
+            function insertPropertyAccessorsHelper(objectLiteralStringOrKeyValueArray, parentBinding, parentBindingKey) {
+                var keyValueArray = typeof objectLiteralStringOrKeyValueArray === "string"
+                    ? ko.bindingExpressionRewriting.parseObjectLiteral(objectLiteralStringOrKeyValueArray)
+                    : objectLiteralStringOrKeyValueArray;
+                var keyValueEntry;
+                for (var i = 0; keyValueEntry = keyValueArray[i]; i++) {
+                    if (resultStrings.length > 0)
+                        resultStrings.push(",");
 
-                if (keyValueEntry['key']) {
-                    var key = keyValueEntry['key'], val = keyValueEntry['value'],
-                        quotedKey = ensureQuoted(parentBindingKey ? parentBindingKey+'.'+key : key),
-                        binding = parentBinding || ko.getBindingHandler(key);
-                    if (binding) {
-                        if ((binding['flags'] & bindingFlags_twoLevel) && val.charAt(0) === "{") {
-                            resultStrings.push(ko.bindingExpressionRewriting.insertPropertyAccessors(val, binding, key));
-                            continue;
-                        }
-                        else if (isWriteableValue(val)) {
-                            if (binding['flags'] & bindingFlags_eventHandler) {
-                                val = 'function(_x,_y,_z){(' + val + ')(_x,_y,_z);}';
+                    if (keyValueEntry['key']) {
+                        var key = keyValueEntry['key'], val = keyValueEntry['value'],
+                            quotedKey = ensureQuoted(parentBindingKey ? parentBindingKey+'.'+key : key),
+                            binding = parentBinding || ko.getBindingHandler(key);
+                        if (!parentBinding && binding && (binding['flags'] & bindingFlags_twoLevel) && val.charAt(0) === "{") {
+                            // Handle two-level binding specified as "binding: {key: value}" by parsing inner
+                            // object and converting to "binding.key: value"
+                            insertPropertyAccessorsHelper(val, binding, key);
+                        } else {
+                            if (binding) {
+                                if (isWriteableValue(val)) {
+                                    if (binding['flags'] & bindingFlags_eventHandler) {
+                                        // call function literal in an anonymous function so that it is called
+                                        // with appropriate "this" value
+                                        val = 'function(_x,_y,_z){(' + val + ')(_x,_y,_z);}';
+                                    }
+                                    else if (binding['flags'] & bindingFlags_twoWay) {
+                                        // for two-way bindings, provide a write method in case the value
+                                        // isn't a writable observable
+                                        if (propertyAccessorResultStrings.length > 0)
+                                            propertyAccessorResultStrings.push(",");
+                                        propertyAccessorResultStrings.push(quotedKey + ":function(_z){" + val + "=_z;}");
+                                    }
+                                }
+                                else if (!(binding['flags'] & bindingFlags_eventHandler) && isPossiblyUnwrappedObservable(val)) {
+                                    // Try to prevent observables from being accessed when parsing a binding;
+                                    // Instead they will be "unwrapped" within the context of the specific binding handler
+                                    val = 'ko.bindingValueWrap(function(){return ' + val + '})';
+                                }
                             }
-                            else if (binding['flags'] & bindingFlags_twoWay) {
-                                if (propertyAccessorResultStrings.length > 0)
-                                    propertyAccessorResultStrings.push(",");
-                                propertyAccessorResultStrings.push(quotedKey + ":function(_z){" + val + "=_z;}");
-                            }
+                            resultStrings.push(quotedKey + ":" + val);
                         }
-                        else if (!(binding['flags'] & bindingFlags_eventHandler) && isPossiblyUnwrappedObservable(val)) {
-                            val = 'ko.bindingValueWrap(function(){return ' + val + '})';
-                        }
+                    } else if (keyValueEntry['unknown']) {
+                        // Check if the 'unknown' entry matches a binding handler that can used without a value
+                        // and include it with a value of 'true'
+                        var key = keyValueEntry['unknown'], binding = ko.bindingHandlers[key];
+                        if (binding && (binding['flags'] & bindingFlags_noValue))
+                            resultStrings.push(ensureQuoted(key)+ ":true");
+                        else
+                            resultStrings.push(key);
                     }
-                    resultStrings.push(quotedKey);
-                    resultStrings.push(":");
-                    resultStrings.push(val);
-                } else if (keyValueEntry['unknown']) {
-                    // handle bindings that can be included without a value
-                    var key = keyValueEntry['unknown'], binding = ko.bindingHandlers[key];
-                    if (binding && (binding['flags'] & bindingFlags_noValue))
-                        resultStrings.push(ensureQuoted(key)+ ":true");
-                    else
-                        resultStrings.push(key);
-
                 }
             }
+            insertPropertyAccessorsHelper(objectLiteralStringOrKeyValueArray);
 
             var combinedResult = resultStrings.join("");
             if (propertyAccessorResultStrings.length > 0) {
