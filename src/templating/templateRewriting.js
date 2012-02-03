@@ -28,9 +28,8 @@ ko.templateRewriting = (function () {
         // For no obvious reason, Opera fails to evaluate rewrittenDataBindAttributeValue unless it's wrapped in an additional
         // anonymous function, even though Opera's built-in debugger can evaluate it anyway. No other browser requires this
         // extra indirection.
-        var applyBindingsToNextSiblingScript = 
-            "ko.templateRewriting.applyMemoizedBindingsToNextSibling(function(){return(function(){return{"
-                + rewrittenDataBindAttributeValue + "}})()})";
+        var applyBindingsToNextSiblingScript =
+            "ko.__tr_ambtns(function(){return(function(){return{" + rewrittenDataBindAttributeValue + "}})()})";
         return templateEngine['createJavaScriptEvaluatorBlock'](applyBindingsToNextSiblingScript) + tagToRetain;
     }
 
@@ -61,6 +60,5 @@ ko.templateRewriting = (function () {
     }
 })();
 
-ko.exportSymbol('templateRewriting', ko.templateRewriting);
 // Exported only because it has to be referenced by string lookup from within rewritten template
-ko.exportSymbol('templateRewriting.applyMemoizedBindingsToNextSibling', ko.templateRewriting.applyMemoizedBindingsToNextSibling);
+ko.exportSymbol('__tr_ambtns', ko.templateRewriting.applyMemoizedBindingsToNextSibling);

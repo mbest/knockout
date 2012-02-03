@@ -369,11 +369,35 @@ describe('Binding: Value', {
         testNode.innerHTML = "<select data-bind='options:[], value:myObservable'></select>";
         ko.applyBindings({ myObservable: observable }, testNode);
         value_of(testNode.childNodes[0].selectedIndex).should_be(-1);   // nothing selected
-        
+
         observable('D'); // This change should be rejected, as there's no corresponding option in the UI
         value_of(observable()).should_be(undefined);
     },
-    
+
+    'For select boxes, should clear value if selected item is deleted': function() {
+        var observable = new ko.observable('B');
+        var observableArray = new ko.observableArray(["A", "B"]);
+        testNode.innerHTML = "<select data-bind='options:myObservableArray, optionsCaption:\"Select...\", value:myObservable'></select>";
+        ko.applyBindings({ myObservable: observable, myObservableArray: observableArray }, testNode);
+        value_of(testNode.childNodes[0].selectedIndex).should_be(2);
+
+        observableArray.remove('B');
+        value_of(testNode.childNodes[0].selectedIndex).should_be(0);
+        value_of(observable()).should_be(undefined);
+    },
+
+    'For select boxes, should clear value if select is cleared and no caption': function() {
+        var observable = new ko.observable('B');
+        var observableArray = new ko.observableArray(["A", "B"]);
+        testNode.innerHTML = "<select data-bind='options:myObservableArray, value:myObservable'></select>";
+        ko.applyBindings({ myObservable: observable, myObservableArray: observableArray }, testNode);
+        value_of(testNode.childNodes[0].selectedIndex).should_be(1);
+
+        observableArray([]);
+        value_of(testNode.childNodes[0].selectedIndex).should_be(-1);
+        value_of(observable()).should_be(undefined);
+    },
+
     'For select boxes, option values can be numerical, and are not implicitly converted to strings': function() {
         var observable = new ko.observable(30);
         testNode.innerHTML = "<select data-bind='options:[10,20,30,40], value:myObservable'></select>";
@@ -1137,7 +1161,7 @@ describe('Binding: With Light', {
             handleClick: function() { countedClicks++ }
         });
 
-        testNode.innerHTML = "<div data-bind='withlight: someItem'><span data-bind='text: childProp, click: handleClick'></span></div>";
+        testNode.innerHTML = "<div data-bind='withlight: someItem'><span data-bind='click: handleClick, text: childProp'></span></div>";
         ko.applyBindings({ someItem: someItem }, testNode);
 
         // Initial state is one subscriber, one click handler
@@ -1294,7 +1318,7 @@ describe('Binding: With', {
             handleClick: function() { countedClicks++ }
         });
 
-        testNode.innerHTML = "<div data-bind='with: someItem'><span data-bind='text: childProp, click: handleClick'></span></div>";
+        testNode.innerHTML = "<div data-bind='with: someItem'><span data-bind='click: handleClick, text: childProp'></span></div>";
         ko.applyBindings({ someItem: someItem }, testNode);
 
         // Initial state is one subscriber, one click handler

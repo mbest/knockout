@@ -34,7 +34,7 @@ describe('DOM node disposal', {
 
         value_of(didRun).should_be(false);
         value_of(testNode.childNodes.length).should_be(1);
-        ko.removeNode(childNode);
+        ko.cleanAndRemoveNode(childNode);
         value_of(didRun).should_be(true);
         value_of(testNode.childNodes.length).should_be(0);
     },

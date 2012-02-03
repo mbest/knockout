@@ -199,7 +199,7 @@ describe('Templating', {
         ko.applyBindings({ someProp: { childProp: innerObservable} }, testNode);
         
         value_of(innerObservable.getSubscriptionsCount()).should_be(1);
-        ko.removeNode(testNode.childNodes[0]);
+        ko.cleanAndRemoveNode(testNode.childNodes[0]);
         value_of(innerObservable.getSubscriptionsCount()).should_be(0);
     },
 
@@ -252,7 +252,7 @@ describe('Templating', {
         ko.applyBindings({ someProp: { childProp: innerObservable} }, testNode);
         
         value_of(innerObservable.getSubscriptionsCount()).should_be(1);
-        ko.removeNode(document.getElementById('innerTemplateOutput'));
+        ko.cleanAndRemoveNode(document.getElementById('innerTemplateOutput'));
         value_of(innerObservable.getSubscriptionsCount()).should_be(0);
     },
 
@@ -405,7 +405,7 @@ describe('Templating', {
         ko.applyBindings({ myCollection: myArray }, testNode);
         value_of(innerObservable.getSubscriptionsCount()).should_be(2);    	
         
-        ko.removeNode(testNode.childNodes[0]);
+        ko.cleanAndRemoveNode(testNode.childNodes[0]);
         value_of(innerObservable.getSubscriptionsCount()).should_be(0);    	
     },
     

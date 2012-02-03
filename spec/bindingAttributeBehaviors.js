@@ -132,7 +132,7 @@ describe('Binding attribute syntax', {
 
         value_of(observable.getSubscriptionsCount()).should_be(1);
 
-        ko.removeNode(testNode);
+        ko.cleanAndRemoveNode(testNode);
 
         value_of(observable.getSubscriptionsCount()).should_be(0);
     },

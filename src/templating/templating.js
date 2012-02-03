@@ -36,7 +36,7 @@
         invokeForEachNodeOrCommentInParent(nodeArrayClone, function(node) {
             ko.applyBindings(bindingContext, node);
             if (subscription)
-                subscription.addDisposeWhenNodesAreRemoved(node);
+                subscription.addDisposalNodes(node);
         });
         invokeForEachNodeOrCommentInParent(nodeArrayClone, function(node) {
             ko.memoization.unmemoizeDomNodeAndDescendants(node, [bindingContext]);
@@ -98,10 +98,10 @@
                     if (renderMode == "replaceNode") {
                         targetNodeOrNodeArray = renderedNodesArray;
                         if (subscription)
-                            subscription.replaceDisposeWhenNodesAreRemoved(targetNodeOrNodeArray);
+                            subscription.replaceDisposalNodes(targetNodeOrNodeArray);
                     }
                 }
-            ).addDisposeWhenNodesAreRemoved(targetNodeOrNodeArray);
+            ).addDisposalNodes(targetNodeOrNodeArray);
             return subscription;
         } else {
             // We don't yet have a DOM node to evaluate, so use a memo and render the template later when there is a DOM node
@@ -142,7 +142,7 @@
                 return executeTemplate(null, "ignoreTargetNode", templateName, createInnerBindingContext(arrayValue), options);
             }, options, activateBindingsCallback);
 
-        }).addDisposeWhenNodesAreRemoved(targetNode);
+        }).addDisposalNodes(targetNode);
     };
 
     var templateSubscriptionDomDataKey = '__ko__templateSubscriptionDomDataKey__';

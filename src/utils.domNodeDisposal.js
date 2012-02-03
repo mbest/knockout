@@ -119,7 +119,7 @@ ko.utils.domNodeDisposal = new (function () {
             }
         },
 
-        removeNode : function(node) {
+        cleanAndRemoveNode : function(node) {
             ko.cleanNode(node);
             if (node.parentNode)
                 node.parentNode.removeChild(node);
@@ -127,6 +127,7 @@ ko.utils.domNodeDisposal = new (function () {
     }
 })();
 ko.cleanNode = ko.utils.domNodeDisposal.cleanNode; // Shorthand name for convenience
-ko.removeNode = ko.utils.domNodeDisposal.removeNode; // Shorthand name for convenience
+ko.cleanAndRemoveNode = ko.utils.domNodeDisposal.cleanAndRemoveNode; // Shorthand name for convenience
 ko.exportSymbol('cleanNode', ko.cleanNode);
-ko.exportSymbol('removeNode', ko.removeNode);
+ko.exportSymbol('removeNode', ko.cleanAndRemoveNode);
+ko.exportSymbol('cleanAndRemoveNode', ko.cleanAndRemoveNode);

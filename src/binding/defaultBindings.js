@@ -166,7 +166,8 @@ ko.bindingHandlers['value'] = {
                 // because you're not allowed to have a model value that disagrees with a visible UI selection.
                 if (newValue !== ko.selectExtensions.readValue(element))
                     ko.utils.triggerEvent(element, "change");
-                setTimeout(applyValueAction, 0);
+                else
+                    setTimeout(applyValueAction, 0);
             }
         }
     }
@@ -242,9 +243,11 @@ ko.bindingHandlers['options'] = {
                     countSelectionsRetained++;
                 }
             }
-
             if (previousScrollTop)
                 element.scrollTop = previousScrollTop;
+
+            if (countSelectionsRetained < previousSelectedValues.length)
+                ko.utils.triggerEvent(element, "change");
         }
     }
 };

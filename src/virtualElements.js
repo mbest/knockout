@@ -89,7 +89,7 @@
             else {
                 var virtualChildren = ko.virtualElements.childNodes(node);
                 for (var i = 0, j = virtualChildren.length; i < j; i++)
-                    ko.removeNode(virtualChildren[i]);
+                    ko.cleanAndRemoveNode(virtualChildren[i]);
             }
         },
 

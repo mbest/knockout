@@ -9,7 +9,7 @@
 
     // "callbackAfterAddingNodes" will be invoked after any "mapping"-generated nodes are inserted into the container node
     // You can use this, for example, to activate bindings on those nodes. Your function must also call
-    // addDisposeWhenNodesAreRemoved with the given mappedNodes and subscription.
+    // addDisposalNodes with the given mappedNodes and subscription.
 
     function fixUpVirtualElements(contiguousNodeArray) {
         // Ensures that contiguousNodeArray really *is* an array of contiguous siblings, even if some of the interior
@@ -34,7 +34,7 @@
     }
 
     function defaultCallbackAfterAddingNodes(value, mappedNodes, subscription) {
-        subscription.addDisposeWhenNodesAreRemoved(mappedNodes);
+        subscription.addDisposalNodes(mappedNodes);
     }
 
     function mapNodeAndRefreshWhenChanged(containerNode, mapping, valueToMap, callbackAfterAddingNodes) {
@@ -46,7 +46,7 @@
             // On subsequent evaluations, just replace the previously-inserted DOM nodes
             if (mappedNodes.length > 0) {
                 fixUpVirtualElements(mappedNodes);
-                dependentObservable.replaceDisposeWhenNodesAreRemoved();    // must clear before calling replaceDomNodes
+                dependentObservable.replaceDisposalNodes();    // must clear before calling replaceDomNodes
                 ko.utils.replaceDomNodes(mappedNodes, newMappedNodes);
                 callbackAfterAddingNodes(valueToMap, newMappedNodes, dependentObservable);
             }
@@ -149,7 +149,7 @@
         }
         if (!invokedBeforeRemoveCallback)
             ko.utils.arrayForEach(nodesToDelete, function (node) {
-                ko.removeNode(node.element);
+                ko.cleanAndRemoveNode(node.element);
             });
 
         // Store a copy of the array items we just considered so we can difference it next time

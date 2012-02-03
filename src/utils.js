@@ -112,7 +112,7 @@ ko.utils = new (function () {
 
         emptyDomNode: function (domNode) {
             while (domNode.firstChild) {
-                ko.removeNode(domNode.firstChild);
+                ko.cleanAndRemoveNode(domNode.firstChild);
             }
         },
 
@@ -143,7 +143,7 @@ ko.utils = new (function () {
                 for (var i = 0, j = newNodesArray.length; i < j; i++)
                     parent.insertBefore(newNodesArray[i], insertionPoint);
                 for (var i = 0, j = nodesToReplaceArray.length; i < j; i++) {
-                    ko.removeNode(nodesToReplaceArray[i]);
+                    ko.cleanAndRemoveNode(nodesToReplaceArray[i]);
                 }
             }
         },
@@ -270,7 +270,7 @@ ko.utils = new (function () {
 
         possiblyWrap: function(readFunction, nodeOrNodes) {
             return ko.dependentObservable(readFunction, null,
-                { returnValueIfNoDependencies: true, disposeWhenNodeIsRemoved: nodeOrNodes });
+                { returnValueIfNoDependencies: true, disposalNodes: nodeOrNodes });
         },
 
         domNodeHasCssClass: function (node, className) {
@@ -430,3 +430,5 @@ if (!Function.prototype['bind']) {
         };
     };
 }
+
+ko.logger = (typeof console !== "undefined" && console.warn) ? console : {warn: function(){}};

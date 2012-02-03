@@ -101,8 +101,8 @@
         }
     }
 
-    function applyBindingsToNodeAndDescendantsInternal (bindingContext, node, isRootNodeForBindingContext, bindingsToApply) {
-        var isElement = (node.nodeType === 1), shouldBindDescendants = !bindingsToApply,
+    function applyBindingsToNodeAndDescendantsInternal (bindingContext, node, isRootNodeForBindingContext, bindingsToApply, dontBindDescendants) {
+        var isElement = (node.nodeType === 1),
             hasBindings = bindingsToApply || ko.bindingProvider['instance']['nodeHasBindings'](node);
 
         if (isElement) // Workaround IE <= 8 HTML parsing weirdness
@@ -114,7 +114,7 @@
             ko.storedBindingContextForNode(node, bindingContext);
 
         if (!hasBindings) {
-            if (shouldBindDescendants)
+            if (!dontBindDescendants)
                 applyBindingsToDescendantsInternal(bindingContext, node, !isElement);
             return;
         }
@@ -173,46 +173,54 @@
         }, node);
 
         // Get binding handlers and organize bindings by run order:
-        // 1. Most bindings
-        // 2. Content-set bindings
-        // 3. Content-bind bindings
-        // 4. Content-update bindings
-        var contentBindBinding, mostBindings=[], contentSetBindings=[], contentUpdateBindings=[];
+        /** @const */ var mostBindings = 0;
+        /** @const */ var contentSetBindings = 1;
+        /** @const */ var contentBindBinding = 2;
+        /** @const */ var contentUpdateBindings = 3;
+        var bindings = [[], [], undefined, []], lastIndex=-1, lastKey, thisIndex, binding;
         for (var bindingKey in parsedBindings) {
-            var binding = ko.bindingHandlers[bindingKey];
-            binding = binding ? { handler: binding, key: bindingKey } : ko.getTwoLevelBindingData(bindingKey);
+            binding = (binding = ko.bindingHandlers[bindingKey])
+                ? { handler: binding, key: bindingKey }
+                : ko.getTwoLevelBindingData(bindingKey);
             if (binding.handler) {
                 binding.flags = binding.handler['flags'];
                 if (!isElement && !(binding.flags & bindingFlags_canUseVirtual))
                     throw new Error("The binding '" + binding.key + "' cannot be used with virtual elements");
                 if (binding.flags & bindingFlags_contentBind) {
-                    if (contentBindBinding)
-                        throw new Error("Multiple bindings (" + contentBindBinding.key + " and " + binding.key + ") are trying to control descendant bindings of the same element. You cannot use these bindings together on the same element.");
-                    contentBindBinding = binding;
+                    if (bindings[contentBindBinding])
+                        throw new Error("Multiple bindings (" + bindings[contentBindBinding].key + " and " + binding.key + ") are trying to control descendant bindings of the same element. You cannot use these bindings together on the same element.");
+                    bindings[thisIndex = contentBindBinding] = binding;
                 } else {
-                    var list = (binding.flags & bindingFlags_contentSet)
+                    thisIndex = (binding.flags & bindingFlags_contentSet)
                         ? contentSetBindings
                         : (binding.flags & bindingFlags_contentUpdate)
                             ? contentUpdateBindings
                             : mostBindings;
-                    list.push(binding);
+                    bindings[thisIndex].push(binding);
                 }
                 binding.valueAccessor = binding.subKey
                     ? makeSubKeyValueAccessor(bindingKey, binding.subKey)
                     : makeValueAccessor(bindingKey);
+                // Warn if bindings will be run "out of order"; this may be because a custom binding hasn't been set up with the correct flags
+                if (thisIndex < lastIndex) {
+                    ko.logger.warn("Warning: bindings will be run in a different order than specified: " + binding.key + " will be run before " + lastKey);
+                } else {
+                    lastKey = binding.key;
+                    lastIndex = thisIndex;
+                }
             }
         }
 
         // Apply the bindings in the correct order
-        applyListedBindings(mostBindings);
-        applyListedBindings(contentSetBindings);
+        applyListedBindings(bindings[mostBindings]);
+        applyListedBindings(bindings[contentSetBindings]);
 
-        if (contentBindBinding)
-            callHandlers(contentBindBinding);
-        else if (shouldBindDescendants)
+        if (bindings[contentBindBinding])
+            callHandlers(bindings[contentBindBinding]);
+        else if (!dontBindDescendants)
             applyBindingsToDescendantsInternal(bindingContext, node, !isElement);
 
-        applyListedBindings(contentUpdateBindings);
+        applyListedBindings(bindings[contentUpdateBindings]);
     };
 
     var storedBindingContextDomDataKey = "__ko_bindingContext__";
@@ -220,7 +228,7 @@
         if (arguments.length == 2) {
             ko.utils.domData.set(node, storedBindingContextDomDataKey, bindingContext);
             if (bindingContext._subscription)
-                bindingContext._subscription.addDisposeWhenNodesAreRemoved(node);
+                bindingContext._subscription.addDisposalNodes(node);
         }
         else
             return ko.utils.domData.get(node, storedBindingContextDomDataKey);
@@ -232,10 +240,10 @@
             : new ko.bindingContext(viewModelOrBindingContext);
     }
 
-    ko.applyBindingsToNode = function (node, bindings, viewModelOrBindingContext) {
+    ko.applyBindingsToNode = function (node, bindings, viewModelOrBindingContext, shouldBindDescendants) {
         if (node.nodeType === 1) // If it's an element, workaround IE <= 8 HTML parsing weirdness
             ko.virtualElements.normaliseVirtualElementDomStructure(node);
-        applyBindingsToNodeAndDescendantsInternal(getBindingContext(viewModelOrBindingContext), node, true, bindings);
+        applyBindingsToNodeAndDescendantsInternal(getBindingContext(viewModelOrBindingContext), node, true, bindings, !shouldBindDescendants);
     };
 
     ko.applyBindingsToDescendants = function(viewModelOrBindingContext, rootNode) {
