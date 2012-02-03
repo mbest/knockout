@@ -125,7 +125,7 @@
         // DOM event callbacks need to be able to access this changed data,
         // so we need a single parsedBindings variable (shared by all callbacks
         // associated with this node's bindings) that all the closures can access.
-        var parsedBindings;
+        var parsedBindings, viewModel = bindingContext['$data'];
         function makeValueAccessor(key) {
             return function () {
                 return ko.unwrapBindingValue(parsedBindings[key]);
@@ -139,17 +139,6 @@
         }
         function parsedBindingsAccessor() {
             return parsedBindings;
-        }
-        function getBindingHandlerAndValueAccessor(bindingKey) {
-            var binding = ko.bindingHandlers[bindingKey];
-            binding = binding ? { handler: binding, key: bindingKey } : ko.getTwoLevelBindingData(bindingKey);
-            if (binding.handler) {
-                binding.valueAccessor = binding.subKey
-                    ? makeSubKeyValueAccessor(bindingKey, binding.subKey)
-                    : makeValueAccessor(bindingKey);
-                binding.flags = binding.handler['flags'];
-                return binding;
-            }
         }
 
         function callHandlers(binding) {
@@ -173,8 +162,6 @@
             ko.utils.arrayForEach(bindings, callHandlers);
         }
 
-        var viewModel = bindingContext['$data'];
-
         // parse bindings; track observables so that the bindng are reparsed if needed
         var bindingUpdater = ko.utils.possiblyWrap(function() {
             // Use evaluatedBindings if given, otherwise fall back on asking the bindings provider to give us some bindings
@@ -192,8 +179,10 @@
         // 4. Content-update bindings
         var contentBindBinding, mostBindings=[], contentSetBindings=[], contentUpdateBindings=[];
         for (var bindingKey in parsedBindings) {
-            var binding = getBindingHandlerAndValueAccessor(bindingKey);
-            if (binding) {
+            var binding = ko.bindingHandlers[bindingKey];
+            binding = binding ? { handler: binding, key: bindingKey } : ko.getTwoLevelBindingData(bindingKey);
+            if (binding.handler) {
+                binding.flags = binding.handler['flags'];
                 if (!isElement && !(binding.flags & bindingFlags_canUseVirtual))
                     throw new Error("The binding '" + binding.key + "' cannot be used with virtual elements");
                 if (binding.flags & bindingFlags_contentBind) {
@@ -208,6 +197,9 @@
                             : mostBindings;
                     list.push(binding);
                 }
+                binding.valueAccessor = binding.subKey
+                    ? makeSubKeyValueAccessor(bindingKey, binding.subKey)
+                    : makeValueAccessor(bindingKey);
             }
         }
 

@@ -127,7 +127,7 @@ ko.bindingExpressionRewriting = (function () {
             return result;
         },
 
-        insertPropertyAccessors: function (objectLiteralStringOrKeyValueArray, parentBinding) {
+        insertPropertyAccessors: function (objectLiteralStringOrKeyValueArray, parentBinding, parentBindingKey) {
             var keyValueArray = typeof objectLiteralStringOrKeyValueArray === "string"
                 ? ko.bindingExpressionRewriting.parseObjectLiteral(objectLiteralStringOrKeyValueArray)
                 : objectLiteralStringOrKeyValueArray;
@@ -140,11 +140,12 @@ ko.bindingExpressionRewriting = (function () {
 
                 if (keyValueEntry['key']) {
                     var key = keyValueEntry['key'], val = keyValueEntry['value'],
-                        quotedKey = ensureQuoted(key),
+                        quotedKey = ensureQuoted(parentBindingKey ? parentBindingKey+'.'+key : key),
                         binding = parentBinding || ko.getBindingHandler(key);
                     if (binding) {
                         if ((binding['flags'] & bindingFlags_twoLevel) && val.charAt(0) === "{") {
-                            val = '{' + ko.bindingExpressionRewriting.insertPropertyAccessors(val, binding) + '}';
+                            resultStrings.push(ko.bindingExpressionRewriting.insertPropertyAccessors(val, binding, key));
+                            continue;
                         }
                         else if (isWriteableValue(val)) {
                             if (binding['flags'] & bindingFlags_eventHandler) {
