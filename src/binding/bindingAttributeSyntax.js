@@ -38,6 +38,7 @@
                 if (parent._subscription)
                     ko.dependencyDetection.registerDependency(parent._subscription);
                 // set our properties
+                self['$parentContext'] = parent;
                 self['$parents'] = (parent['$parents'] || []).slice(0);
                 self['$parents'].unshift(self['$parent'] = parent['$data']);
                 self['$data'] = isOb ? dataItem() : dataItem;
@@ -52,6 +53,9 @@
     }
     ko.bindingContext.prototype['createChildContext'] = function (dataItem) {
         return new ko.bindingContext(dataItem, this);
+    };
+    ko.bindingContext.prototype['extend'] = function(extras) {
+        return ko.utils.extend(new ko.bindingContext(this.$data, this), extras);
     };
 
     ko.checkBindingFlags = function(binding, flagsSet, flagsUnset) {
@@ -91,17 +95,16 @@
         return (value && value.__ko_proto__ && value.__ko_proto__ === ko.bindingValueWrap) ? value() : value;
     };
 
-    function applyBindingsToDescendantsInternal (bindingContext, elementVerified, areRootNodesForBindingContext) {
-        var currentChild, nextInQueue = ko.virtualElements.firstChild(elementVerified);
+    function applyBindingsToDescendantsInternal (bindingContext, elementOrVirtualElement, bindingContextsMayDifferFromDomParentElement) {
+        var currentChild, nextInQueue = ko.virtualElements.firstChild(elementOrVirtualElement);
         while (currentChild = nextInQueue) {
             // Keep a record of the next child *before* applying bindings, in case the binding removes the current child from its position
             nextInQueue = ko.virtualElements.nextSibling(currentChild);
-            applyBindingsToNodeAndDescendantsInternal(bindingContext, currentChild, areRootNodesForBindingContext);
-
+            applyBindingsToNodeAndDescendantsInternal(bindingContext, currentChild, bindingContextsMayDifferFromDomParentElement);
         }
     }
 
-    function applyBindingsToNodeAndDescendantsInternal (bindingContext, node, isRootNodeForBindingContext, bindingsToApply, dontBindDescendants) {
+    function applyBindingsToNodeAndDescendantsInternal (bindingContext, node, bindingContextsMayDifferFromDomParentElement, bindingsToApply, dontBindDescendants) {
         var isElement = (node.nodeType === 1),
             hasBindings = bindingsToApply || ko.bindingProvider['instance']['nodeHasBindings'](node);
 
@@ -110,12 +113,19 @@
 
         // We only need to store the bindingContext at the root of the subtree where it applies
         // as all descendants will be able to find it by scanning up their ancestry
-        if (isRootNodeForBindingContext && (isElement || hasBindings))
+        if (bindingContextsMayDifferFromDomParentElement && (isElement || hasBindings))
             ko.storedBindingContextForNode(node, bindingContext);
 
         if (!hasBindings) {
-            if (!dontBindDescendants)
-                applyBindingsToDescendantsInternal(bindingContext, node, !isElement);
+            if (!dontBindDescendants) {
+                // We're recursing automatically into (real or virtual) child nodes without changing binding contexts. So,
+                //  * For children of a *real* element, the binding context is certainly the same as on their DOM .parentNode,
+                //    hence bindingContextsMayDifferFromDomParentElement is false
+                //  * For children of a *virtual* element, we can't be sure. Evaluating .parentNode on those children may
+                //    skip over any number of intermediate virtual elements, any of which might define a custom binding context,
+                //    hence bindingContextsMayDifferFromDomParentElement is true
+                applyBindingsToDescendantsInternal(bindingContext, node, /* bindingContextsMayDifferFromDomParentElement: */ !isElement);
+            }
             return;
         }
 
@@ -218,7 +228,7 @@
         if (bindings[contentBindBinding])
             callHandlers(bindings[contentBindBinding]);
         else if (!dontBindDescendants)
-            applyBindingsToDescendantsInternal(bindingContext, node, !isElement);
+            applyBindingsToDescendantsInternal(bindingContext, node, /* bindingContextsMayDifferFromDomParentElement: */ !isElement);
 
         applyListedBindings(bindings[contentUpdateBindings]);
     };
@@ -278,7 +288,6 @@
     };
 
     ko.exportSymbol('bindingHandlers', ko.bindingHandlers);
-    ko.exportSymbol('bindingContext', ko.bindingContext);
     ko.exportSymbol('bindingFlags', ko.bindingFlags);
     ko.exportSymbol('bindingValueWrap', ko.bindingValueWrap);       // must be exported because it's used in binding parser (which uses eval)
     ko.exportSymbol('applyBindings', ko.applyBindings);
