@@ -25,8 +25,8 @@ ko.templateRewriting = (function () {
         validateDataBindValuesForRewriting(dataBindKeyValueArray);
         var rewrittenDataBindAttributeValue = ko.bindingExpressionRewriting.insertPropertyAccessors(dataBindKeyValueArray);
 
-        // For no obvious reason, Opera fails to evaluate rewrittenDataBindAttributeValue unless it's wrapped in an additional
-        // anonymous function, even though Opera's built-in debugger can evaluate it anyway. No other browser requires this
+        // For no obvious reason, Opera fails to evaluate rewrittenDataBindAttributeValue unless it's wrapped in an additional 
+        // anonymous function, even though Opera's built-in debugger can evaluate it anyway. No other browser requires this 
         // extra indirection.
         var applyBindingsToNextSiblingScript =
             "ko.__tr_ambtns(function(){return(function(){return{" + rewrittenDataBindAttributeValue + "}})()})";
@@ -47,7 +47,7 @@ ko.templateRewriting = (function () {
             return htmlString.replace(memoizeDataBindingAttributeSyntaxRegex, function () {
                 return constructMemoizedTagReplacement(/* dataBindAttributeValue: */ arguments[6], /* tagToRetain: */ arguments[1], templateEngine);
             }).replace(memoizeVirtualContainerBindingSyntaxRegex, function() {
-                return constructMemoizedTagReplacement(/* dataBindAttributeValue: */ arguments[1], /* tagToRetain: */ "<!-- ko -->", templateEngine);
+                return constructMemoizedTagReplacement(/* dataBindAttributeValue: */ arguments[1], /* tagToRetain: */ "<!-- ko -->", templateEngine);              
             });
         },
 

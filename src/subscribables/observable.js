@@ -5,8 +5,8 @@ ko.observable = function (initialValue) {
 
     function observable() {
         if (arguments.length > 0) {
-            // Write
-
+            // Write            
+            
             // Ignore writes if the value hasn't changed
             if ((!observable['equalityComparer']) || !observable['equalityComparer'](_latestValue, arguments[0])) {
                 observable.valueWillMutate();
@@ -28,7 +28,7 @@ ko.observable = function (initialValue) {
 
     ko.exportProperty(observable, "valueHasMutated", observable.valueHasMutated);
     ko.exportProperty(observable, "valueWillMutate", observable.valueWillMutate);
-
+    
     return observable;
 }
 

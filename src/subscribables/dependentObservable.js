@@ -22,7 +22,6 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
     if (!evaluatorFunctionTarget)
         evaluatorFunctionTarget = options["owner"];
 
-
     var _subscriptionsToDependencies = [];
     function disposeAllSubscriptionsToDependencies() {
         ko.utils.arrayForEach(_subscriptionsToDependencies, function (subscription) {
@@ -57,7 +56,7 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
 
         _isBeingEvaluated = true;
         try {
-            // Initially, we assume that none of the subscriptions are still being used (i.e., all are candidates for disposal).
+            // Initially, we assume that none of the subscriptions are still being used (i.e., all are candidates for disposal). 
             // Then, during evaluation, we cross off any that are in fact still being used.
             var disposalCandidates = ko.utils.arrayMap(_subscriptionsToDependencies, function(item) {return item.target;});
 
@@ -104,10 +103,10 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
         if (arguments.length > 0) {
             set.apply(dependentObservable, arguments);
         } else {
-            return get();
+            return get();             
         }
     }
-
+    
     function set() {
         if (typeof writeFunction === "function") {
             // Writing a value

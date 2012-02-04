@@ -105,7 +105,7 @@ ko.bindingExpressionRewriting = (function () {
                         var replacement = "@ko_token_" + (tokens.length - 1) + "@";
                         str = str.substring(0, tokenStart) + replacement + str.substring(position + 1);
                         position -= (token.length - replacement.length);
-                        tokenStart = null;
+                        tokenStart = null;                            
                     }
                 }
             }
@@ -124,7 +124,7 @@ ko.bindingExpressionRewriting = (function () {
                     result.push({ 'unknown': stripQuotes(restoreTokens(pair, tokens)) });
                 }
             }
-            return result;
+            return result;            
         },
 
         insertPropertyAccessors: function (objectLiteralStringOrKeyValueArray) {
