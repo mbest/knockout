@@ -221,7 +221,7 @@ describe('Binding attribute syntax', {
         value_of(results.full).should_be("bob jones");
     },
 
-    'Bindings can signal that they control descendant bindings by setting their type to "control"': function() {
+    'Bindings can signal that they control descendant bindings by setting contentBind flag': function() {
         ko.bindingHandlers.test = {
             flags: ko.bindingFlags.contentBind
         };
@@ -245,6 +245,18 @@ describe('Binding attribute syntax', {
         
         try { ko.applyBindings(null, testNode) }
         catch(ex) { didThrow = true; value_of(ex.message).should_contain('Multiple bindings (test1 and test2) are trying to control descendant bindings of the same element.') }
+        value_of(didThrow).should_be(true);
+    },
+    
+    'Binding should not be allowed to use old \'controlsDescendantBindings\' style': function() {
+        ko.bindingHandlers.test = {  
+            init: function() { return { controlsDescendantBindings : true } }
+        };
+        testNode.innerHTML = "<div data-bind='test: true'></div>"
+        var didThrow = false;
+        
+        try { ko.applyBindings(null, testNode) }
+        catch(ex) { didThrow = true; value_of(ex.message).should_contain('contentBind flag') }
         value_of(didThrow).should_be(true);
     },
     
@@ -384,7 +396,7 @@ describe('Binding attribute syntax', {
         testNode.innerHTML = "Hello <!-- ko bindChildrenWithCustomContext: true --><div>Some text</div><!-- /ko --> Goodbye"
         ko.applyBindings(null, testNode);
 
-        value_of(ko.contextFor(testNode.childNodes[2]).myCustomData).should_be(123);
+        value_of(ko.dataFor(testNode.childNodes[2]).myCustomData).should_be(123);
     },
     
     'Should be able to set and access correct context in nested containerless binding': function() {

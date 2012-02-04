@@ -431,4 +431,4 @@ if (!Function.prototype['bind']) {
     };
 }
 
-ko.logger = (typeof console !== "undefined" && console.warn) ? console : {warn: function(){}};
+ko.logger = (window.console && window.console.warn) ? window.console : {warn: function(){}};

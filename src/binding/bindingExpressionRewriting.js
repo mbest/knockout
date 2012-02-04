@@ -21,8 +21,13 @@ ko.bindingExpressionRewriting = (function () {
         return expression.match(javaScriptAssignmentTarget) !== null;
     }
 
+    function hasDotOrBracket(expression) {
+        return expression.indexOf(".") != -1 || expression.indexOf("[") != -1;
+    }
+
     function isPossiblyUnwrappedObservable(expression) {
-        return expression.indexOf("(") != -1;
+        // look for parentheses in the expression, but ignore initial parentheses
+        return expression.match(/[^(]+\(/) !== null;
     }
 
     function stripQuotes(key) {
@@ -147,7 +152,7 @@ ko.bindingExpressionRewriting = (function () {
                         } else {
                             if (binding) {
                                 if (isWriteableValue(val)) {
-                                    if (binding['flags'] & bindingFlags_eventHandler) {
+                                    if (binding['flags'] & bindingFlags_eventHandler && hasDotOrBracket(val)) {
                                         // call function literal in an anonymous function so that it is called
                                         // with appropriate "this" value
                                         val = 'function(_x,_y,_z){(' + val + ')(_x,_y,_z);}';

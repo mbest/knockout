@@ -153,7 +153,9 @@
             if (binding.handler['init']) {
                 // call init function; observables accessed in init functions are not tracked
                 ko.dependencyDetection.ignore(function() {
-                    binding.handler['init'](node, binding.valueAccessor, parsedBindingsAccessor, viewModel, bindingContext);
+                    var initResult = binding.handler['init'](node, binding.valueAccessor, parsedBindingsAccessor, viewModel, bindingContext);
+                    if (initResult && initResult['controlsDescendantBindings'])
+                        throw new Error(binding.key + " binding must be updated set contentBind flag");
                 });
             }
             if (binding.handler['update']) {

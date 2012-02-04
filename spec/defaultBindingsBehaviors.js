@@ -941,6 +941,14 @@ describe('Binding: Attr', {
         value_of(testNode.childNodes[0].getAttribute("second-attribute")).should_be("true");
     },
     
+    'Should be able to set arbitrary attribute values (without quotes)': function() {
+        var model = { myValue: "first value" };
+        testNode.innerHTML = "<div data-bind='attr: {firstAttribute: myValue, second-attribute: true}'></div>";
+        ko.applyBindings(model, testNode);
+        value_of(testNode.childNodes[0].getAttribute("firstAttribute")).should_be("first value");
+        value_of(testNode.childNodes[0].getAttribute("second-attribute")).should_be("true");
+    },
+    
     'Should respond to changes in an observable value': function() {
         var model = { myprop : ko.observable("initial value") };
         testNode.innerHTML = "<div data-bind='attr: { someAttrib: myprop }'></div>";
