@@ -84,11 +84,8 @@
     }
 
     ko.bindingValueWrap = function(valueFunction) {
-        function bindingValueWrap() {
-            return valueFunction();
-        }
-        bindingValueWrap.__ko_proto__ = ko.bindingValueWrap;
-        return bindingValueWrap;
+        valueFunction.__ko_proto__ = ko.bindingValueWrap;
+        return valueFunction;
     };
 
     ko.unwrapBindingValue = function(value) {

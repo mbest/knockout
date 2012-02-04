@@ -70,7 +70,7 @@ describe('Binding Expression Rewriting', {
     },
 
     'Should convert values to property accessors': function () {
-        ko.bindingHandlers['b'] = { flags:bindingFlags_twoWay };
+        ko.bindingHandlers.b = { flags: ko.bindingFlags.twoWay };
         var rewritten = ko.bindingExpressionRewriting.insertPropertyAccessors('a : 1, "b" : firstName, c : function() { return "returnValue"; }');
 
         var model = { firstName: "bob", lastName: "smith" };
@@ -83,13 +83,30 @@ describe('Binding Expression Rewriting', {
             parsedRewritten._ko_property_writers.b("bob2");
             value_of(model.firstName).should_be("bob2");
         }
-        delete ko.bindingHandlers['b'];
+        delete ko.bindingHandlers.b;
     },
 
     'Should be able to eval rewritten literals that contain unquoted keywords as keys': function() {
-        var rewritten = ko.bindingExpressionRewriting.insertPropertyAccessors("if: true");
-        value_of(rewritten).should_be("'if':true");
+        var rewritten = ko.bindingExpressionRewriting.insertPropertyAccessors("while: true");
+        value_of(rewritten).should_be("'while':true");
         var evaluated = eval("({" + rewritten + "})");
-        value_of(evaluated['if']).should_be(true);
+        value_of(evaluated['while']).should_be(true);
+    },
+
+    'Should be able to eval two-level bindings mixed with one-level bindings': function() {
+        ko.bindingHandlers.a = { flags: ko.bindingFlags.twoLevel | ko.bindingFlags.twoWay };
+        var rewritten = ko.bindingExpressionRewriting.insertPropertyAccessors('a.f: firstName, b: false, a: {l: lastName}');
+
+        var model = { firstName: "bob", lastName: "smith" };
+        with (model) {
+            var parsedRewritten = eval("({" + rewritten + "})");
+            value_of(parsedRewritten['a.f']).should_be("bob");
+            value_of(parsedRewritten['a.l']).should_be("smith");
+            value_of(parsedRewritten.b).should_be(false);
+
+            parsedRewritten._ko_property_writers['a.f']("bob2");
+            value_of(model.firstName).should_be("bob2");
+        }
+        delete ko.bindingHandlers.a;
     }
 });

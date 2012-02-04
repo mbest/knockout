@@ -136,9 +136,6 @@ ko.bindingExpressionRewriting = (function () {
                     : objectLiteralStringOrKeyValueArray;
                 var keyValueEntry;
                 for (var i = 0; keyValueEntry = keyValueArray[i]; i++) {
-                    if (resultStrings.length > 0)
-                        resultStrings.push(",");
-
                     if (keyValueEntry['key']) {
                         var key = keyValueEntry['key'], val = keyValueEntry['value'],
                             quotedKey = ensureQuoted(parentBindingKey ? parentBindingKey+'.'+key : key),
@@ -158,8 +155,6 @@ ko.bindingExpressionRewriting = (function () {
                                     else if (binding['flags'] & bindingFlags_twoWay) {
                                         // for two-way bindings, provide a write method in case the value
                                         // isn't a writable observable
-                                        if (propertyAccessorResultStrings.length > 0)
-                                            propertyAccessorResultStrings.push(",");
                                         propertyAccessorResultStrings.push(quotedKey + ":function(_z){" + val + "=_z;}");
                                     }
                                 }
@@ -184,9 +179,9 @@ ko.bindingExpressionRewriting = (function () {
             }
             insertPropertyAccessorsHelper(objectLiteralStringOrKeyValueArray);
 
-            var combinedResult = resultStrings.join("");
+            var combinedResult = resultStrings.join(",");
             if (propertyAccessorResultStrings.length > 0) {
-                var allPropertyAccessors = propertyAccessorResultStrings.join("");
+                var allPropertyAccessors = propertyAccessorResultStrings.join(",");
                 combinedResult = combinedResult + ",'_ko_property_writers':{" + allPropertyAccessors + "}";
             }
 

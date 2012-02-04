@@ -193,10 +193,32 @@ describe('Binding attribute syntax', {
         input.value = "some new user-entered value";
         ko.utils.triggerEvent(input, "change");
         value_of(vm().someProp()).should_be("some new user-entered value");
-        
+
         // clear the element and the view-model (shouldn't be any errors)
         testNode.innerHTML = "";
         vm(null);
+    },
+
+    'Should be able to specify two-level bindings through a sub-object and through dot syntax': function() {
+        var results = {}, firstName = ko.observable('bob'), lastName = ko.observable('smith');
+        ko.bindingHandlers.test = {
+            flags: ko.bindingFlags.twoLevel,
+            update: function(element, valueAccessor) {
+                var value = valueAccessor();
+                for (var prop in value) {
+                    results[prop] = ko.utils.unwrapObservable(value[prop]);
+                }
+            }
+        };
+        testNode.innerHTML = "<div data-bind='test: {first: firstName, full: firstName()+\" \"+lastName()}, test.last: lastName'></div>";
+        ko.applyBindings({ firstName: firstName, lastName: lastName }, testNode);
+        value_of(results.first).should_be("bob");
+        value_of(results.last).should_be("smith");
+        value_of(results.full).should_be("bob smith");
+
+        lastName('jones');
+        value_of(results.last).should_be("jones");
+        value_of(results.full).should_be("bob jones");
     },
 
     'Bindings can signal that they control descendant bindings by setting their type to "control"': function() {
@@ -326,6 +348,7 @@ describe('Binding attribute syntax', {
 
     'Should be able to set and access correct context in custom containerless binding': function() {
         ko.bindingHandlers.bindChildrenWithCustomContext = {
+            flags: ko.bindingFlags.canUseVirtual | ko.bindingFlags.contentBind,
             init: function (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
                 var innerContext = bindingContext.extend({ myCustomData: 123 });
                 ko.applyBindingsToDescendants(innerContext, element, true);
@@ -363,7 +386,7 @@ describe('Binding attribute syntax', {
                 innerContext.customValue = 'xyz';
                 ko.applyBindingsToDescendants(innerContext, element, true);
             }
-
+        };
         testNode.innerHTML = "Hello <div data-bind='bindChildrenWithCustomContext: true'><!-- ko with: myCustomData --><div>Some text</div><!-- /ko --></div> Goodbye"
         ko.applyBindings(null, testNode);
 
