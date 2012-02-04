@@ -54,8 +54,9 @@
     ko.bindingContext.prototype['createChildContext'] = function (dataItem) {
         return new ko.bindingContext(dataItem, this);
     };
-    ko.bindingContext.prototype['extend'] = function(extras) {
-        return ko.utils.extend(new ko.bindingContext(this.$data, this), extras);
+    ko.bindingContext.prototype['extend'] = function(properties) {
+        var clone = new ko.bindingContext(this.$data, this);
+        return ko.utils.extend(clone, properties);
     };
 
     ko.checkBindingFlags = function(binding, flagsSet, flagsUnset) {
