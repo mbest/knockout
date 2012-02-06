@@ -362,16 +362,6 @@ describe('Templating', {
         value_of(initCalls).should_be(3); // 3 because there were 3 items in myCollection
     },
     
-    'Data binding \'foreach\' options should only bind each group of output nodes once': function() {
-        var initCalls = 0;
-        ko.bindingHandlers.countInits = { init: function() { initCalls++ } };
-        ko.setTemplateEngine(new dummyTemplateEngine({ itemTemplate: "<span data-bind='countInits: true'></span>" }));
-        testNode.innerHTML = "<div data-bind='template: { name: \"itemTemplate\", foreach: myCollection }'></div>";
-
-        ko.applyBindings({ myCollection: [1,2,3] }, testNode);
-        value_of(initCalls).should_be(3); // 3 because there were 3 items in myCollection
-    },
-    
     'Data binding \'foreach\' option should accept array with "undefined" and "null" items': function () {
         var myArray = new ko.observableArray([undefined, null]);
         ko.setTemplateEngine(new dummyTemplateEngine({ itemTemplate: "The item is <span data-bind='text: String($data)'></span>" }));
