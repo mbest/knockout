@@ -49,7 +49,7 @@ ko.utils.domNodeDisposal = new (function () {
         }
     }
 
-    function newDisposeCallback(nodeOrNodes, disposeCallback, disposeWhen) {
+    function addDisposeCallback(nodeOrNodes, disposeCallback, disposeWhen) {
         var nodes = [];
         function addNode(node) {
             if (node.nodeType !== 3) {
@@ -63,16 +63,18 @@ ko.utils.domNodeDisposal = new (function () {
                 disposeCallback();
         }
         function addNodeOrNodes(nodeOrNodes) {
-            nodeOrNodes.nodeType ? addNode(nodeOrNodes) : ko.utils.arrayForEach(nodeOrNodes, addNode);
+            nodeOrNodes.nodeType
+                ? addNode(nodeOrNodes)
+                : ko.utils.arrayForEach(nodeOrNodes, addNode);
         }
         function deleteNode(node) {
-            ko.utils.arrayRemoveItem(nodes, node);
             var callbacksCollection = getDisposeCallbacksCollection(node, false);
             if (callbacksCollection) {
                 ko.utils.arrayRemoveItem(callbacksCollection, cleanNodeCallback);
                 if (!callbacksCollection.length)
                     destroyCallbacksCollection(node);
             }
+            ko.utils.arrayRemoveItem(nodes, node);
         }
         function deleteAll() {
             while (nodes.length)
@@ -100,34 +102,35 @@ ko.utils.domNodeDisposal = new (function () {
         };
     };
 
-    return {
-        addDisposeCallback : newDisposeCallback,
-
-        cleanNode : function(node) {
-            // First clean this node, where applicable
-            if (cleanableNodeTypes[node.nodeType]) {
-                cleanSingleNode(node);
-                
-                // ... then its descendants, where applicable
-                if (cleanableNodeTypesWithDescendants[node.nodeType]) {
-                    // Clone the descendants list in case it changes during iteration
-                    var descendants = [];
-                    ko.utils.arrayPushAll(descendants, node.getElementsByTagName("*"));
-                    for (var i = 0, j = descendants.length; i < j; i++)
-                        cleanSingleNode(descendants[i]);
-                }
+    function cleanNode(node) {
+        // First clean this node, where applicable
+        if (cleanableNodeTypes[node.nodeType]) {
+            cleanSingleNode(node);
+            
+            // ... then its descendants, where applicable
+            if (cleanableNodeTypesWithDescendants[node.nodeType]) {
+                // Clone the descendants list in case it changes during iteration
+                var descendants = [];
+                ko.utils.arrayPushAll(descendants, node.getElementsByTagName("*"));
+                for (var i = 0, j = descendants.length; i < j; i++)
+                    cleanSingleNode(descendants[i]);
             }
-        },
-
-        cleanAndRemoveNode : function(node) {
-            ko.cleanNode(node);
-            if (node.parentNode)
-                node.parentNode.removeChild(node);
         }
     }
+
+    function cleanAndRemoveNode(node) {
+        cleanNode(node);
+        if (node.parentNode)
+            node.parentNode.removeChild(node);
+    }
+
+    ko.cleanNode = cleanNode;
+    ko.cleanAndRemoveNode = cleanAndRemoveNode;
+
+    return {
+        addDisposeCallback : addDisposeCallback
+    };
 })();
-ko.cleanNode = ko.utils.domNodeDisposal.cleanNode; // Shorthand name for convenience
-ko.cleanAndRemoveNode = ko.utils.domNodeDisposal.cleanAndRemoveNode; // Shorthand name for convenience
 ko.exportSymbol('cleanNode', ko.cleanNode);
-ko.exportSymbol('removeNode', ko.cleanAndRemoveNode);
 ko.exportSymbol('cleanAndRemoveNode', ko.cleanAndRemoveNode);
+ko.exportSymbol('removeNode', ko.cleanAndRemoveNode);       // exported for compatibility

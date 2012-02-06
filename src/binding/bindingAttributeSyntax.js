@@ -1,11 +1,12 @@
-/** @const */ var bindingFlags_twoWay=01;
-/** @const */ var bindingFlags_eventHandler=02;
-/** @const */ var bindingFlags_contentBind=04;
-/** @const */ var bindingFlags_contentSet=010;
-/** @const */ var bindingFlags_contentUpdate=020;
-/** @const */ var bindingFlags_noValue=040;
-/** @const */ var bindingFlags_twoLevel=0100;
+/** @const */ var bindingFlags_builtIn=01;
+/** @const */ var bindingFlags_twoWay=02;
+/** @const */ var bindingFlags_eventHandler=04;
+/** @const */ var bindingFlags_twoLevel=010;
+/** @const */ var bindingFlags_contentSet=020;
+/** @const */ var bindingFlags_contentBind=040;
+/** @const */ var bindingFlags_contentUpdate=0100;
 /** @const */ var bindingFlags_canUseVirtual=0200;
+/** @const */ var bindingFlags_noValue=0400;
 
 (function () {
     ko.bindingFlags = {
@@ -26,6 +27,10 @@
             // Two-level bindings are like {attr.href: value} or {attr: {href: value}}
         'canUseVirtual': bindingFlags_canUseVirtual
             // Virtual element bindings can be used in comments: <!-- ko if: value --><!-- /ko -->
+    };
+
+    ko.checkBindingFlags = function(binding, flagsSet, flagsUnset) {
+        return (!flagsSet || (binding['flags'] & flagsSet)) && !(binding['flags'] & flagsUnset);
     };
 
     ko.bindingHandlers = {};
@@ -59,11 +64,7 @@
         return ko.utils.extend(clone, properties);
     };
 
-    ko.checkBindingFlags = function(binding, flagsSet, flagsUnset) {
-        return (!flagsSet || (binding['flags'] & flagsSet)) && !(binding['flags'] & flagsUnset);
-    };
-
-    ko.getTwoLevelBindingData = function(bindingKey) {
+    function getTwoLevelBindingData(bindingKey) {
         var dotPos = bindingKey.indexOf(".");
         if (dotPos > 0) {
             var realKey = bindingKey.substring(0, dotPos), binding = ko.bindingHandlers[realKey];
@@ -81,15 +82,15 @@
     }
 
     ko.getBindingHandler = function(bindingKey) {
-        return ko.bindingHandlers[bindingKey] || ko.getTwoLevelBindingData(bindingKey).handler;
-    }
+        return ko.bindingHandlers[bindingKey] || getTwoLevelBindingData(bindingKey).handler;
+    };
 
     ko.bindingValueWrap = function(valueFunction) {
         valueFunction.__ko_proto__ = ko.bindingValueWrap;
         return valueFunction;
     };
 
-    ko.unwrapBindingValue = function(value) {
+    ko.unwrapBindingValue = function(value) {   // store this function in ko so the compiler doesn't inline it 
         return (value && value.__ko_proto__ && value.__ko_proto__ === ko.bindingValueWrap) ? value() : value;
     };
 
@@ -155,7 +156,7 @@
                 ko.dependencyDetection.ignore(function() {
                     var initResult = binding.handler['init'](node, binding.valueAccessor, parsedBindingsAccessor, viewModel, bindingContext);
                     if (initResult && initResult['controlsDescendantBindings'])
-                        throw new Error(binding.key + " binding must be updated set contentBind flag");
+                        throw new Error(binding.key + " binding handler must be updated to use contentBind flag");
                 });
             }
             if (binding.handler['update']) {
@@ -187,11 +188,11 @@
         /** @const */ var contentSetBindings = 1;
         /** @const */ var contentBindBinding = 2;
         /** @const */ var contentUpdateBindings = 3;
-        var bindings = [[], [], undefined, []], lastIndex=-1, lastKey, thisIndex, binding;
+        var bindings = [[], [], undefined, []], lastIndex=0, lastKey, thisIndex, binding;
         for (var bindingKey in parsedBindings) {
             binding = (binding = ko.bindingHandlers[bindingKey])
                 ? { handler: binding, key: bindingKey }
-                : ko.getTwoLevelBindingData(bindingKey);
+                : getTwoLevelBindingData(bindingKey);
             if (binding.handler) {
                 binding.flags = binding.handler['flags'];
                 if (!isElement && !(binding.flags & bindingFlags_canUseVirtual))
@@ -211,12 +212,13 @@
                 binding.valueAccessor = binding.subKey
                     ? makeSubKeyValueAccessor(bindingKey, binding.subKey)
                     : makeValueAccessor(bindingKey);
-                // Warn if bindings will be run "out of order"; this may be because a custom binding hasn't been set up with the correct flags
-                if (thisIndex < lastIndex) {
-                    ko.logger.warn("Warning: bindings will be run in a different order than specified: " + binding.key + " will be run before " + lastKey);
-                } else {
+                if (thisIndex >= lastIndex) {
+                    // Save key and index if index didn't get smaller
                     lastKey = binding.key;
                     lastIndex = thisIndex;
+                } else if (!(binding.flags & bindingFlags_builtIn)) {
+                    // Warn if custom binding will be run "out of order"; this may be because a binding hasn't been set up with the correct flags
+                    ko.logger.warn("Warning: bindings will be run in a different order than specified: " + binding.key + " will be run before " + lastKey);
                 }
             }
         }
