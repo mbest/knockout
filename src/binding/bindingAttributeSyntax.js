@@ -155,7 +155,8 @@
                 // call init function; observables accessed in init functions are not tracked
                 ko.dependencyDetection.ignore(function() {
                     var initResult = binding.handler['init'](node, binding.valueAccessor, parsedBindingsAccessor, viewModel, bindingContext);
-                    if (initResult && initResult['controlsDescendantBindings'])
+                    // throw an error is binding handler is only using the old method of indicating that it controls binding descendants
+                    if (initResult && !(binding.flags & bindingFlags_contentBind) && initResult['controlsDescendantBindings'])
                         throw new Error(binding.key + " binding handler must be updated to use contentBind flag");
                 });
             }

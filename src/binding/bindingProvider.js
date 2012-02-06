@@ -3,6 +3,9 @@
 
     ko.bindingProvider = function() {
         this.bindingCache = {};
+        this['clearCache'] = function() {
+            this.bindingCache = {};
+        };
     };
 
     ko.utils.extend(ko.bindingProvider.prototype, {

@@ -201,7 +201,7 @@ describe('Binding attribute syntax', {
 
     'Should be able to specify two-level bindings through a sub-object and through dot syntax': function() {
         var results = {}, firstName = ko.observable('bob'), lastName = ko.observable('smith');
-        ko.bindingHandlers.test = {
+        ko.bindingHandlers.twoLevelBinding = {
             flags: ko.bindingFlags.twoLevel,
             update: function(element, valueAccessor) {
                 var value = valueAccessor();
@@ -210,7 +210,7 @@ describe('Binding attribute syntax', {
                 }
             }
         };
-        testNode.innerHTML = "<div data-bind='test: {first: firstName, full: firstName()+\" \"+lastName()}, test.last: lastName'></div>";
+        testNode.innerHTML = "<div data-bind='twoLevelBinding: {first: firstName, full: firstName()+\" \"+lastName()}, twoLevelBinding.last: lastName'></div>";
         ko.applyBindings({ firstName: firstName, lastName: lastName }, testNode);
         value_of(results.first).should_be("bob");
         value_of(results.last).should_be("smith");
@@ -219,6 +219,53 @@ describe('Binding attribute syntax', {
         lastName('jones');
         value_of(results.last).should_be("jones");
         value_of(results.full).should_be("bob jones");
+    },
+
+    'Value of \'this\' in call to event handler should be the function\'s object': function() {
+        ko.bindingHandlers.testEvent = {
+            flags: ko.bindingFlags.eventHandler,
+            init: function(element, valueAccessor) {
+                valueAccessor()(); // call the function
+            }
+        };
+        var eventCalls = 0, vm = {
+            topLevelFunction: function() {
+                value_of(this).should_be(vm);
+                eventCalls++;
+            },
+            level2: {
+                secondLevelFunction: function() {
+                    value_of(this).should_be(vm.level2);
+                    eventCalls++;
+                }
+            }
+        };
+        testNode.innerHTML = "<div data-bind='testEvent: topLevelFunction'></div><div data-bind='testEvent: level2.secondLevelFunction'></div>";
+        ko.applyBindings(vm, testNode);
+        value_of(eventCalls).should_be(2);
+    },
+
+    'Should be able to leave off the value if a binding specifies it doesn\'t require one (will default to true)': function() {
+        var initCalls = 0;
+        ko.bindingHandlers.doesntRequireValue = {
+            flags: ko.bindingFlags.noValue,
+            init: function(element, valueAccessor) { if (valueAccessor()) initCalls++; }
+        }
+        testNode.innerHTML = "<div data-bind='doesntRequireValue, dummy: false'></div><div data-bind='doesntRequireValue: true, dummy: false'></div>";
+        ko.applyBindings(null, testNode);
+        value_of(initCalls).should_be(2);
+    },
+
+    'Should not be able to leave off the value if a binding doesn\'t specify the noValue flag': function() {
+        var initCalls = 0, didThrow = false;
+        ko.bindingHandlers.doesRequireValue = {
+            init: function(element, valueAccessor) { if (valueAccessor()) initCalls++; }
+        }
+        testNode.innerHTML = "<div data-bind='doesRequireValue, dummy: false'></div><div data-bind='doesRequireValue: true, dummy: false'></div>";
+
+        try { ko.applyBindings(null, testNode) }
+        catch(ex) { didThrow = true; value_of(ex.message).should_contain('Unable to parse bindings') }
+        value_of(didThrow).should_be(true);
     },
 
     'Bindings can signal that they control descendant bindings by setting contentBind flag': function() {
@@ -497,5 +544,79 @@ describe('Binding attribute syntax', {
 
         ko.applyBindings({ myObservable: observable }, testNode);
         value_of(observable.getSubscriptionsCount()).should_be(0);
+    },
+
+    'Should not run updates for all bindings if only one needs to run': function() {
+        var observable = ko.observable('A'), updateCount1 = 0, updateCount2 = 0;
+        ko.bindingHandlers.test1 = {
+            update: function(element, valueAccessor) {
+                valueAccessor()();  // access value to create a subscription
+                updateCount1++;
+            }
+        };
+        ko.bindingHandlers.test2 = {
+            update: function() {
+                updateCount2++;
+            }
+        };
+        testNode.innerHTML = "<div data-bind='test1: myObservable, test2: true'></div>";
+
+        ko.applyBindings({ myObservable: observable }, testNode);
+        value_of(updateCount1).should_be(1);
+        value_of(updateCount2).should_be(1);
+
+        // update the observable and check that only the first binding was updated
+        observable('B');
+        value_of(updateCount1).should_be(2);
+        value_of(updateCount2).should_be(1);
+    },
+
+    'Should process bindings in a certain order based on their type and warn if order in data-bind is different': function() {
+        var lastBindingIndex = 0, countWarn = 0, saveWarn = ko.logger.warn;
+        ko.logger.warn = function() {
+            countWarn++;
+        }; 
+        function checkOrder(bindingIndex) {
+            if (bindingIndex < lastBindingIndex) {
+                ko.logger.warn = saveWarn;
+                throw new Error("handler " + bindingIndex + " called after " + lastBindingIndex);
+            }
+            lastBindingIndex = bindingIndex; 
+        }
+        ko.bindingHandlers.test1 = { update: function() { checkOrder(1); } };
+        ko.bindingHandlers.test2 = { flags: ko.bindingFlags.contentSet, update: function() { checkOrder(2); } };
+        ko.bindingHandlers.test3 = { flags: ko.bindingFlags.contentBind, update: function() { checkOrder(3); } };
+        ko.bindingHandlers.test4 = { flags: ko.bindingFlags.contentUpdate, update: function() { checkOrder(4); } };
+
+        testNode.innerHTML = "<div data-bind='test4: true, test3: true, test2: true, test1: true'></div>";
+
+        ko.applyBindings(null, testNode);
+
+        ko.logger.warn = saveWarn;
+        value_of(countWarn).should_be(3);
+    },
+    
+    'Changing type of binding handler won\'t clear binding cache, but cache can be cleared by calling clearCache': function() {
+        var vm = ko.observable(1), updateCalls = 0, didThrow = false;
+        ko.bindingHandlers.sometimesRequiresValue = { 
+            flags: ko.bindingFlags.noValue,
+            update: function() { updateCalls++; }
+        }
+        testNode.innerHTML = "<div data-bind='sometimesRequiresValue'></div>";
+        // first time works fine
+        ko.applyBindings(vm, testNode);
+        value_of(updateCalls).should_be(1);
+        
+        // change type of handler; it will still work because of cache
+        delete ko.bindingHandlers.sometimesRequiresValue.flags;
+        vm(2);      // forces reparsing of binding values (but cache will kick in)
+        value_of(updateCalls).should_be(2);
+
+        // now clear the cache; reparsing will fail
+        ko.bindingProvider.instance.clearCache();
+        try { vm(3); }
+        catch(ex) { didThrow = true; value_of(ex.message).should_contain('Unable to parse bindings') }
+        value_of(didThrow).should_be(true);
+        value_of(updateCalls).should_be(2);
     }
 });

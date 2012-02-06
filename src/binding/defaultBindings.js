@@ -427,7 +427,7 @@ ko.bindingHandlers['attr'] = {
     }
 };
 
-ko.bindingHandlers['withlight'] = {
+ko.bindingHandlers['with'] = {
     'flags': bindingFlags_builtIn | bindingFlags_contentBind | bindingFlags_canUseVirtual,
     'init': function(element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
         var innerContext = bindingContext['createChildContext'](function() {
@@ -482,8 +482,8 @@ templateBasedBinding.prototype['update'] = function(element, valueAccessor, allB
     ko.bindingHandlers['template']['update'](element, this.makeTemplateValueAccessor(valueAccessor), allBindingsAccessor, viewModel, bindingContext);
 };
 
-// "with: someExpression" is equivalent to "template: { if: someExpression, data: someExpression }"
-ko.bindingHandlers['with'] = new templateBasedBinding( function(value, options) { options['if'] = value; options['data'] = value; });
+// "withif: someExpression" is equivalent to "template: { if: someExpression, data: someExpression }"
+ko.bindingHandlers['withif'] = new templateBasedBinding( function(value, options) { options['if'] = value; options['data'] = value; });
 
 // "if: someExpression" is equivalent to "template: { if: someExpression }"
 ko.bindingHandlers['if'] = new templateBasedBinding( function(value, options) { options['if'] = value; });
