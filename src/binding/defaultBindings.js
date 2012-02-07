@@ -228,10 +228,9 @@ ko.bindingHandlers['options'] = {
                     optionText = value[i][optionsTextValue]; // Given a string; treat it as a property name on the data value
                 else
                     optionText = optionValue;				 // Given no optionsText arg; use the data value itself
-                if ((optionText === null) || (optionText === undefined))
-                    optionText = "";                                    
+                optionText = ko.utils.unwrapObservable(optionText);
 
-                ko.utils.setTextContent(option, optionText);
+                option.appendChild(document.createTextNode((optionText === null || optionText === undefined) ? "" : optionText));
 
                 element.appendChild(option);
             }
@@ -300,10 +299,7 @@ ko.bindingHandlers['selectedOptions'] = {
 ko.bindingHandlers['text'] = {
     'flags': bindingFlags_builtIn | bindingFlags_contentBind | bindingFlags_contentSet | bindingFlags_canUseVirtual,
     'init': function(element) {
-        var node = ko.virtualElements.firstChild(element);
-        if (!node || node.nodeType !== 3 || ko.virtualElements.nextSibling(node)) {
-            ko.virtualElements.setDomNodeChildren(element, [document.createTextNode("")]);
-        }
+        ko.virtualElements.setDomNodeChildren(element, [document.createTextNode("")]);
     },
     'update': function (element, valueAccessor) {
         var value = ko.utils.unwrapObservable(valueAccessor());

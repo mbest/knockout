@@ -292,20 +292,6 @@ ko.utils = new (function () {
             }
         },
 
-        setTextContent: function(element, textContent) {
-            var value = ko.utils.unwrapObservable(textContent);
-            if ((value === null) || (value === undefined))
-                value = "";
-
-            'innerText' in element ? element.innerText = value
-                                   : element.textContent = value;
-                                   
-            if (ieVersion >= 9) {
-                // Believe it or not, this actually fixes an IE9 rendering bug. Insane. https://github.com/SteveSanderson/knockout/issues/209
-                element.style.display = element.style.display;
-            }
-        },
-
         range: function (min, max) {
             min = ko.utils.unwrapObservable(min);
             max = ko.utils.unwrapObservable(max);
