@@ -37,9 +37,12 @@
 
     ko.bindingContext = function(dataItem, parent) {
         var self = this, isOb = ko.isObservable(dataItem) || typeof(dataItem) == "function";
-        self._subscription = undefined;  // set so it isn't set by extend call below
         self._subscription = ko.utils.possiblyWrap(parent ?
             function() {
+                var oldSubscription = self._subscription;   // save previous subscription value 
+                // copy $root and any custom properties from parent binding context
+                ko.utils.extend(self, parent);
+                self._subscription = oldSubscription;       // restore subscription value
                 if (parent._subscription)
                     ko.dependencyDetection.registerDependency(parent._subscription);
                 // set our properties
@@ -47,8 +50,6 @@
                 self['$parents'] = (parent['$parents'] || []).slice(0);
                 self['$parents'].unshift(self['$parent'] = parent['$data']);
                 self['$data'] = isOb ? dataItem() : dataItem;
-                // copy $root and any custom properties from parent binding context
-                ko.utils.extend(self, parent, true);
             } :
             function() {
                 self['$parents'] = [];
