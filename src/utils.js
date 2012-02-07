@@ -417,4 +417,5 @@ if (!Function.prototype['bind']) {
     };
 }
 
-ko.logger = (window.console && window.console.warn) ? window.console : {warn: function(){}};
+ko.logger = (window.console && window.console.warn) ? window.console : {'warn': function(){}};
+ko.exportSymbol('logger', ko.logger);

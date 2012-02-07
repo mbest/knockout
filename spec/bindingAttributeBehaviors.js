@@ -173,10 +173,9 @@ describe('Binding attribute syntax', {
 
     'Should be able to update bindings (including callbacks) using an observable view model': function() {
         testNode.innerHTML = "<input data-bind='value:someProp' />";
-        var input = testNode.childNodes[0]
-
-        var vm = ko.observable({ someProp: 'My prop value' });
+        var input = testNode.childNodes[0], vm = ko.observable({ someProp: 'My prop value' });
         ko.applyBindings(vm, input);
+
         value_of(input.value).should_be("My prop value");
 
         // a change to the input value should be written to the model
@@ -189,7 +188,6 @@ describe('Binding attribute syntax', {
         value_of(input.value).should_be("My new prop value");
 
         // a change to the input value should be written to the new model
-        var input = testNode.childNodes[0]
         input.value = "some new user-entered value";
         ko.utils.triggerEvent(input, "change");
         value_of(vm().someProp()).should_be("some new user-entered value");
@@ -197,6 +195,21 @@ describe('Binding attribute syntax', {
         // clear the element and the view-model (shouldn't be any errors)
         testNode.innerHTML = "";
         vm(null);
+    },
+
+    'Updates to an observable view model should update all child contexts (uncluding values copied from the parent)': function() {
+        testNode.innerHTML = "<div data-bind='with:obj1'><span data-bind='text:prop1'></span> <span data-bind='text:$root.prop2'></span></div>";
+        var vm = ko.observable({obj1: {prop1: "First"}, prop2: "view model"});
+        ko.applyBindings(vm, testNode);
+        value_of(testNode).should_contain_text("First view model");
+
+        // change view model to new object
+        vm({obj1: {prop1: "Second view"}, prop2: "model"});
+        value_of(testNode).should_contain_text("Second view model");
+
+        // change it again
+        vm({obj1: {prop1: "View model"}, prop2: "final"});
+        value_of(testNode).should_contain_text("View model final");
     },
 
     'Should be able to specify two-level bindings through a sub-object and through dot syntax': function() {
