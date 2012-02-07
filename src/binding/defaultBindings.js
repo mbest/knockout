@@ -141,7 +141,7 @@ ko.bindingHandlers['value'] = {
                     if (ko.isWriteableObservable(modelValue))
                         modelValue(elementValue);
                     else
-                        ko.bindingExpressionRewriting.writeValueToProperty(allBindingsAccessor, 'value', elementValue);
+                        ko.bindingExpressionRewriting.writeValueToProperty(allBindingsAccessor(), 'value', elementValue);
                 });
             });	    	
         });
@@ -278,7 +278,7 @@ ko.bindingHandlers['selectedOptions'] = {
             if (ko.isWriteableObservable(value))
                 value(valueToWrite);
             else
-                ko.bindingExpressionRewriting.writeValueToProperty(allBindingsAccessor, 'value', valueToWrite);
+                ko.bindingExpressionRewriting.writeValueToProperty(allBindingsAccessor(), 'value', valueToWrite);
         });    	
     },
     'update': function (element, valueAccessor) {
@@ -298,9 +298,16 @@ ko.bindingHandlers['selectedOptions'] = {
 };
 
 ko.bindingHandlers['text'] = {
-    'flags': bindingFlags_builtIn | bindingFlags_contentBind | bindingFlags_contentSet,
+    'flags': bindingFlags_builtIn | bindingFlags_contentBind | bindingFlags_contentSet | bindingFlags_canUseVirtual,
+    'init': function(element) {
+        var node = ko.virtualElements.firstChild(element);
+        if (!node || node.nodeType !== 3 || ko.virtualElements.nextSibling(node)) {
+            ko.virtualElements.setDomNodeChildren(element, [document.createTextNode("")]);
+        }
+    },
     'update': function (element, valueAccessor) {
-        ko.utils.setTextContent(element, valueAccessor());
+        var value = ko.utils.unwrapObservable(valueAccessor());
+        ko.virtualElements.firstChild(element).data = (value === null || value === undefined) ? "" : value;
     }
 };
 
@@ -381,7 +388,7 @@ ko.bindingHandlers['checked'] = {
                     modelValue(valueToWrite);
                 }
             } else {
-                ko.bindingExpressionRewriting.writeValueToProperty(allBindingsAccessor, 'checked', valueToWrite);
+                ko.bindingExpressionRewriting.writeValueToProperty(allBindingsAccessor(), 'checked', valueToWrite);
             }
         };
         ko.utils.registerEventHandler(element, "click", updateHandler);
@@ -448,7 +455,7 @@ ko.bindingHandlers['hasfocus'] = {
             if (ko.isWriteableObservable(modelValue))
                 modelValue(valueToWrite);
             else
-                ko.bindingExpressionRewriting.writeValueToProperty(allBindingsAccessor, 'hasfocus', valueToWrite);
+                ko.bindingExpressionRewriting.writeValueToProperty(allBindingsAccessor(), 'hasfocus', valueToWrite);
         };
         ko.utils.registerEventHandler(element, "focus", function() { writeValue(true) });
         ko.utils.registerEventHandler(element, "focusin", function() { writeValue(true) }); // For IE

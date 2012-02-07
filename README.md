@@ -13,8 +13,9 @@ What’s new and improved in this update?
 4. Bindings whose only valid value is *true* can be specified without the value. The only built-in binding this applies to is `uniqueValue`. So you could use `uniqueValue` instead of `uniqueValue: true`.
 5. Event handler functions are called with the correct `this` value when just the function value is given. Previously, all handler functions were called with `this` set to the value of `$data`. With this update, if you specify `click: $parent.handler`, the handler function will be called with `this` set to `$parent`.  This is equivalent to `click: function() { $parent.handler() }` or `click: $parent.handler.bind($parent)`
 6. The `with` binding has been split into two bindings: `with` and `withif`. The new `with` binding doesn’t use the template code and thus is much faster and simpler. It doesn’t modify it’s contents but just pushes a new binding context. The `withif` binding provides the same functionality of the previous `with` binding.
-7. Certain bindings can be set up to run after their descendants’ bindings have run. This is useful if a binding modifies its descendant elements and needs them to be initialized first.
-8. The minified code is smaller. Even with a lot of new features (and some additional error reporting), the minified version of this update is slightly smaller than the current master *head*.
+7. The `text` binding can now be used with container-less syntax: `<!--ko text: value--><!--/ko-->`.
+8. Certain bindings can be set up to run after their descendants’ bindings have run. This is useful if a binding modifies its descendant elements and needs them to be initialized first.
+9. The minified code is smaller. Even with a lot of new features (and some additional error reporting), the minified version of this update is slightly smaller than the current master *head*.
 
 What compatibility issues are there with this update?
 
@@ -27,6 +28,7 @@ What compatibility issues are there with this update?
 7. Two Knockout objects are no longer exported: `ko.utils.domNodeDisposal` and `ko.jsonExpressionRewriting`. Both objects were heavily modified in this update, and rather than explaining the changes, it was simpler (and space saving) to not export them.
 8. The last parameter to `utils.setDomNodeChildrenFromArrayMapping` is a callback function that is called after nodes are added to the document. Anyone using this function and providing that callback will need to update their code to include a third parameter, `subscription`, and call `addDisposalNodes` on the subscription with any of the given nodes that should be watched.
 9. Observables accessed within a binding’s `init` function will not be tracked and thus will not trigger updates for that binding. Only observables accessed in the `update` function will be tracked.
+10. The `text` binding will always create a single text node. Previously some browsers would convert new-lines in the text into `br` nodes. Now they will stay as new-lines in a single text node. Use the `white-space: pre-wrap` style to format the text.
 
 What are the new interfaces in this update?
 
@@ -47,9 +49,11 @@ What are the new interfaces in this update?
 
 This update was not meant to fix bugs. However the following bugs were fixed:
 
-1. For `select` elements with both `options` and `value` bindings, where `value` is specified before `options`, removing the currently selected item from the array (or clearing the whole array) will now correctly clear the value. (Previously the value would not be updated.)
-2. For `select` elements with a `value` binding and no options (where either no `options` binding is given or the binding is after the `value` binding), setting the value’s observable to any value will now reset the value to *undefined*. (Previously the value would be accepted.)
-3. `ko.computed` now prevents itself from being called recursively. In other words, if a computed observables’s `read` function somehow triggers itself to be re-evaluated, that inner evaluation will not happen. (Previously such a situation would result in a Javascript stack error.)
+1. There are various bugs that occur if the `value` binding is run before the `options` bindings. Since the changes in this update ensure that `options` is always run before `value`, these bugs are fixed with this update:
+   * Removing the currently selected item from the array (or clearing the whole array) will now correctly clear the value. (Previously the value would not be updated.)
+   * If there are no options, setting the value’s observable to any value will now reset the value to *undefined*. (Previously the value would be accepted.)
+2. `ko.computed` now prevents itself from being called recursively. In other words, if a computed observables’s `read` function somehow triggers itself to be re-evaluated, that inner evaluation will not happen. (Previously such a situation would result in a Javascript stack error.)
+3. For two-level bindings such `attr` and `css`, the sub keys no longer need to be quoted (see #233).
 
 Are there any other issues to watch for with this update?
 

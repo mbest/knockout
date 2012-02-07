@@ -86,6 +86,34 @@ describe('Binding Expression Rewriting', {
         delete ko.bindingHandlers.b;
     },
 
+    'Should convert a variety of values to property accessors': function () {
+        ko.bindingHandlers.b = { flags: ko.bindingFlags.twoWay | ko.bindingFlags.twoLevel };
+        var rewritten = ko.bindingExpressionRewriting.insertPropertyAccessors('b.a: prop1, b.b: obj2.prop2, b.c: obj2["prop2"], b.d: getObj().prop2');
+
+        var model = { prop1: "bob", obj2: { prop2: "jones" }, getObj: function() { return this.obj2 } };
+        with (model) {
+            var parsedRewritten = eval("({" + rewritten + "})");
+            value_of(parsedRewritten['b.a']).should_be("bob");
+            value_of(parsedRewritten['b.b']).should_be("jones");
+            value_of(parsedRewritten['b.c']).should_be("jones");
+
+            // update simple property
+            ko.bindingExpressionRewriting.writeValueToProperty(parsedRewritten, 'b.a', "stan");
+            value_of(model.prop1).should_be("stan");
+
+            // update sub-property (two methods)
+            ko.bindingExpressionRewriting.writeValueToProperty(parsedRewritten, 'b.b', "smith");
+            value_of(model.obj2.prop2).should_be("smith");
+            ko.bindingExpressionRewriting.writeValueToProperty(parsedRewritten, 'b.c', "sloan");
+            value_of(model.obj2.prop2).should_be("sloan");
+
+            // update property of object returned by a function (won't update)
+            ko.bindingExpressionRewriting.writeValueToProperty(parsedRewritten, 'b.d', "smart");
+            value_of(model.obj2.prop2).should_be("sloan");
+        }
+        delete ko.bindingHandlers.b;
+    },
+
     'Should be able to eval rewritten literals that contain unquoted keywords as keys': function() {
         var rewritten = ko.bindingExpressionRewriting.insertPropertyAccessors("while: true");
         value_of(rewritten).should_be("'while':true");

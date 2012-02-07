@@ -196,8 +196,8 @@ ko.bindingExpressionRewriting = (function () {
             return false;
         },
 
-        writeValueToProperty: function(allBindingsAccessor, key, value) {
-            var propWriters = allBindingsAccessor()['_ko_property_writers'];
+        writeValueToProperty: function(allBindings, key, value) {
+            var propWriters = allBindings['_ko_property_writers'];
             if (propWriters && propWriters[key])
                 propWriters[key](value);
         }
