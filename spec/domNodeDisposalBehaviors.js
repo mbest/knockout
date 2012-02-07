@@ -40,6 +40,17 @@ describe('DOM node disposal', {
     },
     
     'Should be able to remove previously-registered disposal callbacks': function() {
+        var didRun = false;
+        var callback = function() { didRun = true };
+        ko.utils.domNodeDisposal.addDisposeCallback(testNode, callback);
+        
+        value_of(didRun).should_be(false);
+        ko.utils.domNodeDisposal.removeDisposeCallback(testNode, callback);
+        ko.cleanNode(testNode);
+        value_of(didRun).should_be(false); // Didn't run only because we removed it    		
+    },
+
+    'Should be able to remove nodes from disposal callbacks': function() {
         var didRun1 = false, didRun2 = false;
         var callback1 = function() { didRun1 = true }, callback2 = function() { didRun2 = true };
         var disposer1 = ko.utils.domNodeDisposal.addDisposeCallback(testNode, callback1);
@@ -47,10 +58,12 @@ describe('DOM node disposal', {
 
         value_of(didRun1).should_be(false);
         value_of(didRun2).should_be(false);
-        
-        disposer1.deleteNode(testNode);
-        ko.cleanNode(testNode);
-        value_of(didRun1).should_be(false);
-        value_of(didRun2).should_be(true);
-    }
+
+        if (disposer1.deleteNode) {     // interface insn't currently exported
+            disposer1.deleteNode(testNode);
+            ko.cleanNode(testNode);
+            value_of(didRun1).should_be(false);
+            value_of(didRun2).should_be(true);
+        }
+    },
 });

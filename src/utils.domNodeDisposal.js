@@ -57,10 +57,16 @@ ko.utils.domNodeDisposal = new (function () {
                 getDisposeCallbacksCollection(node, true).push(cleanNodeCallback);
             }
         }
-        function cleanNodeCallback(node) {
+        function nodeIsDisposed(node) {
             ko.utils.arrayRemoveItem(nodes, node);
             if (!nodes.length)
                 disposeCallback();
+        }
+        function cleanNodeCallback(node, deleteNodeIfMatchingDispose) {
+            if (!deleteNodeIfMatchingDispose)
+                nodeIsDisposed(node);
+            else if (deleteNodeIfMatchingDispose == disposeCallback)
+                deleteNode(node);
         }
         function addNodeOrNodes(nodeOrNodes) {
             nodeOrNodes.nodeType
@@ -100,7 +106,15 @@ ko.utils.domNodeDisposal = new (function () {
             dispose: dispose,
             shouldDispose: shouldDispose
         };
-    };
+    }
+
+    function removeDisposeCallback(node, disposeCallback) {
+        var callbacksCollection = getDisposeCallbacksCollection(node, false);
+        if (callbacksCollection)
+            ko.utils.arrayForEach(callbacksCollection, function(cleanNodeCallback) {
+                cleanNodeCallback(node, disposeCallback);
+            });
+    }
 
     function cleanNode(node) {
         // First clean this node, where applicable
@@ -128,9 +142,15 @@ ko.utils.domNodeDisposal = new (function () {
     ko.cleanAndRemoveNode = cleanAndRemoveNode;
 
     return {
-        addDisposeCallback : addDisposeCallback
+        addDisposeCallback : addDisposeCallback,
+        removeDisposeCallback : removeDisposeCallback
+        
     };
 })();
 ko.exportSymbol('cleanNode', ko.cleanNode);
 ko.exportSymbol('cleanAndRemoveNode', ko.cleanAndRemoveNode);
 ko.exportSymbol('removeNode', ko.cleanAndRemoveNode);       // exported for compatibility
+
+ko.exportSymbol('utils.domNodeDisposal', ko.utils.domNodeDisposal);
+ko.exportSymbol('utils.domNodeDisposal.addDisposeCallback', ko.utils.domNodeDisposal.addDisposeCallback);
+ko.exportSymbol('utils.domNodeDisposal.removeDisposeCallback', ko.utils.domNodeDisposal.removeDisposeCallback);

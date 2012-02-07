@@ -545,7 +545,7 @@ describe('Binding attribute syntax', {
         value_of(hasUpdatedSecondBinding).should_be(true);
     },
 
-    'Should not subscribe to observables accessed in init function': function() {
+    'Should not subscribe to observables accessed in init function if binding are run independently': function() {
         var observable = ko.observable('A');
         ko.bindingHandlers.test = {
             init: function(element, valueAccessor) {
@@ -555,11 +555,11 @@ describe('Binding attribute syntax', {
         }
         testNode.innerHTML = "<div data-bind='if: true'><div data-bind='test: myObservable'></div></div>";
 
-        ko.applyBindings({ myObservable: observable }, testNode);
+        ko.applyBindings({ myObservable: observable }, testNode, {independentBindings: true});
         value_of(observable.getSubscriptionsCount()).should_be(0);
     },
 
-    'Should not run updates for all bindings if only one needs to run': function() {
+    'Should not run updates for all bindings if only one needs to run if binding are run independently': function() {
         var observable = ko.observable('A'), updateCount1 = 0, updateCount2 = 0;
         ko.bindingHandlers.test1 = {
             update: function(element, valueAccessor) {
@@ -574,7 +574,7 @@ describe('Binding attribute syntax', {
         };
         testNode.innerHTML = "<div data-bind='test1: myObservable, test2: true'></div>";
 
-        ko.applyBindings({ myObservable: observable }, testNode);
+        ko.applyBindings({ myObservable: observable }, testNode, {independentBindings: true});
         value_of(updateCount1).should_be(1);
         value_of(updateCount2).should_be(1);
 
