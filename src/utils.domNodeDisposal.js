@@ -5,47 +5,51 @@ ko.utils.domNodeDisposal = new (function () {
     var cleanableNodeTypesWithDescendants = { 1: true, 9: true }; // Element, Document
 
     function getDisposeCallbacksCollection(node, createIfNotFound) {
-        var allDisposeCallbacks = ko.utils.domData.get(node, domDataKey);
+        var allDisposeCallbacks = ko.domDataGet(node, domDataKey);
         if ((allDisposeCallbacks === undefined) && createIfNotFound) {
             allDisposeCallbacks = [];
-            ko.utils.domData.set(node, domDataKey, allDisposeCallbacks);
+            ko.domDataSet(node, domDataKey, allDisposeCallbacks);
         }
         return allDisposeCallbacks;
     }
     function destroyCallbacksCollection(node) {
-        ko.utils.domData.set(node, domDataKey, undefined);
+        ko.domDataSet(node, domDataKey, undefined);
     }
     
-    function cleanSingleNode(node) {
+    function cleanSingleNode(node, onlyDispose) {
         // Run all the dispose callbacks
         var callbacks = getDisposeCallbacksCollection(node, false);
         if (callbacks) {
             callbacks = callbacks.slice(0); // Clone, as the array may be modified during iteration (typically, callbacks will remove themselves)
             for (var i = 0; i < callbacks.length; i++)
                 callbacks[i](node);
+            if (onlyDispose)
+                destroyCallbacksCollection(node);
         }
         
-        // Also erase the DOM data
-        ko.utils.domData.clear(node);
+        if (!onlyDispose) {
+            // Also erase the DOM data
+            ko.utils.domData.clear(node);
         
-        // Special support for jQuery here because it's so commonly used.
-        // Many jQuery plugins (including jquery.tmpl) store data using jQuery's equivalent of domData
-        // so notify it to tear down any resources associated with the node & descendants here.
-        if ((typeof jQuery == "function") && (typeof jQuery['cleanData'] == "function"))
-            jQuery['cleanData']([node]);
+            // Special support for jQuery here because it's so commonly used.
+            // Many jQuery plugins (including jquery.tmpl) store data using jQuery's equivalent of domData
+            // so notify it to tear down any resources associated with the node & descendants here.
+            if ((typeof jQuery == "function") && (typeof jQuery['cleanData'] == "function"))
+                jQuery['cleanData']([node]);
+        }
 
         // Also clear any immediate-child comment nodes, as these wouldn't have been found by
         // node.getElementsByTagName("*") in cleanNode() (comment nodes aren't elements)
         if (cleanableNodeTypesWithDescendants[node.nodeType])
-            cleanImmediateCommentTypeChildren(node);
+            cleanImmediateCommentTypeChildren(node, onlyDispose);
     }
 
-    function cleanImmediateCommentTypeChildren(nodeWithChildren) {
+    function cleanImmediateCommentTypeChildren(nodeWithChildren, onlyDispose) {
         var child, nextChild = nodeWithChildren.firstChild;
         while (child = nextChild) {
             nextChild = child.nextSibling;
             if (child.nodeType === 8)
-                cleanSingleNode(child);
+                cleanSingleNode(child, onlyDispose);
         }
     }
 
@@ -120,10 +124,10 @@ ko.utils.domNodeDisposal = new (function () {
             });
     }
 
-    function cleanNode(node) {
+    function cleanOrDisposeNode(node, onlyDispose) {
         // First clean this node, where applicable
         if (cleanableNodeTypes[node.nodeType]) {
-            cleanSingleNode(node);
+            cleanSingleNode(node, onlyDispose);
             
             // ... then its descendants, where applicable
             if (cleanableNodeTypesWithDescendants[node.nodeType]) {
@@ -131,30 +135,34 @@ ko.utils.domNodeDisposal = new (function () {
                 var descendants = [];
                 ko.utils.arrayPushAll(descendants, node.getElementsByTagName("*"));
                 for (var i = 0, j = descendants.length; i < j; i++)
-                    cleanSingleNode(descendants[i]);
+                    cleanSingleNode(descendants[i], onlyDispose);
             }
         }
     }
+    
+    function disposeNode(node) {
+        cleanOrDisposeNode(node, true);
+    }
 
     function cleanAndRemoveNode(node) {
-        cleanNode(node);
+        cleanOrDisposeNode(node);
         if (node.parentNode)
             node.parentNode.removeChild(node);
     }
 
-    ko.cleanNode = cleanNode;
+    ko.cleanNode = cleanOrDisposeNode;
     ko.cleanAndRemoveNode = cleanAndRemoveNode;
+    ko.disposeNode = disposeNode;
 
-    return {
+    var domNodeDisposal = {
         addDisposeCallback : addDisposeCallback,
         removeDisposeCallback : removeDisposeCallback
-        
     };
+    ko.exportProperty(domNodeDisposal, 'addDisposeCallback', domNodeDisposal.addDisposeCallback);
+    ko.exportProperty(domNodeDisposal, 'removeDisposeCallback', domNodeDisposal.removeDisposeCallback);
+    return domNodeDisposal;
 })();
 ko.exportSymbol('cleanNode', ko.cleanNode);
 ko.exportSymbol('cleanAndRemoveNode', ko.cleanAndRemoveNode);
 ko.exportSymbol('removeNode', ko.cleanAndRemoveNode);       // exported for compatibility
-
 ko.exportSymbol('utils.domNodeDisposal', ko.utils.domNodeDisposal);
-ko.exportSymbol('utils.domNodeDisposal.addDisposeCallback', ko.utils.domNodeDisposal.addDisposeCallback);
-ko.exportSymbol('utils.domNodeDisposal.removeDisposeCallback', ko.utils.domNodeDisposal.removeDisposeCallback);

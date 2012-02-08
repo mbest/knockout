@@ -142,10 +142,10 @@
 
     var templateSubscriptionDomDataKey = ko.utils.domData.nextKey();
     function disposeOldSubscriptionAndStoreNewOne(element, newSubscription) {
-        var oldSubscription = ko.utils.domData.get(element, templateSubscriptionDomDataKey);
+        var oldSubscription = ko.domDataGet(element, templateSubscriptionDomDataKey);
         if (oldSubscription && (typeof(oldSubscription.dispose) == 'function'))
             oldSubscription.dispose();
-        ko.utils.domData.set(element, templateSubscriptionDomDataKey, newSubscription);
+        ko.domDataSet(element, templateSubscriptionDomDataKey, newSubscription);
     }
     
     ko.bindingHandlers['template'] = {

@@ -45,9 +45,9 @@
     
     ko.templateSources.domElement.prototype['data'] = function(key /*, valueToWrite */) {
         if (arguments.length === 1) {
-            return ko.utils.domData.get(this.domElement, "templateSourceData_" + key);
+            return ko.domDataGet(this.domElement, "templateSourceData_" + key);
         } else {
-            ko.utils.domData.set(this.domElement, "templateSourceData_" + key, arguments[1]);
+            ko.domDataSet(this.domElement, "templateSourceData_" + key, arguments[1]);
         }
     };
     
@@ -63,22 +63,22 @@
     ko.templateSources.anonymousTemplate.prototype = new ko.templateSources.domElement();
     ko.templateSources.anonymousTemplate.prototype['text'] = function(/* valueToWrite */) {
         if (arguments.length == 0) {
-            var templateData = ko.utils.domData.get(this.domElement, anonymousTemplatesDomDataKey) || {};
+            var templateData = ko.domDataGet(this.domElement, anonymousTemplatesDomDataKey) || {};
             if (templateData.textData === undefined && templateData.containerData)
                 templateData.textData = templateData.containerData.innerHTML;
             return templateData.textData;
         } else {
             var valueToWrite = arguments[0];
-            ko.utils.domData.set(this.domElement, anonymousTemplatesDomDataKey, {textData: valueToWrite});
+            ko.domDataSet(this.domElement, anonymousTemplatesDomDataKey, {textData: valueToWrite});
         }
     };
     ko.templateSources.domElement.prototype['nodes'] = function(/* valueToWrite */) {
         if (arguments.length == 0) {
-            var templateData = ko.utils.domData.get(this.domElement, anonymousTemplatesDomDataKey) || {};
+            var templateData = ko.domDataGet(this.domElement, anonymousTemplatesDomDataKey) || {};
             return templateData.containerData;
         } else {
             var valueToWrite = arguments[0];
-            ko.utils.domData.set(this.domElement, anonymousTemplatesDomDataKey, {containerData: valueToWrite});
+            ko.domDataSet(this.domElement, anonymousTemplatesDomDataKey, {containerData: valueToWrite});
         }
     };
 

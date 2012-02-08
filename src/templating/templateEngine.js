@@ -26,15 +26,17 @@
 
 ko.templateEngine = function () { };
 
-ko.templateEngine.prototype['renderTemplateSource'] = function (templateSource, bindingContext, options) {
+ko.utils.extendInternal(ko.templateEngine.prototype, {
+
+'renderTemplateSource': function (templateSource, bindingContext, options) {
     throw new Error("Override renderTemplateSource");
-};
+},
 
-ko.templateEngine.prototype['createJavaScriptEvaluatorBlock'] = function (script) {
+'createJavaScriptEvaluatorBlock': function (script) {
     throw new Error("Override createJavaScriptEvaluatorBlock");
-};
+},
 
-ko.templateEngine.prototype['makeTemplateSource'] = function(template) {
+'makeTemplateSource': function(template) {
     // Named template
     if (typeof template == "string") {
         var elem = document.getElementById(template);
@@ -46,14 +48,14 @@ ko.templateEngine.prototype['makeTemplateSource'] = function(template) {
         return new ko.templateSources.anonymousTemplate(template);
     } else
         throw new Error("Unknown template type: " + template);
-};
+},
 
-ko.templateEngine.prototype['renderTemplate'] = function (template, bindingContext, options) {
+'renderTemplate': function (template, bindingContext, options) {
     var templateSource = this['makeTemplateSource'](template);
     return this['renderTemplateSource'](templateSource, bindingContext, options);
-};
+},
 
-ko.templateEngine.prototype['isTemplateRewritten'] = function (template) {
+'isTemplateRewritten': function (template) {
     // Skip rewriting if requested
     if (this['allowTemplateRewriting'] === false)
         return true;
@@ -63,9 +65,9 @@ ko.templateEngine.prototype['isTemplateRewritten'] = function (template) {
         return true;
     
     return this['makeTemplateSource'](template)['data']("isRewritten");
-};
+},
 
-ko.templateEngine.prototype['rewriteTemplate'] = function (template, rewriterCallback) {
+'rewriteTemplate': function (template, rewriterCallback) {
     var templateSource = this['makeTemplateSource'](template);          
     var rewritten = rewriterCallback(templateSource['text']());
     templateSource['text'](rewritten);
@@ -77,6 +79,8 @@ ko.templateEngine.prototype['rewriteTemplate'] = function (template, rewriterCal
         this.knownRewrittenTemplates = this.knownRewrittenTemplates || {};
         this.knownRewrittenTemplates[template] = true;            
     }
-};
+}
+
+});
 
 ko.exportSymbol('templateEngine', ko.templateEngine);

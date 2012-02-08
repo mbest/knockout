@@ -13,7 +13,7 @@ ko.subscription.prototype.dispose = function () {
 ko.subscribable = function () {
     this._subscriptions = {};
 
-    ko.utils.extend(this, ko.subscribable['fn']);
+    ko.utils.extendInternal(this, ko.subscribable['fn']);
     ko.exportProperty(this, 'subscribe', this.subscribe);
     ko.exportProperty(this, 'extend', this.extend);
     ko.exportProperty(this, 'getSubscriptionsCount', this.getSubscriptionsCount);

@@ -8,7 +8,7 @@
         readValue : function(element) {
             if (element.tagName == 'OPTION') {
                 if (element[hasDomDataExpandoProperty] === true)
-                    return ko.utils.domData.get(element, ko.bindingHandlers.options.optionValueDomDataKey);
+                    return ko.domDataGet(element, ko.bindingHandlers.options.optionValueDomDataKey);
                 return element.getAttribute("value");
             } else if (element.tagName == 'SELECT')
                 return element.selectedIndex >= 0 ? ko.selectExtensions.readValue(element.options[element.selectedIndex]) : undefined;
@@ -20,7 +20,7 @@
             if (element.tagName == 'OPTION') {
                 switch(typeof value) {
                     case "string":
-                        ko.utils.domData.set(element, ko.bindingHandlers.options.optionValueDomDataKey, undefined);
+                        ko.domDataSet(element, ko.bindingHandlers.options.optionValueDomDataKey, undefined);
                         if (hasDomDataExpandoProperty in element) { // IE <= 8 throws errors if you delete non-existent properties from a DOM node
                             delete element[hasDomDataExpandoProperty];
                         }
@@ -28,7 +28,7 @@
                         break;
                     default:
                         // Store arbitrary object using DomData
-                        ko.utils.domData.set(element, ko.bindingHandlers.options.optionValueDomDataKey, value);
+                        ko.domDataSet(element, ko.bindingHandlers.options.optionValueDomDataKey, value);
                         element[hasDomDataExpandoProperty] = true;
 
                         // Special treatment of numbers is just for backward compatibility. KO 1.2.1 wrote numerical values to element.value.

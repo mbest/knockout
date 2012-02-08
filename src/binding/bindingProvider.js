@@ -8,7 +8,7 @@
         };
     };
 
-    ko.utils.extend(ko.bindingProvider.prototype, {
+    ko.utils.extendInternal(ko.bindingProvider.prototype, {
         'nodeHasBindings': function(node) {
             switch (node.nodeType) {
                 case 1: return node.getAttribute(defaultBindingAttributeName) != null;   // Element

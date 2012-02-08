@@ -35,36 +35,37 @@
 
     ko.bindingHandlers = {};
 
-    ko.bindingContext = function(dataItem, parent, options) {
-        var self = this, isOb = ko.isObservable(dataItem) || typeof(dataItem) == "function";
+    // Accepts either a data value or a value accessor function; note that an observable qualifies as a value accessor function
+    ko.bindingContext = function(dataItemOrValueAccessor, parent, options) {
+        var self = this, isFunc = typeof(dataItemOrValueAccessor) == "function";
         self._subscription = ko.utils.possiblyWrap(parent ?
             function() {
-                var oldSubscription = self._subscription;   // save previous subscription value 
+                var oldSubscription = self._subscription;   // save previous subscription value
                 // copy $root, $options, and any custom properties from parent binding context
-                ko.utils.extend(self, parent);
+                ko.utils.extendInternal(self, parent);
                 self._subscription = oldSubscription;       // restore subscription value
                 if (parent._subscription)
                     ko.dependencyDetection.registerDependency(parent._subscription);
                 // set our properties
-                ko.utils.extend(self['$options'], options);
+                ko.utils.extendInternal(self['$options'], options);
                 self['$parentContext'] = parent;
                 self['$parents'] = parent['$parents'].slice(0);
                 self['$parents'].unshift(self['$parent'] = parent['$data']);
-                self['$data'] = isOb ? dataItem() : dataItem;
+                self['$data'] = isFunc ? dataItemOrValueAccessor() : dataItemOrValueAccessor;
             } :
             function() {
                 self['$options'] = options || {};
                 self['$parents'] = [];
-                self['$root'] = self['$data'] = isOb ? dataItem() : dataItem;
+                self['$root'] = self['$data'] = isFunc ? dataItemOrValueAccessor() : dataItemOrValueAccessor;
             }
         );
     }
-    ko.bindingContext.prototype['createChildContext'] = function (dataItem) {
-        return new ko.bindingContext(dataItem, this);
+    ko.bindingContext.prototype['createChildContext'] = function (dataItemOrValueAccessor) {
+        return new ko.bindingContext(dataItemOrValueAccessor, this);
     };
     ko.bindingContext.prototype['extend'] = function(properties) {
         var clone = new ko.bindingContext(this.$data, this);
-        return ko.utils.extend(clone, properties);
+        return ko.utils.extendInternal(clone, properties);
     };
 
     function getTwoLevelBindingData(bindingKey) {
@@ -156,7 +157,8 @@
 
         function initCaller(binding) {
             return function() {
-                var initResult = binding.handler['init'](node, binding.valueAccessor, parsedBindingsAccessor, viewModel, bindingContext);
+                var handlerInitFn = binding.handler['init']; 
+                var initResult = handlerInitFn(node, binding.valueAccessor, parsedBindingsAccessor, viewModel, bindingContext);
                 // throw an error if binding handler is only using the old method of indicating that it controls binding descendants
                 if (initResult && !(binding.flags & bindingFlags_contentBind) && initResult['controlsDescendantBindings'])
                     throw new Error(binding.key + " binding handler must be updated to use contentBind flag");
@@ -167,7 +169,8 @@
             return function() {
                 if (bindingUpdater)
                     ko.dependencyDetection.registerDependency(bindingUpdater);
-                binding.handler['update'](node, binding.valueAccessor, parsedBindingsAccessor, viewModel, bindingContext);
+                var handlerUpdateFn = binding.handler['update'];
+                handlerUpdateFn(node, binding.valueAccessor, parsedBindingsAccessor, viewModel, bindingContext);
             };
         }
 
@@ -259,12 +262,12 @@
     var storedBindingContextDomDataKey = ko.utils.domData.nextKey();
     ko.storedBindingContextForNode = function (node, bindingContext) {
         if (arguments.length == 2) {
-            ko.utils.domData.set(node, storedBindingContextDomDataKey, bindingContext);
+            ko.domDataSet(node, storedBindingContextDomDataKey, bindingContext);
             if (bindingContext._subscription)
                 bindingContext._subscription.addDisposalNodes(node);
         }
         else
-            return ko.utils.domData.get(node, storedBindingContextDomDataKey);
+            return ko.domDataGet(node, storedBindingContextDomDataKey);
     }
 
     function getBindingContext(viewModelOrBindingContext, options) {

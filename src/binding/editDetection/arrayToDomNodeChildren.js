@@ -76,8 +76,8 @@
         array = array || [];
         options = options || {};
         callbackAfterAddingNodes = wrapCallbackAfterAddingNodes(callbackAfterAddingNodes);
-        var isFirstExecution = ko.utils.domData.get(domNode, lastMappingResultDomDataKey) === undefined;
-        var lastMappingResult = ko.utils.domData.get(domNode, lastMappingResultDomDataKey) || [];
+        var isFirstExecution = ko.domDataGet(domNode, lastMappingResultDomDataKey) === undefined;
+        var lastMappingResult = ko.domDataGet(domNode, lastMappingResultDomDataKey) || [];
         var lastArray = ko.utils.arrayMap(lastMappingResult, function (x) { return x.arrayEntry; });
         var editScript = ko.utils.compareArrays(lastArray, array);
 
@@ -163,7 +163,7 @@
             });
 
         // Store a copy of the array items we just considered so we can difference it next time
-        ko.utils.domData.set(domNode, lastMappingResultDomDataKey, newMappingResult);
+        ko.domDataSet(domNode, lastMappingResultDomDataKey, newMappingResult);
     }
 })();
 

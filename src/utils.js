@@ -101,7 +101,7 @@ ko.utils = new (function () {
             return array;
         },
 
-        extend: function (target, source) {
+        extendInternal: function (target, source) {
             for(var prop in source) {
                 if(source.hasOwnProperty(prop)) {
                     target[prop] = source[prop];
@@ -394,7 +394,7 @@ ko.exportSymbol('utils.arrayIndexOf', ko.utils.arrayIndexOf);
 ko.exportSymbol('utils.arrayMap', ko.utils.arrayMap);
 ko.exportSymbol('utils.arrayPushAll', ko.utils.arrayPushAll);
 ko.exportSymbol('utils.arrayRemoveItem', ko.utils.arrayRemoveItem);
-ko.exportSymbol('utils.extend', ko.utils.extend);
+ko.exportSymbol('utils.extend', ko.utils.extendInternal);
 ko.exportSymbol('utils.fieldsIncludedWithJsonPost', ko.utils.fieldsIncludedWithJsonPost);
 ko.exportSymbol('utils.getFormFields', ko.utils.getFormFields);
 ko.exportSymbol('utils.postJson', ko.utils.postJson);

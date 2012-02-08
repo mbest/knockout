@@ -198,7 +198,16 @@ describe('Binding attribute syntax', {
     },
 
     'Updates to an observable view model should update all child contexts (uncluding values copied from the parent)': function() {
-        testNode.innerHTML = "<div data-bind='with:obj1'><span data-bind='text:prop1'></span> <span data-bind='text:$root.prop2'></span></div>";
+        ko.bindingHandlers.setChildContext = {
+            flags: ko.bindingFlags.contentBind,
+            init: function(element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
+                ko.applyBindingsToDescendants(
+                    bindingContext.createChildContext(function() { return ko.utils.unwrapObservable(valueAccessor()) }), 
+                    element, true);
+            }
+        };
+        
+        testNode.innerHTML = "<div data-bind='setChildContext:obj1'><span data-bind='text:prop1'></span> <span data-bind='text:$root.prop2'></span></div>";
         var vm = ko.observable({obj1: {prop1: "First"}, prop2: "view model"});
         ko.applyBindings(vm, testNode);
         value_of(testNode).should_contain_text("First view model");

@@ -430,7 +430,7 @@ ko.bindingHandlers['attr'] = {
     }
 };
 
-ko.bindingHandlers['with'] = {
+ko.bindingHandlers['withlight'] = {
     'flags': bindingFlags_builtIn | bindingFlags_contentBind | bindingFlags_canUseVirtual,
     'init': function(element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
         var innerContext = bindingContext['createChildContext'](function() {
@@ -465,45 +465,72 @@ ko.bindingHandlers['hasfocus'] = {
     }
 };
 
+var withBoundDomDataKey = ko.utils.domData.nextKey(), withContainerDomDataKey = ko.utils.domData.nextKey();
+ko.bindingHandlers['with'] = {
+    'flags': bindingFlags_builtIn | bindingFlags_contentBind | bindingFlags_canUseVirtual,
+    'update': function(element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
+        var isBound = ko.domDataGet(element, withBoundDomDataKey),
+            container = ko.domDataGet(element, withContainerDomDataKey),
+            dataValue = ko.utils.unwrapObservable(valueAccessor());
+
+        if (!isBound && dataValue) {
+            if (container) {
+                ko.virtualElements.setDomNodeChildren(element, ko.utils.makeArray(container.childNodes));
+                ko.domDataSet(element, withContainerDomDataKey);  // clear container from data storage
+            }
+            var innerContext = bindingContext['createChildContext'](function() {
+                return ko.utils.unwrapObservable(valueAccessor());
+            });
+            ko.applyBindingsToDescendants(innerContext, element, true);
+            ko.domDataSet(element, withBoundDomDataKey, true);
+        }
+        else if (!dataValue && !container) {
+            var nodeArray = ko.virtualElements.childNodes(element);
+            if (isBound) {
+                ko.utils.arrayForEach(nodeArray, ko.disposeNode);
+                ko.domDataSet(element, withBoundDomDataKey, false);
+            }
+            container = ko.utils.moveNodesToContainerElement(nodeArray);
+            ko.domDataSet(element, withContainerDomDataKey, container);
+        }
+    }
+};
 
 function templateBasedBinding(makeOptionsFunction) {
-    this['flags'] = bindingFlags_builtIn | bindingFlags_contentBind | bindingFlags_canUseVirtual;
-    this.makeOptions = makeOptionsFunction;
-};
-templateBasedBinding.prototype.makeTemplateValueAccessor = function(valueAccessor) {
-    var self = this;
-    return function() {
-        var options = {'templateEngine': ko.nativeTemplateEngine.instance};
-        self.makeOptions(valueAccessor(), options);
-        return options;
+    function makeTemplateValueAccessor(valueAccessor) {
+        return function() {
+            var options = {'templateEngine': ko.nativeTemplateEngine.instance};
+            makeOptionsFunction(valueAccessor(), options);
+            return options;
+        };
+    }
+    return {
+        'flags': bindingFlags_builtIn | bindingFlags_contentBind | bindingFlags_canUseVirtual,
+        'init': function(element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
+            ko.bindingHandlers['template']['init'](element, makeTemplateValueAccessor(valueAccessor));
+        },
+        'update': function(element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
+            ko.bindingHandlers['template']['update'](element, makeTemplateValueAccessor(valueAccessor), allBindingsAccessor, viewModel, bindingContext);
+        }
     };
-};
-templateBasedBinding.prototype['init'] = function(element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
-    ko.bindingHandlers['template']['init'](element, this.makeTemplateValueAccessor(valueAccessor));
-};
-templateBasedBinding.prototype['update'] = function(element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
-    ko.bindingHandlers['template']['update'](element, this.makeTemplateValueAccessor(valueAccessor), allBindingsAccessor, viewModel, bindingContext);
-};
-
-// "withif: someExpression" is equivalent to "template: { if: someExpression, data: someExpression }"
-ko.bindingHandlers['withif'] = new templateBasedBinding( function(value, options) { options['if'] = value; options['data'] = value; });
+}
 
 // "if: someExpression" is equivalent to "template: { if: someExpression }"
-ko.bindingHandlers['if'] = new templateBasedBinding( function(value, options) { options['if'] = value; });
+ko.bindingHandlers['if'] = templateBasedBinding( function(value, options) { options['if'] = value; });
 
 // "ifnot: someExpression" is equivalent to "template: { ifnot: someExpression }"
-ko.bindingHandlers['ifnot'] = new templateBasedBinding( function(value, options) { options['ifnot'] = value; });
+ko.bindingHandlers['ifnot'] = templateBasedBinding( function(value, options) { options['ifnot'] = value; });
 
 // "foreach: someExpression" is equivalent to "template: { foreach: someExpression }"
 // "foreach: { data: someExpression, afterAdd: myfn }" is equivalent to "template: { foreach: someExpression, afterAdd: myfn }"
-ko.bindingHandlers['foreach'] = new templateBasedBinding(
+ko.bindingHandlers['foreach'] = templateBasedBinding(
     function(value, options) {
         if ((!value) || typeof value.length == "number") {
             // If bindingValue is the array, just pass it on its own
             options['foreach'] = value;
         } else {
             // If bindingValue is a object with options, copy it and set foreach to the data value
-            ko.utils.extend(options, value);
+            ko.utils.extendInternal(options, value);
             options['foreach'] = options['data'];
             delete options['name'];   // don't allow named templates
         }
