@@ -691,10 +691,10 @@ describe('Binding: Event', {
         value_of(model.clickCalled).should_be(true);
     },
 
-    'Should call function in correct context': function() {
+    'Should call function in correct context if using \'eventHandlersUseObjectForThis\' option': function() {
         var model = { subModel: { wasCalled: false, clickFunc: function() {this.wasCalled = true} } };
         testNode.innerHTML = "<button data-bind='event: {click: subModel.clickFunc}'>hey</button>";
-        ko.applyBindings(model, testNode);
+        ko.applyBindings(model, testNode, {eventHandlersUseObjectForThis: true});
         ko.utils.triggerEvent(testNode.childNodes[0], "click");
         value_of(model.subModel.wasCalled).should_be(true);
     },

@@ -50,7 +50,6 @@ ko.utils.domData = new (function () {
     return {
         get: getData,
         set: setData,
-        getAll: getAll,
         clear: clear,
         nextKey: nextKey
     };

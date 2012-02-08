@@ -155,13 +155,28 @@
             return parsedBindings;
         }
 
+        function validateThatBindingIsAllowedForVirtualElements(binding) {
+            if (!isElement && !ko.virtualElements.allowedBindings[binding.key] && !(binding.flags & bindingFlags_canUseVirtual))
+                throw new Error("The binding '" + binding.key + "' cannot be used with virtual elements");
+        }
+
+        function multiContentBindError(key1, key2) {
+            throw new Error("Multiple bindings (" + key1 + " and " + key2 + ") are trying to control descendant bindings of the same element. You cannot use these bindings together on the same element.");
+        }
+
         function initCaller(binding) {
             return function() {
                 var handlerInitFn = binding.handler['init']; 
                 var initResult = handlerInitFn(node, binding.valueAccessor, parsedBindingsAccessor, viewModel, bindingContext);
                 // throw an error if binding handler is only using the old method of indicating that it controls binding descendants
-                if (initResult && !(binding.flags & bindingFlags_contentBind) && initResult['controlsDescendantBindings'])
-                    throw new Error(binding.key + " binding handler must be updated to use contentBind flag");
+                if (initResult && !(binding.flags & bindingFlags_contentBind) && initResult['controlsDescendantBindings']) {
+                    if (independentBindings)
+                        throw new Error(binding.key + " binding handler must be updated to use contentBind flag");
+                    else if (bindings[contentBindBinding])
+                        multiContentBindError(bindings[contentBindBinding].key, binding.key);
+                    else
+                        bindings[contentBindBinding] = binding;
+                }
             };
         }
 
@@ -185,8 +200,6 @@
         }
 
         function callHandlersDependent(binding) {
-            if (runInits && binding.handler['init'])
-                initCaller(binding)();
             if (binding.handler['update'])
                 updateCaller(binding)();
         }
@@ -205,45 +218,54 @@
             if (parsedBindings && bindingContext._subscription)
                 ko.dependencyDetection.registerDependency(bindingContext._subscription);
         }, node);
-
-        // Get binding handlers and organize bindings by run order:
+        
         /** @const */ var mostBindings = 0;
         /** @const */ var contentSetBindings = 1;
         /** @const */ var contentBindBinding = 2;
         /** @const */ var contentUpdateBindings = 3;
-        var bindings = [[], [], undefined, []], lastIndex=mostBindings, thisIndex, binding;
-        for (var bindingKey in parsedBindings) {
-            binding = (binding = ko.bindingHandlers[bindingKey])
-                ? { handler: binding, key: bindingKey }
-                : getTwoLevelBindingData(bindingKey);
-            if (binding.handler) {
-                binding.flags = binding.handler['flags'];
-                if (!isElement && !(binding.flags & bindingFlags_canUseVirtual))
-                    throw new Error("The binding '" + binding.key + "' cannot be used with virtual elements");
-                if (binding.flags & bindingFlags_contentBind) {
-                    if (bindings[contentBindBinding])
-                        throw new Error("Multiple bindings (" + bindings[contentBindBinding].key + " and " + binding.key + ") are trying to control descendant bindings of the same element. You cannot use these bindings together on the same element.");
-                    bindings[contentBindBinding] = binding;
-                    thisIndex = contentBindBinding + 1;
-                } else {
-                    thisIndex = 
-                        (binding.flags & bindingFlags_contentSet)
-                            ? contentSetBindings
-                        : (binding.flags & bindingFlags_contentUpdate)
-                            ? contentUpdateBindings
-                            : lastIndex;
-                    bindings[thisIndex].push(binding);
-                }
-                binding.valueAccessor = binding.subKey
-                    ? makeSubKeyValueAccessor(bindingKey, binding.subKey)
-                    : makeValueAccessor(bindingKey);
-                if (thisIndex > lastIndex)
-                    lastIndex = thisIndex;
-            }
-        }
+        var allBindings = [], bindings = [[], [], undefined, []], lastIndex=mostBindings, thisIndex, binding;
 
-        // Apply the bindings in the correct order
         ko.utils.possiblyWrap(function() {
+            if (runInits) {
+                // Get binding handlers and call init function if not in independent mode
+                for (var bindingKey in parsedBindings) {
+                    binding = (binding = ko.bindingHandlers[bindingKey])
+                        ? { handler: binding, key: bindingKey }
+                        : getTwoLevelBindingData(bindingKey);
+                    if (binding.handler) {
+                        allBindings.push(binding);
+                        binding.flags = binding.handler['flags'];
+                        validateThatBindingIsAllowedForVirtualElements(binding);
+                        binding.valueAccessor = binding.subKey
+                            ? makeSubKeyValueAccessor(bindingKey, binding.subKey)
+                            : makeValueAccessor(bindingKey);
+                        if (!independentBindings && binding.handler['init'])
+                            initCaller(binding)();
+                    }
+                }
+        
+                // Organize bindings by run order
+                for (var i=0; binding = allBindings[i]; i++) {
+                    if (binding.flags & bindingFlags_contentBind) {
+                        if (bindings[contentBindBinding])
+                            multiContentBindError(bindings[contentBindBinding].key, binding.key);
+                        bindings[contentBindBinding] = binding;
+                        thisIndex = contentBindBinding + 1;
+                    } else {
+                        thisIndex = 
+                            (binding.flags & bindingFlags_contentSet)
+                                ? contentSetBindings
+                            : (binding.flags & bindingFlags_contentUpdate)
+                                ? contentUpdateBindings
+                                : lastIndex;
+                        bindings[thisIndex].push(binding);
+                    }
+                    if (thisIndex > lastIndex)
+                        lastIndex = thisIndex;
+                }
+            }
+
+            // Apply the bindings in the correct order
             applyListedBindings(bindings[mostBindings]);
             applyListedBindings(bindings[contentSetBindings]);
     
@@ -291,6 +313,8 @@
         if (rootNode && (rootNode.nodeType !== 1) && (rootNode.nodeType !== 8))
             throw new Error("ko.applyBindings: first parameter should be your view model; second parameter should be a DOM node");
         rootNode = rootNode || window.document.body; // Make "rootNode" parameter optional
+
+        ko.bindingExpressionRewriting.options.eventHandlersUseObjectForThis = (options && options['eventHandlersUseObjectForThis']);
 
         applyBindingsToNodeAndDescendantsInternal(getBindingContext(viewModelOrBindingContext, options), rootNode, true);
     };

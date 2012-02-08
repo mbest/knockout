@@ -78,6 +78,7 @@
     }
 
     ko.virtualElements = {
+        allowedBindings: {},
 
         childNodes: function(node) {
             return isStartComment(node) ? getVirtualChildren(node) : node.childNodes;
@@ -181,6 +182,7 @@
     };  
 })();
 ko.exportSymbol('virtualElements', ko.virtualElements);
+ko.exportSymbol('virtualElements.allowedBindings', ko.virtualElements.allowedBindings);
 ko.exportSymbol('virtualElements.emptyNode', ko.virtualElements.emptyNode);
 //ko.exportSymbol('virtualElements.firstChild', ko.virtualElements.firstChild);     // firstChild is not minified
 ko.exportSymbol('virtualElements.insertAfter', ko.virtualElements.insertAfter);

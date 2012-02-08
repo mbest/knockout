@@ -207,18 +207,18 @@ describe('Binding attribute syntax', {
             }
         };
         
-        testNode.innerHTML = "<div data-bind='setChildContext:obj1'><span data-bind='text:prop1'></span> <span data-bind='text:$root.prop2'></span></div>";
-        var vm = ko.observable({obj1: {prop1: "First"}, prop2: "view model"});
+        testNode.innerHTML = "<div data-bind='setChildContext:obj1'><span data-bind='text:prop1'></span><span data-bind='text:$root.prop2'></span></div>";
+        var vm = ko.observable({obj1: {prop1: "First "}, prop2: "view model"});
         ko.applyBindings(vm, testNode);
         value_of(testNode).should_contain_text("First view model");
 
         // change view model to new object
-        vm({obj1: {prop1: "Second view"}, prop2: "model"});
+        vm({obj1: {prop1: "Second view "}, prop2: "model"});
         value_of(testNode).should_contain_text("Second view model");
 
         // change it again
-        vm({obj1: {prop1: "View model"}, prop2: "final"});
-        value_of(testNode).should_contain_text("View model final");
+        vm({obj1: {prop1: "Third view model"}, prop2: ""});
+        value_of(testNode).should_contain_text("Third view model");
     },
 
     'Should be able to specify two-level bindings through a sub-object and through dot syntax': function() {
@@ -243,7 +243,7 @@ describe('Binding attribute syntax', {
         value_of(results.full).should_be("bob jones");
     },
 
-    'Value of \'this\' in call to event handler should be the function\'s object': function() {
+    'Value of \'this\' in call to event handler should be the function\'s object if option set': function() {
         ko.bindingHandlers.testEvent = {
             flags: ko.bindingFlags.eventHandler,
             init: function(element, valueAccessor) {
@@ -263,7 +263,7 @@ describe('Binding attribute syntax', {
             }
         };
         testNode.innerHTML = "<div data-bind='testEvent: topLevelFunction'></div><div data-bind='testEvent: level2.secondLevelFunction'></div>";
-        ko.applyBindings(vm, testNode);
+        ko.applyBindings(vm, testNode, {eventHandlersUseObjectForThis: true});
         value_of(eventCalls).should_be(2);
     },
 
@@ -317,16 +317,48 @@ describe('Binding attribute syntax', {
         value_of(didThrow).should_be(true);
     },
     
-    'Binding should not be allowed to use old \'controlsDescendantBindings\' style': function() {
+    'Binding should not be allowed to use \'controlsDescendantBindings\' style with independent bindings': function() {
         ko.bindingHandlers.test = {  
             init: function() { return { controlsDescendantBindings : true } }
         };
         testNode.innerHTML = "<div data-bind='test: true'></div>"
         var didThrow = false;
         
-        try { ko.applyBindings(null, testNode) }
+        try { ko.applyBindings(null, testNode, {independentBindings: true}) }
         catch(ex) { didThrow = true; value_of(ex.message).should_contain('contentBind flag') }
         value_of(didThrow).should_be(true);
+    },
+    
+    'Binding should be allowed to use \'controlsDescendantBindings\' with standard bindings': function() {
+        ko.bindingHandlers.test = {  
+            init: function() { return { controlsDescendantBindings : true } }
+        };
+        testNode.innerHTML = "<div data-bind='test: true'></div>"
+        
+        ko.applyBindings(null, testNode);
+        // shouldn't throw any error
+    },
+    
+    'Binding can use both \'controlsDescendantBindings\' and \'contentBind\' with independent bindings': function() {
+        ko.bindingHandlers.test = {  
+            flags: ko.bindingFlags.contentBind,
+            init: function() { return { controlsDescendantBindings : true } }
+        };
+        testNode.innerHTML = "<div data-bind='test: true'></div>"
+        
+        ko.applyBindings(null, testNode, {independentBindings: true});
+        // shouldn't throw any error
+    },
+    
+    'Binding can use both \'controlsDescendantBindings\' and \'contentBind\' with standard bindings': function() {
+        ko.bindingHandlers.test = {  
+            flags: ko.bindingFlags.contentBind,
+            init: function() { return { controlsDescendantBindings : true } }
+        };
+        testNode.innerHTML = "<div data-bind='test: true'></div>"
+        
+        ko.applyBindings(null, testNode);
+        // shouldn't throw any error
     },
     
     'Should use properties on the view model in preference to properties on the binding context': function() {
@@ -392,12 +424,24 @@ describe('Binding attribute syntax', {
         value_of(didThrow).should_be(true);
     },
     
-    'Should be able to set a custom binding to use containerless binding': function() {
+    'Should be able to set a custom binding to use containerless binding using \'canUseVirtual\' flag': function() {
         var initCalls = 0;
         ko.bindingHandlers.test = {
             flags: ko.bindingFlags.canUseVirtual,
             init: function () { initCalls++; }
         };
+        testNode.innerHTML = "Hello <!-- ko test: false -->Some text<!-- /ko --> Goodbye"
+        ko.applyBindings(null, testNode);
+
+        value_of(initCalls).should_be(1);
+        value_of(testNode).should_contain_text("Hello Some text Goodbye");
+    },
+    
+    'Should be able to set a custom binding to use containerless binding using \'allowedBindings\'': function() {
+        var initCalls = 0;
+        ko.bindingHandlers.test = { init: function () { initCalls++ } };
+        ko.virtualElements.allowedBindings['test'] = true;
+
         testNode.innerHTML = "Hello <!-- ko test: false -->Some text<!-- /ko --> Goodbye"
         ko.applyBindings(null, testNode);
 
