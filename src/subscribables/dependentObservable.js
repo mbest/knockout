@@ -153,6 +153,7 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
     dependentObservable.hasWriteFunction = typeof options["write"] === "function";
     dependentObservable.addDisposalNodes = addDisposalNodes;
     dependentObservable.replaceDisposalNodes = replaceDisposalNodes;
+    dependentObservable.getDisposalNodesCount = function() { return disposer ? disposer.getNodesCount() : 0; };
 
     dependentObservable.dispose = disposeAllSubscriptionsToDependencies;
     disposeWhen = options.disposeWhen || options["disposeWhen"];
@@ -166,8 +167,10 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
 
     ko.exportProperty(dependentObservable, 'dispose', dependentObservable.dispose);
     ko.exportProperty(dependentObservable, 'getDependenciesCount', dependentObservable.getDependenciesCount);
+
     ko.exportProperty(dependentObservable, 'addDisposalNodes', dependentObservable.addDisposalNodes);
     ko.exportProperty(dependentObservable, 'replaceDisposalNodes', dependentObservable.replaceDisposalNodes);
+    ko.exportProperty(dependentObservable, 'getDisposalNodesCount', dependentObservable.getDisposalNodesCount);
 
     return dependentObservable;
 };

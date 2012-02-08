@@ -208,7 +208,7 @@
         /** @const */ var contentSetBindings = 1;
         /** @const */ var contentBindBinding = 2;
         /** @const */ var contentUpdateBindings = 3;
-        var bindings = [[], [], undefined, []], lastIndex=0, lastKey, thisIndex, binding;
+        var bindings = [[], [], undefined, []], lastIndex=mostBindings, thisIndex, binding;
         for (var bindingKey in parsedBindings) {
             binding = (binding = ko.bindingHandlers[bindingKey])
                 ? { handler: binding, key: bindingKey }
@@ -220,26 +220,22 @@
                 if (binding.flags & bindingFlags_contentBind) {
                     if (bindings[contentBindBinding])
                         throw new Error("Multiple bindings (" + bindings[contentBindBinding].key + " and " + binding.key + ") are trying to control descendant bindings of the same element. You cannot use these bindings together on the same element.");
-                    bindings[thisIndex = contentBindBinding] = binding;
+                    bindings[contentBindBinding] = binding;
+                    thisIndex = contentBindBinding + 1;
                 } else {
-                    thisIndex = (binding.flags & bindingFlags_contentSet)
-                        ? contentSetBindings
+                    thisIndex = 
+                        (binding.flags & bindingFlags_contentSet)
+                            ? contentSetBindings
                         : (binding.flags & bindingFlags_contentUpdate)
                             ? contentUpdateBindings
-                            : mostBindings;
+                            : lastIndex;
                     bindings[thisIndex].push(binding);
                 }
                 binding.valueAccessor = binding.subKey
                     ? makeSubKeyValueAccessor(bindingKey, binding.subKey)
                     : makeValueAccessor(bindingKey);
-                if (thisIndex >= lastIndex) {
-                    // Save key and index if index didn't get smaller
-                    lastKey = binding.key;
+                if (thisIndex > lastIndex)
                     lastIndex = thisIndex;
-                } else if (!(binding.flags & bindingFlags_builtIn)) {
-                    // Warn if custom binding will be run "out of order"; this may be because a binding hasn't been set up with the correct flags
-                    ko.logger.warn("Warning: bindings will be run in a different order than specified: " + binding.key + " will be run before " + lastKey);
-                }
             }
         }
 
@@ -260,7 +256,7 @@
         runInits = dontBindDescendants = false;        
     };
 
-    var storedBindingContextDomDataKey = "__ko_bindingContext__";
+    var storedBindingContextDomDataKey = ko.utils.domData.nextKey();
     ko.storedBindingContextForNode = function (node, bindingContext) {
         if (arguments.length == 2) {
             ko.utils.domData.set(node, storedBindingContextDomDataKey, bindingContext);

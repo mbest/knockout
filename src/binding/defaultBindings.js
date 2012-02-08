@@ -253,7 +253,7 @@ ko.bindingHandlers['options'] = {
         }
     }
 };
-ko.bindingHandlers['options'].optionValueDomDataKey = '__ko.optionValueDomData__';
+ko.bindingHandlers['options'].optionValueDomDataKey = ko.utils.domData.nextKey();
 
 ko.bindingHandlers['selectedOptions'] = {
     'flags': bindingFlags_builtIn | bindingFlags_twoWay | bindingFlags_contentUpdate,

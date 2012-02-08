@@ -584,29 +584,22 @@ describe('Binding attribute syntax', {
         value_of(updateCount2).should_be(1);
     },
 
-    'Should process bindings in a certain order based on their type and warn if order in data-bind is different': function() {
-        var lastBindingIndex = 0, countWarn = 0, saveWarn = ko.logger.warn;
-        ko.logger.warn = function() {
-            countWarn++;
-        }; 
+    'Should process bindings in a certain order based on their type': function() {
+        var lastBindingIndex = 0;
         function checkOrder(bindingIndex) {
-            if (bindingIndex < lastBindingIndex) {
-                ko.logger.warn = saveWarn;
+            if (bindingIndex < lastBindingIndex)
                 throw new Error("handler " + bindingIndex + " called after " + lastBindingIndex);
-            }
             lastBindingIndex = bindingIndex; 
         }
-        ko.bindingHandlers.test1 = { update: function() { checkOrder(1); } };
+        ko.bindingHandlers.test1 = { flags: 0, update: function() { checkOrder(1); } };
         ko.bindingHandlers.test2 = { flags: ko.bindingFlags.contentSet, update: function() { checkOrder(2); } };
         ko.bindingHandlers.test3 = { flags: ko.bindingFlags.contentBind, update: function() { checkOrder(3); } };
         ko.bindingHandlers.test4 = { flags: ko.bindingFlags.contentUpdate, update: function() { checkOrder(4); } };
+        ko.bindingHandlers.test5 = { update: function() { checkOrder(5); } };
 
-        testNode.innerHTML = "<div data-bind='test4: true, test3: true, test2: true, test1: true'></div>";
+        testNode.innerHTML = "<div data-bind='test1: true, test4: true, test3: true, test2: true, test5: true'></div>";
 
         ko.applyBindings(null, testNode);
-
-        ko.logger.warn = saveWarn;
-        value_of(countWarn).should_be(3);
     },
     
     'Changing type of binding handler won\'t clear binding cache, but cache can be cleared by calling clearCache': function() {

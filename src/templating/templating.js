@@ -140,7 +140,7 @@
         }).addDisposalNodes(targetNode);
     };
 
-    var templateSubscriptionDomDataKey = '__ko__templateSubscriptionDomDataKey__';
+    var templateSubscriptionDomDataKey = ko.utils.domData.nextKey();
     function disposeOldSubscriptionAndStoreNewOne(element, newSubscription) {
         var oldSubscription = ko.utils.domData.get(element, templateSubscriptionDomDataKey);
         if (oldSubscription && (typeof(oldSubscription.dispose) == 'function'))

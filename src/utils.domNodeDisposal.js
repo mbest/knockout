@@ -1,6 +1,6 @@
 
 ko.utils.domNodeDisposal = new (function () {
-    var domDataKey = "__ko_domNodeDisposal__" + (new Date).getTime();
+    var domDataKey = ko.utils.domData.nextKey();
     var cleanableNodeTypes = { 1: true, 8: true, 9: true };       // Element, Comment, Document
     var cleanableNodeTypesWithDescendants = { 1: true, 9: true }; // Element, Document
 
@@ -93,6 +93,9 @@ ko.utils.domNodeDisposal = new (function () {
         function shouldDispose() {
             return !ko.utils.arrayFirst(nodes, ko.utils.domNodeIsAttachedToDocument) || (disposeWhen && disposeWhen());
         }
+        function getNodesCount() {
+            return nodes.length;
+        }
 
         if (typeof disposeCallback != "function")
             throw new Error("Callback must be a function");
@@ -104,7 +107,8 @@ ko.utils.domNodeDisposal = new (function () {
             deleteNode: deleteNode,
             deleteAll: deleteAll,
             dispose: dispose,
-            shouldDispose: shouldDispose
+            shouldDispose: shouldDispose,
+            getNodesCount: getNodesCount
         };
     }
 

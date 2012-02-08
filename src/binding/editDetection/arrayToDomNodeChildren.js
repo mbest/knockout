@@ -37,6 +37,16 @@
         subscription.addDisposalNodes(mappedNodes);
     }
 
+    function wrapCallbackAfterAddingNodes(originalCallback) {
+        return originalCallback 
+            ? function(value, mappedNodes, subscription) {
+                originalCallback(value, mappedNodes, subscription);
+                if (mappedNodes.length && !subscription.getDisposalNodesCount())
+                    subscription.addDisposalNodes(mappedNodes);
+            }
+            : defaultCallbackAfterAddingNodes;
+    }
+
     function mapNodeAndRefreshWhenChanged(containerNode, mapping, valueToMap, callbackAfterAddingNodes) {
         // Map this array value inside a dependentObservable so we re-map when any dependency changes
         var mappedNodes = [];
@@ -59,13 +69,13 @@
         return { mappedNodes : mappedNodes, dependentObservable : dependentObservable };
     }
     
-    var lastMappingResultDomDataKey = "setDomNodeChildrenFromArrayMapping_lastMappingResult";
+    var lastMappingResultDomDataKey = ko.utils.domData.nextKey();
 
     ko.utils.setDomNodeChildrenFromArrayMapping = function (domNode, array, mapping, options, callbackAfterAddingNodes) {
         // Compare the provided array against the previous one
         array = array || [];
         options = options || {};
-        callbackAfterAddingNodes = callbackAfterAddingNodes || defaultCallbackAfterAddingNodes;
+        callbackAfterAddingNodes = wrapCallbackAfterAddingNodes(callbackAfterAddingNodes);
         var isFirstExecution = ko.utils.domData.get(domNode, lastMappingResultDomDataKey) === undefined;
         var lastMappingResult = ko.utils.domData.get(domNode, lastMappingResultDomDataKey) || [];
         var lastArray = ko.utils.arrayMap(lastMappingResult, function (x) { return x.arrayEntry; });

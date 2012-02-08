@@ -34,6 +34,9 @@ ko.utils.domData = new (function () {
                 delete dataStore[dataStoreKey];
                 node[dataStoreKeyExpandoPropertyName] = null;
             }
+        },
+        nextKey: function() {
+            return uniqueId++;
         }
     }
 })();
