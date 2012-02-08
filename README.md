@@ -12,7 +12,7 @@
 3. Two-level bindings can be specified using one-level syntax. For example, when binding the load event, you could use `event.load: handler` instead of `event { load: handler }`. Both forms can be used, with no functional difference between the two.
 4. Bindings whose only valid value is *true* can be specified without the value. The only built-in binding this applies to is `uniqueValue`. So you could use `uniqueValue` instead of `uniqueValue: true`.
 5. Event handler functions are called with the correct `this` value when just the function value is given. Previously, the `event` binding called all handler functions with `this` set to the value of `$data`. With this update, if you specify `click: $parent.handler`, the handler function will be called with `this` set to `$parent`. Previously to get that same functionality, you’d have to use `click: function() { $parent.handler() }` or `click: $parent.handler.bind($parent)`
-6. The `with` binding has been split into two bindings: `with` and `withif`. The new `with` binding doesn’t use the template code and is thus much faster and simpler. It doesn’t modify its contents but just pushes a new binding context. The `withif` binding provides the same functionality of the previous `with` binding.
+6. The `with` binding no longer uses the template code and thus is faster and simpler.
 7. The `text` binding can now be used with container-less syntax: `<!--ko text: value--><!--/ko-->`.
 8. Custom bindings can be set up to run after their descendants’ bindings have run by using the `contentUpdate` flag (see below). This is useful if a binding modifies its descendant elements and needs them to be initialized first.
 9. The minified code is only slightly larger. Even with a lot of new features (and some additional error reporting), the minified version of this update is less than 1% larger than the current master *head* (for comparison, the debug code is about 4.5% larger).
@@ -32,10 +32,9 @@
 3. `bindingContext.createChildContext` will accept an observable as a data value, which it will automatically unwrap and track for changes. A binding handler that uses this feature avoids having to create a new context and re-bind its descendants if the data value changes.
 4. `ko.cleanAndRemoveNode` is a more descriptive synonym for `ko.removeNode`.
 5. `ko.computed` exports two new methods: `addDisposalNodes` and `replaceDisposalNodes`. The former can be used instead of (or in addition to) the `disposeWhenNodeIsRemoved` option. The big change is that computed observables can track multiple nodes, which can be changed dynamically. Only when all of the tracked nodes are removed will it be disposed.
-6. Binding handler functions are called with `this` set to the handler object. This allows binding handlers to use general OO functionality such as inheritance.
-7. `ko.applyBindingsToNode` accepts a fourth parameter, `shouldBindDescendants`.
-8. `ko.bindingProvider.instance.clearCache` is a new function that lets you clear the binding cache. (See the last section for why you might want to use it.)
-9. The last parameter to `utils.setDomNodeChildrenFromArrayMapping` is a callback function that is called after nodes are added to the document. This callback is now passed a third parameter, `subscription`, on which it can call `addDisposalNodes` with any of the given nodes that should be watched. If the callback doesn’t call `addDisposalNodes`, `setDomNodeChildrenFromArrayMapping` will just watch all the nodes.
+6. `ko.applyBindingsToNode` accepts a fourth parameter, `shouldBindDescendants`.
+7. `ko.bindingProvider.instance.clearCache` is a new function that lets you clear the binding cache. (See the last section for why you might want to use it.)
+8. The last parameter to `utils.setDomNodeChildrenFromArrayMapping` is a callback function that is called after nodes are added to the document. This callback is now passed a third parameter, `subscription`, on which it can call `addDisposalNodes` with any of the given nodes that should be watched. If the callback doesn’t call `addDisposalNodes`, `setDomNodeChildrenFromArrayMapping` will just watch all the nodes.
 
 ### What compatibility issues are there with this update?
 
@@ -43,14 +42,13 @@
    1. Bindings with `contentSet`: none (Some have `contentSet`, but they also have `contentBind` which takes priority.)
    2. Bindings with `contentBind`: `options`, `text`, `html`, `with`, `withif`, `if`, `ifnot`, `foreach`, `template`
    3. Bindings with `contentUpdate`: `value`, `selectedOptions`
-2. Users using `with` that expect it to clear its contents if the given value is false (or falsy) should switch to using `withif`.
-3. Users may assume that `this` in an event handler function will be the same as `$data`. But `this` will now be set to the handler’s object (see item #5). The `$data` object is always passed to the function as the first parameter, and users should update their code to use that instead: `function(data) { dosomethingwith(data); }` instead of `function() { dosomethingwith(this); }`
-4. Any custom binding that manages the binding of its descendants will need to be changed. It should no longer return a specific object value from its `init` function (doing so will trigger an error). Instead it must set a `flags` property for the handler with a value of `ko.bindingFlags.contentBind` (see above for the full list of flags).
-5. `ko.virtualElements.allowedBindings` is no longer used to determine which bindings can be used in container-less elements. Use the `canUseVirtual` flag instead (see above).
-6. `ko.jsonExpressionRewriting` is no longer exported. It was heavily modified in this update, and rather than explaining the changes, it was simpler (and space saving) to not export it.
-7. The `text` binding will always create a single text node. Previously some browsers would convert new-lines in the text into `br` nodes. Now they will stay as new-lines in a single text node. Use the `white-space: pre-wrap` style to format the text.
-8. If a normal binding (not listed in item 1 in this section) is specified after a `contentUpdate` binding, it will also be run after the element’s contents have been processed. Probably this won’t be an issue most of the time, but it may be something to watch out for.
-9. When mulitple bindings are given for an element, the binding system processes each binding individually, first calling the handler’s `init` function and then `update` for each of them. This differs from the previous method which called `init` for all bindings and then called `update` for all of them.
+2. Users may assume that `this` in an event handler function will be the same as `$data`. But `this` will now be set to the handler’s object (see item #5). The `$data` object is always passed to the function as the first parameter, and users should update their code to use that instead: `function(data) { dosomethingwith(data); }` instead of `function() { dosomethingwith(this); }`
+3. Any custom binding that manages the binding of its descendants will need to be changed. It should no longer return a specific object value from its `init` function (doing so will trigger an error). Instead it must set a `flags` property for the handler with a value of `ko.bindingFlags.contentBind` (see above for the full list of flags).
+4. `ko.virtualElements.allowedBindings` is no longer used to determine which bindings can be used in container-less elements. Use the `canUseVirtual` flag instead (see above).
+5. `ko.jsonExpressionRewriting` is no longer exported. It was heavily modified in this update, and rather than explaining the changes, it was simpler (and space saving) to not export it.
+6. The `text` binding will always create a single text node. Previously some browsers would convert new-lines in the text into `br` nodes. Now they will stay as new-lines in a single text node. Use the `white-space: pre-wrap` style to format the text.
+7. If a normal binding (not listed in item 1 in this section) is specified after a `contentUpdate` binding, it will also be run after the element’s contents have been processed. Probably this won’t be an issue most of the time, but it may be something to watch out for.
+8. When mulitple bindings are given for an element, the binding system processes each binding individually, first calling the handler’s `init` function and then `update` for each of them. This differs from the previous method which called `init` for all bindings and then called `update` for all of them.
 
 ### The following bugs were fixed as part of this update:
 
