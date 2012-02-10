@@ -38,7 +38,7 @@
             try {
                 var viewModel = bindingContext['$data'],
                     scopes = (typeof viewModel == 'object' && viewModel != null) ? [viewModel, bindingContext] : [bindingContext],
-                    bindingFunction = createBindingsStringEvaluatorViaCache(bindingsString, scopes.length, this.bindingCache);
+                    bindingFunction = createBindingsStringEvaluatorViaCache(bindingsString, bindingContext['$options'], scopes.length, this.bindingCache);
                 return bindingFunction(scopes);
             } catch (ex) {
                 throw new Error("Unable to parse bindings.\nMessage: " + ex + ";\nBindings value: " + bindingsString);
@@ -48,14 +48,14 @@
 
     ko.bindingProvider['instance'] = new ko.bindingProvider();
 
-    function createBindingsStringEvaluatorViaCache(bindingsString, scopesCount, cache) {
+    function createBindingsStringEvaluatorViaCache(bindingsString, bindingOptions, scopesCount, cache) {
         var cacheKey = scopesCount + '_' + bindingsString;
         return cache[cacheKey] 
-            || (cache[cacheKey] = createBindingsStringEvaluator(bindingsString, scopesCount));
+            || (cache[cacheKey] = createBindingsStringEvaluator(bindingsString, bindingOptions, scopesCount));
     }
 
-    function createBindingsStringEvaluator(bindingsString, scopesCount) {
-        var rewrittenBindings = " { " + ko.bindingExpressionRewriting.insertPropertyAccessors(bindingsString) + " } ";
+    function createBindingsStringEvaluator(bindingsString, bindingOptions, scopesCount) {
+        var rewrittenBindings = " { " + ko.bindingExpressionRewriting.insertPropertyAccessors(bindingsString, bindingOptions) + " } ";
         return ko.utils.buildEvalWithinScopeFunction(rewrittenBindings, scopesCount);
     }    
 })();

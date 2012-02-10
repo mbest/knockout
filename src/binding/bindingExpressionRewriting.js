@@ -3,7 +3,6 @@ ko.bindingExpressionRewriting = (function () {
     var restoreCapturedTokensRegex = /\@ko_token_(\d+)\@/g;
     var javaScriptAssignmentTarget = /^[\_$a-z][\_$a-z0-9]*(\[.*?\])*(\.[\_$a-z][\_$a-z0-9]*(\[.*?\])*)*$/i;
     var javaScriptReservedWords = ["true", "false", "null"];
-    var options = {};
 
     function restoreTokens(string, tokens) {
         var prevValue = null;
@@ -43,8 +42,6 @@ ko.bindingExpressionRewriting = (function () {
     }
 
     return {
-        options: options,
-
         parseObjectLiteral: function(objectLiteralString) {
             // A full tokeniser+lexer would add too much weight to this library, so here's a simple parser
             // that is sufficient just to split an object literal string into a set of top-level key-value pairs
@@ -131,8 +128,10 @@ ko.bindingExpressionRewriting = (function () {
             return result;            
         },
 
-        insertPropertyAccessors: function (objectLiteralStringOrKeyValueArray) {
+        insertPropertyAccessors: function (objectLiteralStringOrKeyValueArray, bindingOptions) {
+            bindingOptions = bindingOptions || {};
             var resultStrings = [], propertyAccessorResultStrings = [];
+            var eventHandlersUseObjectForThis = bindingOptions['eventHandlersUseObjectForThis'];
 
             function insertPropertyAccessorsHelper(objectLiteralStringOrKeyValueArray, parentBinding, parentBindingKey) {
                 var keyValueArray = typeof objectLiteralStringOrKeyValueArray === "string"
@@ -151,7 +150,7 @@ ko.bindingExpressionRewriting = (function () {
                         } else {
                             if (binding) {
                                 if (isWriteableValue(val)) {
-                                    if (options.eventHandlersUseObjectForThis && binding['flags'] & bindingFlags_eventHandler) {
+                                    if (eventHandlersUseObjectForThis && binding['flags'] & bindingFlags_eventHandler) {
                                         // call function literal in an anonymous function so that it is called
                                         // with appropriate "this" value
                                         val = 'function(_x,_y,_z){(' + val + ')(_x,_y,_z);}';

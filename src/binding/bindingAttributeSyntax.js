@@ -314,8 +314,6 @@
             throw new Error("ko.applyBindings: first parameter should be your view model; second parameter should be a DOM node");
         rootNode = rootNode || window.document.body; // Make "rootNode" parameter optional
 
-        ko.bindingExpressionRewriting.options.eventHandlersUseObjectForThis = (options && options['eventHandlersUseObjectForThis']);
-
         applyBindingsToNodeAndDescendantsInternal(getBindingContext(viewModelOrBindingContext, options), rootNode, true);
     };
 
