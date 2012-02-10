@@ -29,8 +29,7 @@ ko.bindingHandlers['event'] = {
                         var handlerFunction = valueAccessor()[eventName];
                         if (!handlerFunction)
                             return;
-                        var allBindings = allBindingsAccessor();
-                        
+
                         try { 
                             // Take all the event args, and prefix with the viewmodel
                             var argsForHandler = ko.utils.makeArray(arguments);
@@ -45,7 +44,7 @@ ko.bindingHandlers['event'] = {
                             }
                         }
                         
-                        var bubble = allBindings[eventName + 'Bubble'] !== false;
+                        var bubble = allBindingsAccessor(eventName + 'Bubble') !== false;
                         if (!bubble) {
                             event.cancelBubble = true;
                             if (event.stopPropagation)
@@ -114,7 +113,7 @@ ko.bindingHandlers['value'] = {
     'init': function (element, valueAccessor, allBindingsAccessor) { 
         // Always catch "change" event; possibly other events too if asked
         var eventsToCatch = ["change"];
-        var requestedEventsToCatch = allBindingsAccessor()["valueUpdate"];
+        var requestedEventsToCatch = allBindingsAccessor("valueUpdate");
         if (requestedEventsToCatch) {
             if (typeof requestedEventsToCatch == "string") // Allow both individual event names, and arrays of event names
                 requestedEventsToCatch = [requestedEventsToCatch];
@@ -141,7 +140,7 @@ ko.bindingHandlers['value'] = {
                     if (ko.isWriteableObservable(modelValue))
                         modelValue(elementValue);
                     else
-                        ko.bindingExpressionRewriting.writeValueToProperty(allBindingsAccessor(), 'value', elementValue);
+                        ko.bindingExpressionRewriting.writeValueToProperty(allBindingsAccessor, 'value', elementValue);
                 });
             });	    	
         });
@@ -277,7 +276,7 @@ ko.bindingHandlers['selectedOptions'] = {
             if (ko.isWriteableObservable(value))
                 value(valueToWrite);
             else
-                ko.bindingExpressionRewriting.writeValueToProperty(allBindingsAccessor(), 'value', valueToWrite);
+                ko.bindingExpressionRewriting.writeValueToProperty(allBindingsAccessor, 'value', valueToWrite);
         });    	
     },
     'update': function (element, valueAccessor) {
@@ -384,7 +383,7 @@ ko.bindingHandlers['checked'] = {
                     modelValue(valueToWrite);
                 }
             } else {
-                ko.bindingExpressionRewriting.writeValueToProperty(allBindingsAccessor(), 'checked', valueToWrite);
+                ko.bindingExpressionRewriting.writeValueToProperty(allBindingsAccessor, 'checked', valueToWrite);
             }
         };
         ko.utils.registerEventHandler(element, "click", updateHandler);
@@ -451,7 +450,7 @@ ko.bindingHandlers['hasfocus'] = {
             if (ko.isWriteableObservable(modelValue))
                 modelValue(valueToWrite);
             else
-                ko.bindingExpressionRewriting.writeValueToProperty(allBindingsAccessor(), 'hasfocus', valueToWrite);
+                ko.bindingExpressionRewriting.writeValueToProperty(allBindingsAccessor, 'hasfocus', valueToWrite);
         };
         ko.utils.registerEventHandler(element, "focus", function() { writeValue(true) });
         ko.utils.registerEventHandler(element, "focusin", function() { writeValue(true) }); // For IE

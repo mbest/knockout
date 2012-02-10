@@ -90,12 +90,12 @@
     };
 
     ko.bindingValueWrap = function(valueFunction) {
-        valueFunction.__ko_proto__ = ko.bindingValueWrap;
+        valueFunction.__ko_wraptest = ko.bindingValueWrap;
         return valueFunction;
     };
 
-    ko.unwrapBindingValue = function(value) {   // store this function in ko so the compiler doesn't inline it 
-        return (value && value.__ko_proto__ && value.__ko_proto__ === ko.bindingValueWrap) ? value() : value;
+    function unwrapBindingValue(value) { 
+        return (value && value.__ko_wraptest && value.__ko_wraptest === ko.bindingValueWrap) ? value() : value;
     };
 
     function applyBindingsToDescendantsInternal (bindingContext, elementOrVirtualElement, bindingContextsMayDifferFromDomParentElement) {
@@ -139,21 +139,24 @@
         // DOM event callbacks need to be able to access this changed data,
         // so we need a single parsedBindings variable (shared by all callbacks
         // associated with this node's bindings) that all the closures can access.
-        var parsedBindings, viewModel = bindingContext['$data'];
+        var parsedBindings, extraBindings, viewModel = bindingContext['$data'];
         function makeValueAccessor(key) {
             return function () {
-                return ko.unwrapBindingValue(parsedBindings[key]);
+                return unwrapBindingValue(parsedBindings[key]);
             };
         }
         function makeSubKeyValueAccessor(fullKey, subKey) {
             var _z = {};
             return function() {
-                _z[subKey] = ko.unwrapBindingValue(parsedBindings[fullKey]); return _z;
+                _z[subKey] = unwrapBindingValue(parsedBindings[fullKey]); return _z;
             };
         }
-        function parsedBindingsAccessor() {
-            return parsedBindings;
-        }
+        var extraBindingsAccessor = independentBindings
+            ? function(key) {
+                return key ? unwrapBindingValue(extraBindings[key]) : ko.utils.objectMap(extraBindings, unwrapBindingValue);
+            } : function(key) {
+                return key ? parsedBindings[key] : parsedBindings;
+            };
 
         function validateThatBindingIsAllowedForVirtualElements(binding) {
             if (!isElement && !ko.virtualElements.allowedBindings[binding.key] && !(binding.flags & bindingFlags_canUseVirtual))
@@ -167,7 +170,7 @@
         function initCaller(binding) {
             return function() {
                 var handlerInitFn = binding.handler['init']; 
-                var initResult = handlerInitFn(node, binding.valueAccessor, parsedBindingsAccessor, viewModel, bindingContext);
+                var initResult = handlerInitFn(node, binding.valueAccessor, extraBindingsAccessor, viewModel, bindingContext);
                 // throw an error if binding handler is only using the old method of indicating that it controls binding descendants
                 if (initResult && !(binding.flags & bindingFlags_contentBind) && initResult['controlsDescendantBindings']) {
                     if (independentBindings)
@@ -185,7 +188,7 @@
                 if (bindingUpdater)
                     ko.dependencyDetection.registerDependency(bindingUpdater);
                 var handlerUpdateFn = binding.handler['update'];
-                handlerUpdateFn(node, binding.valueAccessor, parsedBindingsAccessor, viewModel, bindingContext);
+                handlerUpdateFn(node, binding.valueAccessor, extraBindingsAccessor, viewModel, bindingContext);
             };
         }
 
@@ -214,6 +217,7 @@
             // Use evaluatedBindings if given, otherwise fall back on asking the bindings provider to give us some bindings
             var evaluatedBindings = (typeof bindingsToApply == "function") ? bindingsToApply() : bindingsToApply;
             parsedBindings = evaluatedBindings || ko.bindingProvider['instance']['getBindings'](node, bindingContext);
+            extraBindings = {};
 
             if (parsedBindings && bindingContext._subscription)
                 ko.dependencyDetection.registerDependency(bindingContext._subscription);
@@ -239,13 +243,15 @@
                         binding.valueAccessor = binding.subKey
                             ? makeSubKeyValueAccessor(bindingKey, binding.subKey)
                             : makeValueAccessor(bindingKey);
-                        if (!independentBindings && binding.handler['init'])
-                            initCaller(binding)();
+                    } else if (independentBindings) {
+                        extraBindings[bindingKey] = parsedBindings[bindingKey];
                     }
                 }
         
-                // Organize bindings by run order
+                // Organize bindings by run order and call init function if not in independent mode
                 for (var i=0; binding = allBindings[i]; i++) {
+                    if (!independentBindings && binding.handler['init'])
+                        initCaller(binding)();
                     if (binding.flags & bindingFlags_contentBind) {
                         if (bindings[contentBindBinding])
                             multiContentBindError(bindings[contentBindBinding].key, binding.key);

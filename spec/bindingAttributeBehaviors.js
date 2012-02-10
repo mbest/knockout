@@ -637,7 +637,7 @@ describe('Binding attribute syntax', {
         value_of(updateCount2).should_be(1);
     },
 
-    'Should update all bindings if a extra binding unwraps an observable': function() {
+    'Should update all bindings if a extra binding unwraps an observable (only in dependent mode)': function() {
         delete ko.bindingHandlers.nonexistentHandler;
         var countUpdates = 0, observable = ko.observable(1);
         ko.bindingHandlers.existentHandler = {
@@ -645,21 +645,22 @@ describe('Binding attribute syntax', {
         }
         testNode.innerHTML = "<div data-bind='existentHandler: true, nonexistentHandler: myObservable()'></div>";
 
-        // independent mode
-        ko.applyBindings({ myObservable: observable }, testNode, {independentBindings: true});
+        // dependent mode: should update
+        ko.applyBindings({ myObservable: observable }, testNode);
         value_of(countUpdates).should_be(1);
-        observable(2);
+        observable(3);
         value_of(countUpdates).should_be(2);
 
         // reset
         countUpdates = 0;
         ko.cleanNode(testNode);
+        ko.bindingProvider.instance.clearCache();
 
-        // dependent mode
-        ko.applyBindings({ myObservable: observable }, testNode);
+        // independent mode: should not update
+        ko.applyBindings({ myObservable: observable }, testNode, {independentBindings: true});
         value_of(countUpdates).should_be(1);
-        observable(3);
-        value_of(countUpdates).should_be(2);
+        observable(2);
+        value_of(countUpdates).should_be(1);
     },
 
     // TODO - This is a spec that succeeds in base Knockout, but fails with this update

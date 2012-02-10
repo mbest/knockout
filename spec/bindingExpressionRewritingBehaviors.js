@@ -96,19 +96,20 @@ describe('Binding Expression Rewriting', {
             value_of(parsedRewritten['b.a']).should_be("bob");
             value_of(parsedRewritten['b.b']).should_be("jones");
             value_of(parsedRewritten['b.c']).should_be("jones");
+            var accessor = function(key) { return parsedRewritten[key]; };
 
             // update simple property
-            ko.bindingExpressionRewriting.writeValueToProperty(parsedRewritten, 'b.a', "stan");
+            ko.bindingExpressionRewriting.writeValueToProperty(accessor, 'b.a', "stan");
             value_of(model.prop1).should_be("stan");
 
             // update sub-property (two methods)
-            ko.bindingExpressionRewriting.writeValueToProperty(parsedRewritten, 'b.b', "smith");
+            ko.bindingExpressionRewriting.writeValueToProperty(accessor, 'b.b', "smith");
             value_of(model.obj2.prop2).should_be("smith");
-            ko.bindingExpressionRewriting.writeValueToProperty(parsedRewritten, 'b.c', "sloan");
+            ko.bindingExpressionRewriting.writeValueToProperty(accessor, 'b.c', "sloan");
             value_of(model.obj2.prop2).should_be("sloan");
 
             // update property of object returned by a function (won't update)
-            ko.bindingExpressionRewriting.writeValueToProperty(parsedRewritten, 'b.d', "smart");
+            ko.bindingExpressionRewriting.writeValueToProperty(accessor, 'b.d', "smart");
             value_of(model.obj2.prop2).should_be("sloan");
         }
         delete ko.bindingHandlers.b;

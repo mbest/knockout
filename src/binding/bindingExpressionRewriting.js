@@ -130,8 +130,9 @@ ko.bindingExpressionRewriting = (function () {
 
         insertPropertyAccessors: function (objectLiteralStringOrKeyValueArray, bindingOptions) {
             bindingOptions = bindingOptions || {};
-            var resultStrings = [], propertyAccessorResultStrings = [];
-            var eventHandlersUseObjectForThis = bindingOptions['eventHandlersUseObjectForThis'];
+            var resultStrings = [], propertyAccessorResultStrings = [],
+                eventHandlersUseObjectForThis = bindingOptions['eventHandlersUseObjectForThis'],
+                independentBindings = bindingOptions['independentBindings'];
 
             function insertPropertyAccessorsHelper(objectLiteralStringOrKeyValueArray, parentBinding, parentBindingKey) {
                 var keyValueArray = typeof objectLiteralStringOrKeyValueArray === "string"
@@ -148,24 +149,22 @@ ko.bindingExpressionRewriting = (function () {
                             // object and converting to "binding.key: value"
                             insertPropertyAccessorsHelper(val, binding, key);
                         } else {
-                            if (binding) {
-                                if (isWriteableValue(val)) {
-                                    if (eventHandlersUseObjectForThis && binding['flags'] & bindingFlags_eventHandler) {
-                                        // call function literal in an anonymous function so that it is called
-                                        // with appropriate "this" value
-                                        val = 'function(_x,_y,_z){(' + val + ')(_x,_y,_z);}';
-                                    }
-                                    else if (binding['flags'] & bindingFlags_twoWay) {
-                                        // for two-way bindings, provide a write method in case the value
-                                        // isn't a writable observable
-                                        propertyAccessorResultStrings.push(quotedKey + ":function(_z){" + val + "=_z;}");
-                                    }
+                            if (binding && isWriteableValue(val)) {
+                                if (eventHandlersUseObjectForThis && binding['flags'] & bindingFlags_eventHandler) {
+                                    // call function literal in an anonymous function so that it is called
+                                    // with appropriate "this" value
+                                    val = 'function(_x,_y,_z){(' + val + ')(_x,_y,_z);}';
                                 }
-                                else if (!(binding['flags'] & bindingFlags_eventHandler) && isPossiblyUnwrappedObservable(val)) {
-                                    // Try to prevent observables from being accessed when parsing a binding;
-                                    // Instead they will be "unwrapped" within the context of the specific binding handler
-                                    val = 'ko.bindingValueWrap(function(){return ' + val + '})';
+                                else if (binding['flags'] & bindingFlags_twoWay) {
+                                    // for two-way bindings, provide a write method in case the value
+                                    // isn't a writable observable
+                                    propertyAccessorResultStrings.push(quotedKey + ":function(_z){" + val + "=_z;}");
                                 }
+                            }
+                            if (independentBindings && !(binding && binding['flags'] & bindingFlags_eventHandler) && isPossiblyUnwrappedObservable(val)) {
+                                // Try to prevent observables from being accessed when parsing a binding;
+                                // Instead they will be "unwrapped" within the context of the specific binding handler
+                                val = 'ko.bindingValueWrap(function(){return ' + val + '})';
                             }
                             resultStrings.push(quotedKey + ":" + val);
                         }
@@ -198,8 +197,8 @@ ko.bindingExpressionRewriting = (function () {
             return false;
         },
 
-        writeValueToProperty: function(allBindings, key, value) {
-            var propWriters = allBindings['_ko_property_writers'];
+        writeValueToProperty: function(allBindingsAccessor, key, value) {
+            var propWriters = allBindingsAccessor('_ko_property_writers');
             if (propWriters && propWriters[key])
                 propWriters[key](value);
         }
