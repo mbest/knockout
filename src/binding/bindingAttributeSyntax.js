@@ -33,7 +33,9 @@
         return (!flagsSet || (binding['flags'] & flagsSet)) && !(binding['flags'] & flagsUnset);
     };
 
-    ko.bindingHandlers = {};
+    ko.bindingHandlers = {
+        'dependencies': { 'flags': bindingFlags_builtIn | bindingFlags_twoLevel }
+    };
 
     // Accepts either a data value or a value accessor function; note that an observable qualifies as a value accessor function
     ko.bindingContext = function(dataItemOrValueAccessor, parent, options) {
@@ -84,7 +86,7 @@
         }
         return {};
     }
-
+    
     ko.getBindingHandler = function(bindingKey) {
         return ko.bindingHandlers[bindingKey] || getTwoLevelBindingData(bindingKey).handler;
     };
@@ -133,86 +135,8 @@
             return;
         }
 
-        // Each time the dependentObservable is evaluated (after data changes),
-        // the binding attribute is reparsed so that it can pick out the correct
-        // model properties in the context of the changed data.
-        // DOM event callbacks need to be able to access this changed data,
-        // so we need a single parsedBindings variable (shared by all callbacks
-        // associated with this node's bindings) that all the closures can access.
+        // Parse bindings; track observables so that the bindng are reparsed if needed
         var parsedBindings, extraBindings, viewModel = bindingContext['$data'];
-        function makeValueAccessor(key) {
-            return function () {
-                return unwrapBindingValue(parsedBindings[key]);
-            };
-        }
-        function makeSubKeyValueAccessor(fullKey, subKey) {
-            var _z = {};
-            return function() {
-                _z[subKey] = unwrapBindingValue(parsedBindings[fullKey]); return _z;
-            };
-        }
-        var extraBindingsAccessor = independentBindings
-            ? function(key) {
-                return key ? unwrapBindingValue(extraBindings[key]) : ko.utils.objectMap(extraBindings, unwrapBindingValue);
-            } : function(key) {
-                return key ? parsedBindings[key] : parsedBindings;
-            };
-
-        function validateThatBindingIsAllowedForVirtualElements(binding) {
-            if (!isElement && !ko.virtualElements.allowedBindings[binding.key] && !(binding.flags & bindingFlags_canUseVirtual))
-                throw new Error("The binding '" + binding.key + "' cannot be used with virtual elements");
-        }
-
-        function multiContentBindError(key1, key2) {
-            throw new Error("Multiple bindings (" + key1 + " and " + key2 + ") are trying to control descendant bindings of the same element. You cannot use these bindings together on the same element.");
-        }
-
-        function initCaller(binding) {
-            return function() {
-                var handlerInitFn = binding.handler['init']; 
-                var initResult = handlerInitFn(node, binding.valueAccessor, extraBindingsAccessor, viewModel, bindingContext);
-                // throw an error if binding handler is only using the old method of indicating that it controls binding descendants
-                if (initResult && !(binding.flags & bindingFlags_contentBind) && initResult['controlsDescendantBindings']) {
-                    if (independentBindings)
-                        throw new Error(binding.key + " binding handler must be updated to use contentBind flag");
-                    else if (bindings[contentBindBinding])
-                        multiContentBindError(bindings[contentBindBinding].key, binding.key);
-                    else
-                        bindings[contentBindBinding] = binding;
-                }
-            };
-        }
-
-        function updateCaller(binding) {
-            return function() {
-                if (bindingUpdater)
-                    ko.dependencyDetection.registerDependency(bindingUpdater);
-                var handlerUpdateFn = binding.handler['update'];
-                handlerUpdateFn(node, binding.valueAccessor, extraBindingsAccessor, viewModel, bindingContext);
-            };
-        }
-
-        var runInits = true;
-        function callHandlersIndependent(binding) {
-            // call init function; observables accessed in init functions are not tracked
-            if (runInits && binding.handler['init'])
-                ko.dependencyDetection.ignore(initCaller(binding));
-            // call update function; observables accessed in update function are tracked
-            if (binding.handler['update'])
-                ko.utils.possiblyWrap(updateCaller(binding), node);
-        }
-
-        function callHandlersDependent(binding) {
-            if (binding.handler['update'])
-                updateCaller(binding)();
-        }
-        
-        var callHandlers = independentBindings ? callHandlersIndependent : callHandlersDependent;
-        function applyListedBindings(bindings) {
-            ko.utils.arrayForEach(bindings, callHandlers);
-        }
-
-        // parse bindings; track observables so that the bindng are reparsed if needed
         var bindingUpdater = ko.utils.possiblyWrap(function() {
             // Use evaluatedBindings if given, otherwise fall back on asking the bindings provider to give us some bindings
             var evaluatedBindings = (typeof bindingsToApply == "function") ? bindingsToApply() : bindingsToApply;
@@ -222,48 +146,155 @@
             if (parsedBindings && bindingContext._subscription)
                 ko.dependencyDetection.registerDependency(bindingContext._subscription);
         }, node);
-        
-        /** @const */ var mostBindings = 0;
+
+        // These functions make values accessible to bindings.
+        function makeValueAccessor(fullKey, subKey) {
+            return subKey
+            ? function() {
+                var _z = {}; _z[subKey] = unwrapBindingValue(parsedBindings[fullKey]); return _z;
+            } : function () {
+                return unwrapBindingValue(parsedBindings[fullKey]);
+            };
+        }
+        function allBindingsAccessorIndependent(key) {
+            return key ? unwrapBindingValue(parsedBindings[key]) : ko.utils.objectMap(extraBindings, unwrapBindingValue);
+        }
+        function allBindingsAccessorDependent(key) {
+            return key ? parsedBindings[key] : parsedBindings;
+        }
+
+        // These functions let the user know something is wrong
+        function validateThatBindingIsAllowedForVirtualElements(binding) {
+            if (!isElement && !ko.virtualElements.allowedBindings[binding.key] && !(binding.flags & bindingFlags_canUseVirtual))
+                throw new Error("The binding '" + binding.key + "' cannot be used with virtual elements");
+        }
+        function multiContentBindError(key1, key2) {
+            throw new Error("Multiple bindings (" + key1 + " and " + key2 + ") are trying to control descendant bindings of the same element. You cannot use these bindings together on the same element.");
+        }
+
+        // These functions call the binding handler functions
+        function initCaller(binding) {
+            return function() {
+                var handlerInitFn = binding.handler['init']; 
+                var initResult = handlerInitFn(node, binding.valueAccessor, allBindingsAccessor, viewModel, bindingContext);
+                // throw an error if binding handler is only using the old method of indicating that it controls binding descendants
+                if (initResult && !(binding.flags & bindingFlags_contentBind) && initResult['controlsDescendantBindings']) {
+                    if (independentBindings)
+                        throw new Error(binding.key + " binding handler must be updated to use contentBind flag");
+                    else if (bindings[contentBindBinding])
+                        multiContentBindError(bindings[contentBindBinding].key, binding.key);
+                    else
+                        bindings[binding.order = contentBindBinding] = binding;
+                }
+            };
+        }
+        function updateCaller(binding) {
+            return function() {
+                if (bindingUpdater)
+                    ko.dependencyDetection.registerDependency(bindingUpdater);
+                var handlerUpdateFn = binding.handler['update'];
+                handlerUpdateFn(node, binding.valueAccessor, allBindingsAccessor, viewModel, bindingContext);
+            };
+        }
+        function callHandlersIndependent(binding) {
+            if (runInits && binding.handler['init'])
+                ko.dependencyDetection.ignore(initCaller(binding));     // Observables accessed in init functions are not tracked
+            if (binding.handler['update'])
+                ko.utils.possiblyWrap(updateCaller(binding), node);     // Observables accessed in update function are tracked
+        }
+        function callHandlersDependent(binding) {
+            if (binding.handler['update'])
+                updateCaller(binding)();
+        }
+        function applyListedBindings(bindings) {
+            ko.utils.arrayForEach(bindings, callHandlers);
+        }
+
+        function getBindingData(bindingKey) {
+            var binding;
+            binding = (binding = ko.bindingHandlers[bindingKey])
+                    ? { handler: binding, key: bindingKey }
+                    : getTwoLevelBindingData(bindingKey);
+            if (binding.handler) {
+                binding.flags = binding.handler['flags'];
+                validateThatBindingIsAllowedForVirtualElements(binding);
+                binding.valueAccessor = makeValueAccessor(bindingKey, binding.subKey);
+                binding.dependencies = [].concat(binding.handler['dependencies'] || [], parsedBindings['dependencies.'+bindingKey] || []);
+            }
+            return binding;
+        }
+
+        var allBindingsAccessor = independentBindings ? allBindingsAccessorIndependent : allBindingsAccessorDependent,
+            callHandlers = independentBindings ? callHandlersIndependent : callHandlersDependent,
+            runInits = true,
+            allBindings = [],
+            bindings = [[], [], undefined, []];
+        /** @const */ var unorderedBindings = 0;
         /** @const */ var contentSetBindings = 1;
         /** @const */ var contentBindBinding = 2;
         /** @const */ var contentUpdateBindings = 3;
-        var allBindings = [], bindings = [[], [], undefined, []], lastIndex=mostBindings, thisIndex, binding;
 
         ko.utils.possiblyWrap(function() {
             if (runInits) {
-                // Get binding handlers and call init function if not in independent mode
-                for (var bindingKey in parsedBindings) {
-                    binding = (binding = ko.bindingHandlers[bindingKey])
-                        ? { handler: binding, key: bindingKey }
-                        : getTwoLevelBindingData(bindingKey);
+                var bindingIndexes = {}, lastIndex = unorderedBindings, thisIndex;
+
+                // Get binding handlers, call init function if not in independent mode, and determine run order
+                function pushBinding(bindingKey) {
+                    if (bindingKey in bindingIndexes)
+                        return allBindings[bindingIndexes[bindingKey]];
+
+                    var binding = getBindingData(bindingKey);
                     if (binding.handler) {
+                        if (!independentBindings && binding.handler['init'])
+                            initCaller(binding)();
+
+                        if (binding.flags & bindingFlags_contentBind) {
+                            if (bindings[contentBindBinding])
+                                multiContentBindError(bindings[contentBindBinding].key, binding.key);
+                            bindings[binding.order = contentBindBinding] = binding;
+                        } else {
+                            binding.order = 
+                                (binding.flags & bindingFlags_contentSet)
+                                    ? contentSetBindings
+                                : (binding.flags & bindingFlags_contentUpdate)
+                                    ? contentUpdateBindings
+                                    : unorderedBindings;
+                        }
+
+                        ko.utils.arrayForEach(binding.dependencies, function(dependencyKey) {
+                            var dependentBinding;
+                            if (!(dependencyKey in parsedBindings) || !(dependentBinding = pushBinding(dependencyKey)))
+                                throw new Error("Binding " + bindingKey + " requires missing " + dependencyKey + " binding");
+                            if (binding.order) {
+                                if (dependentBinding.order > binding.order) {
+                                    throw new Error("Binding " + bindingKey + " cannot depend on " + dependencyKey);
+                                } else {
+                                    var dependentOrder = binding.order == contentBindBinding ? contentBindBinding-1 : binding.order;
+                                    dependentBinding.dependentOrder = dependentBinding.dependentOrder ? Math.min(dependentBinding.dependentOrder, dependentOrder) : dependentOrder;
+                                }
+                            } else if (dependentBinding.order) {
+                                binding.order = dependentBinding.order;
+                            }
+                        });
+
+                        bindingIndexes[bindingKey] = allBindings.length;
                         allBindings.push(binding);
-                        binding.flags = binding.handler['flags'];
-                        validateThatBindingIsAllowedForVirtualElements(binding);
-                        binding.valueAccessor = binding.subKey
-                            ? makeSubKeyValueAccessor(bindingKey, binding.subKey)
-                            : makeValueAccessor(bindingKey);
-                    } else if (independentBindings) {
-                        extraBindings[bindingKey] = parsedBindings[bindingKey];
+                        return binding;
                     }
+                    if (independentBindings)
+                        extraBindings[bindingKey] = parsedBindings[bindingKey];
                 }
-        
-                // Organize bindings by run order and call init function if not in independent mode
+
+                for (var bindingKey in parsedBindings) {
+                    pushBinding(bindingKey);
+                }
+
+                // Organize bindings by run order
                 for (var i=0; binding = allBindings[i]; i++) {
-                    if (!independentBindings && binding.handler['init'])
-                        initCaller(binding)();
-                    if (binding.flags & bindingFlags_contentBind) {
-                        if (bindings[contentBindBinding])
-                            multiContentBindError(bindings[contentBindBinding].key, binding.key);
-                        bindings[contentBindBinding] = binding;
+                    if (binding.order == contentBindBinding) {
                         thisIndex = contentBindBinding + 1;
                     } else {
-                        thisIndex = 
-                            (binding.flags & bindingFlags_contentSet)
-                                ? contentSetBindings
-                            : (binding.flags & bindingFlags_contentUpdate)
-                                ? contentUpdateBindings
-                                : lastIndex;
+                        thisIndex = binding.order || binding.dependentOrder || lastIndex;
                         bindings[thisIndex].push(binding);
                     }
                     if (thisIndex > lastIndex)
@@ -272,7 +303,7 @@
             }
 
             // Apply the bindings in the correct order
-            applyListedBindings(bindings[mostBindings]);
+            applyListedBindings(bindings[unorderedBindings]);
             applyListedBindings(bindings[contentSetBindings]);
     
             if (bindings[contentBindBinding])
@@ -283,7 +314,7 @@
             applyListedBindings(bindings[contentUpdateBindings]);
         }, node);
 
-        // don't want to call init function or bind descendents twice
+        // Don't want to call init function or bind descendents twice
         runInits = dontBindDescendants = false;        
     };
 
