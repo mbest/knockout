@@ -696,7 +696,7 @@ describe('Binding attribute syntax', {
         ko.bindingHandlers.test4 = { flags: ko.bindingFlags.contentUpdate, update: function() { checkOrder(4); } };
         ko.bindingHandlers.test5 = { update: function() { checkOrder(5); } };
 
-        testNode.innerHTML = "<div data-bind='test1: true, test4: true, test3: true, test2: true, test5: true'></div>";
+        testNode.innerHTML = "<div data-bind='test4: true, test3: true, test2: true, test1: true, test5: true, dependencies: {test2: \"test1\"}'></div>";
 
         ko.applyBindings(null, testNode);
     },
