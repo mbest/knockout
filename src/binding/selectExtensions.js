@@ -51,8 +51,8 @@ ko.selectExtensions = (function () {
     };        
 
     return ko.exportProperties(selectExtensions,
-        'readValue', ko.selectExtensions.readValue,
-        'writeValue', ko.selectExtensions.writeValue
+        'readValue', selectExtensions.readValue,
+        'writeValue', selectExtensions.writeValue
     );
 })();
 
