@@ -33,9 +33,7 @@
         return (!flagsSet || (binding['flags'] & flagsSet)) && !(binding['flags'] & flagsUnset);
     };
 
-    ko.bindingHandlers = {
-        'dependencies': { 'flags': bindingFlags_builtIn | bindingFlags_twoLevel }
-    };
+    ko.bindingHandlers = {};
 
     // Accepts either a data value or a value accessor function; note that an observable qualifies as a value accessor function
     ko.bindingContext = function(dataItemOrValueAccessor, parent, options) {
@@ -109,6 +107,7 @@
         }
     }
 
+    var dependenciesName = 'dependencies', dependenciesBinding = { 'flags': bindingFlags_builtIn };
     function applyBindingsToNodeAndDescendantsInternal (bindingContext, node, bindingContextsMayDifferFromDomParentElement, bindingsToApply, dontBindDescendants) {
         var isElement = (node.nodeType === 1),
             hasBindings = bindingsToApply || ko.bindingProvider['instance']['nodeHasBindings'](node),
@@ -138,6 +137,8 @@
         // Parse bindings; track observables so that the bindng are reparsed if needed
         var parsedBindings, extraBindings, viewModel = bindingContext['$data'];
         var bindingUpdater = ko.utils.possiblyWrap(function() {
+            // Make sure dependencies binding is set correctly
+            ko.bindingHandlers[dependenciesName] = dependenciesBinding;
             // Use evaluatedBindings if given, otherwise fall back on asking the bindings provider to give us some bindings
             var evaluatedBindings = (typeof bindingsToApply == "function") ? bindingsToApply() : bindingsToApply;
             parsedBindings = evaluatedBindings || ko.bindingProvider['instance']['getBindings'](node, bindingContext);
@@ -210,20 +211,6 @@
             ko.utils.arrayForEach(bindings, callHandlers);
         }
 
-        function getBindingData(bindingKey) {
-            var binding;
-            binding = (binding = ko.bindingHandlers[bindingKey])
-                    ? { handler: binding, key: bindingKey }
-                    : getTwoLevelBindingData(bindingKey);
-            if (binding.handler) {
-                binding.flags = binding.handler['flags'];
-                validateThatBindingIsAllowedForVirtualElements(binding);
-                binding.valueAccessor = makeValueAccessor(bindingKey, binding.subKey);
-                binding.dependencies = [].concat(binding.handler['dependencies'] || [], parsedBindings['dependencies.'+bindingKey] || []);
-            }
-            return binding;
-        }
-
         var allBindingsAccessor = independentBindings ? allBindingsAccessorIndependent : allBindingsAccessorDependent,
             callHandlers = independentBindings ? callHandlersIndependent : callHandlersDependent,
             runInits = true,
@@ -236,16 +223,24 @@
 
         ko.utils.possiblyWrap(function() {
             if (runInits) {
-                var bindingIndexes = {}, lastIndex = unorderedBindings, thisIndex;
+                var bindingIndexes = {}, dependencies = parsedBindings[dependenciesName] || {}, 
+                    lastIndex = unorderedBindings, thisIndex;
 
                 // Get binding handlers, call init function if not in independent mode, and determine run order
                 function pushBinding(bindingKey) {
                     if (bindingKey in bindingIndexes)
                         return allBindings[bindingIndexes[bindingKey]];
 
-                    var binding = getBindingData(bindingKey);
-                    if (binding.handler) {
-                        if (!independentBindings && binding.handler['init'])
+                    var handler = ko.bindingHandlers[bindingKey],
+                        binding = handler ? { handler: handler, key: bindingKey } : getTwoLevelBindingData(bindingKey);
+
+                    if (handler = binding.handler) {
+                        binding.flags = handler['flags'];
+                        validateThatBindingIsAllowedForVirtualElements(binding);
+                        binding.valueAccessor = makeValueAccessor(bindingKey, binding.subKey);
+                        binding.dependencies = [].concat(handler[dependenciesName] || [], dependencies[bindingKey] || []);
+
+                        if (!independentBindings && handler['init'])
                             initCaller(binding)();
 
                         if (binding.flags & bindingFlags_contentBind) {
@@ -263,12 +258,13 @@
 
                         bindingIndexes[bindingKey] = -1;    // Allows for recursive dependencies check
                         ko.utils.arrayForEach(binding.dependencies, function(dependencyKey) {
-                            var dependentBinding;
+                            var dependentBinding,
+                                dependencyError = "Binding " + bindingKey + " cannot depend on " + dependencyKey + ": ";
                             if (!(dependencyKey in parsedBindings) || !(dependentBinding = pushBinding(dependencyKey)))
-                                throw new Error("Binding " + bindingKey + " cannot depend on " + dependencyKey + " (missing or recursive)");
+                                throw new Error(dependencyError + "missing or recursive");
                             if (binding.order) {
                                 if (dependentBinding.order > binding.order) {
-                                    throw new Error("Binding " + bindingKey + " cannot depend on " + dependencyKey + " (conflicting ordering)");
+                                    throw new Error(dependencyError + "conflicting ordering");
                                 } else {
                                     var dependentOrder = binding.order == contentBindBinding ? contentBindBinding-1 : binding.order;
                                     dependentBinding.dependentOrder = dependentBinding.dependentOrder ? Math.min(dependentBinding.dependentOrder, dependentOrder) : dependentOrder;
@@ -291,7 +287,7 @@
                 }
 
                 // Organize bindings by run order
-                for (var i=0; binding = allBindings[i]; i++) {
+                for (var i=0, binding; binding = allBindings[i]; i++) {
                     if (binding.order == contentBindBinding) {
                         thisIndex = contentBindBinding + 1;
                     } else {

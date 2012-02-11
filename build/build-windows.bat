@@ -14,11 +14,15 @@ goto :Combine
 goto :EOF 
 
 :Combine
-echo (function(window,document,navigator,undefined){ > %OutDebugFile%.temp
+type %AllFiles%                   >> %OutDebugFile%_all.temp
+cscript tools\searchReplace.js "throw (new )?Error\(" "ko_throw(" %OutDebugFile%_all.temp
+
+echo (function(window,document,navigator,undefined){function ko_throw(e){throw Error(e)} > %OutDebugFile%.temp
 type fragments\amd-pre.js         >> %OutDebugFile%.temp
-type %AllFiles%                   >> %OutDebugFile%.temp
+type %OutDebugFile%_all.temp      >> %OutDebugFile%.temp
 type fragments\amd-post.js        >> %OutDebugFile%.temp
 echo })(window,document,navigator); >> %OutDebugFile%.temp
+del %OutDebugFile%_all.temp
 
 @rem Now call Google Closure Compiler to produce a minified version
 tools\curl -d output_info=compiled_code -d output_format=text -d compilation_level=ADVANCED_OPTIMIZATIONS --data-urlencode output_wrapper="(function() {%%output%%})();" --data-urlencode js_code@%OutDebugFile%.temp "http://closure-compiler.appspot.com/compile" > %OutMinFile%.temp
