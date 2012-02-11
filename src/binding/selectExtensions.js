@@ -1,17 +1,17 @@
-(function () {
+ko.selectExtensions = (function () {
     var hasDomDataExpandoProperty = '__ko__hasDomDataOptionValue__';
 
     // Normally, SELECT elements and their OPTIONs can only take value of type 'string' (because the values
     // are stored on DOM attributes). ko.selectExtensions provides a way for SELECTs/OPTIONs to have values
     // that are arbitrary objects. This is very convenient when implementing things like cascading dropdowns.
-    ko.selectExtensions = {
+    var selectExtensions = {
         readValue : function(element) {
             if (element.tagName == 'OPTION') {
                 if (element[hasDomDataExpandoProperty] === true)
                     return ko.domDataGet(element, ko.bindingHandlers.options.optionValueDomDataKey);
                 return element.getAttribute("value");
             } else if (element.tagName == 'SELECT')
-                return element.selectedIndex >= 0 ? ko.selectExtensions.readValue(element.options[element.selectedIndex]) : undefined;
+                return element.selectedIndex >= 0 ? selectExtensions.readValue(element.options[element.selectedIndex]) : undefined;
             else
                 return element.value;
         },
@@ -37,7 +37,7 @@
                 }			
             } else if (element.tagName == 'SELECT') {
                 for (var i = element.options.length - 1; i >= 0; i--) {
-                    if (ko.selectExtensions.readValue(element.options[i]) == value) {
+                    if (selectExtensions.readValue(element.options[i]) == value) {
                         element.selectedIndex = i;
                         break;
                     }
@@ -49,8 +49,11 @@
             }
         }
     };        
+
+    return ko.exportProperties(selectExtensions,
+        'readValue', ko.selectExtensions.readValue,
+        'writeValue', ko.selectExtensions.writeValue
+    );
 })();
 
 ko.exportSymbol('selectExtensions', ko.selectExtensions);
-ko.exportSymbol('selectExtensions.readValue', ko.selectExtensions.readValue);
-ko.exportSymbol('selectExtensions.writeValue', ko.selectExtensions.writeValue);

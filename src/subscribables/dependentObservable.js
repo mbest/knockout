@@ -165,14 +165,13 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
     ko.subscribable.call(dependentObservable);
     ko.utils.extendInternal(dependentObservable, ko.dependentObservable['fn']);
 
-    ko.exportProperty(dependentObservable, 'dispose', dependentObservable.dispose);
-    ko.exportProperty(dependentObservable, 'getDependenciesCount', dependentObservable.getDependenciesCount);
-
-    ko.exportProperty(dependentObservable, 'addDisposalNodes', dependentObservable.addDisposalNodes);
-    ko.exportProperty(dependentObservable, 'replaceDisposalNodes', dependentObservable.replaceDisposalNodes);
-    ko.exportProperty(dependentObservable, 'getDisposalNodesCount', dependentObservable.getDisposalNodesCount);
-
-    return dependentObservable;
+    return ko.exportProperties(dependentObservable, 
+        'dispose', dependentObservable.dispose,
+        'getDependenciesCount', dependentObservable.getDependenciesCount,
+        'addDisposalNodes', dependentObservable.addDisposalNodes,
+        'replaceDisposalNodes', dependentObservable.replaceDisposalNodes,
+        'getDisposalNodesCount', dependentObservable.getDisposalNodesCount
+    );
 };
 
 ko.dependentObservable['fn'] = {

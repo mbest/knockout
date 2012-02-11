@@ -14,9 +14,11 @@ ko.subscribable = function () {
     this._subscriptions = {};
 
     ko.utils.extendInternal(this, ko.subscribable['fn']);
-    ko.exportProperty(this, 'subscribe', this.subscribe);
-    ko.exportProperty(this, 'extend', this.extend);
-    ko.exportProperty(this, 'getSubscriptionsCount', this.getSubscriptionsCount);
+    ko.exportProperties(this, 
+        'subscribe', this.subscribe,
+        'extend', this.extend,
+        'getSubscriptionsCount', this.getSubscriptionsCount
+    );
 }
 
 var defaultEvent = "change";
@@ -24,15 +26,15 @@ var defaultEvent = "change";
 ko.subscribable['fn'] = {
     subscribe: function (callback, callbackTarget, event) {
         event = event || defaultEvent;
-        var boundCallback = callbackTarget ? callback.bind(callbackTarget) : callback;
+        var self = this, boundCallback = callbackTarget ? callback.bind(callbackTarget) : callback;
 
-        var subscription = new ko.subscription(this, boundCallback, function () {
-            ko.utils.arrayRemoveItem(this._subscriptions[event], subscription);
-        }.bind(this));
+        var subscription = new ko.subscription(self, boundCallback, function () {
+            ko.utils.arrayRemoveItem(self._subscriptions[event], subscription);
+        });
 
-        if (!this._subscriptions[event])
-            this._subscriptions[event] = [];
-        this._subscriptions[event].push(subscription);
+        if (!self._subscriptions[event])
+            self._subscriptions[event] = [];
+        self._subscriptions[event].push(subscription);
         return subscription;
     },
 

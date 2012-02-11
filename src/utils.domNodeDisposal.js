@@ -158,9 +158,11 @@ ko.utils.domNodeDisposal = new (function () {
         addDisposeCallback : addDisposeCallback,
         removeDisposeCallback : removeDisposeCallback
     };
-    ko.exportProperty(domNodeDisposal, 'addDisposeCallback', domNodeDisposal.addDisposeCallback);
-    ko.exportProperty(domNodeDisposal, 'removeDisposeCallback', domNodeDisposal.removeDisposeCallback);
-    return domNodeDisposal;
+
+    return ko.exportProperties(domNodeDisposal, 
+        'addDisposeCallback', domNodeDisposal.addDisposeCallback,
+        'removeDisposeCallback', domNodeDisposal.removeDisposeCallback
+    );
 })();
 ko.exportSymbol('cleanNode', ko.cleanNode);
 ko.exportSymbol('cleanAndRemoveNode', ko.cleanAndRemoveNode);

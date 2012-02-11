@@ -26,10 +26,10 @@ ko.observable = function (initialValue) {
     observable.valueWillMutate = function () { observable["notifySubscribers"](_latestValue, "beforeChange"); }
     ko.utils.extendInternal(observable, ko.observable['fn']);
 
-    ko.exportProperty(observable, "valueHasMutated", observable.valueHasMutated);
-    ko.exportProperty(observable, "valueWillMutate", observable.valueWillMutate);
-    
-    return observable;
+    return ko.exportProperties(observable, 
+        "valueHasMutated", observable.valueHasMutated,
+        "valueWillMutate", observable.valueWillMutate
+    );
 }
 
 ko.observable['fn'] = {

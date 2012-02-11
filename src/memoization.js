@@ -21,7 +21,7 @@ ko.memoization = (function () {
         }
     }
 
-    return {
+    var memoization = {
         memoize: function (callback) {
             if (typeof callback != "function")
                 throw new Error("You can only pass a function to ko.memoization.memoize()");
@@ -49,7 +49,7 @@ ko.memoization = (function () {
                 var combinedParams = [node];
                 if (extraCallbackParamsArray)
                     ko.utils.arrayPushAll(combinedParams, extraCallbackParamsArray);
-                ko.memoization.unmemoize(memos[i].memoId, combinedParams);
+                memoization.unmemoize(memos[i].memoId, combinedParams);
                 node.nodeValue = ""; // Neuter this node so we don't try to unmemoize it again
                 if (node.parentNode)
                     node.parentNode.removeChild(node); // If possible, erase it totally (not always possible - someone else might just hold a reference to it then call unmemoizeDomNodeAndDescendants again)
@@ -61,10 +61,13 @@ ko.memoization = (function () {
             return match ? match[1] : null;
         }
     };
+
+    return ko.exportProperties(memoization,
+        'memoize', memoization.memoize,
+        'unmemoize', memoization.unmemoize,
+        'parseMemoText', memoization.parseMemoText,
+        'unmemoizeDomNodeAndDescendants', memoization.unmemoizeDomNodeAndDescendants
+    );
 })();
 
 ko.exportSymbol('memoization', ko.memoization);
-ko.exportSymbol('memoization.memoize', ko.memoization.memoize);
-ko.exportSymbol('memoization.unmemoize', ko.memoization.unmemoize);
-ko.exportSymbol('memoization.parseMemoText', ko.memoization.parseMemoText);
-ko.exportSymbol('memoization.unmemoizeDomNodeAndDescendants', ko.memoization.unmemoizeDomNodeAndDescendants);

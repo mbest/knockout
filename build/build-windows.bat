@@ -15,7 +15,7 @@ goto :EOF
 
 :Combine
 type %AllFiles%                   >> %OutDebugFile%_all.temp
-cscript tools\searchReplace.js "throw (new )?Error\(" "ko_throw(" %OutDebugFile%_all.temp
+cscript tools\searchReplace.js "throw( new)* Error" "ko_throw" %OutDebugFile%_all.temp
 
 echo (function(window,document,navigator,undefined){function ko_throw(e){throw Error(e)} > %OutDebugFile%.temp
 type fragments\amd-pre.js         >> %OutDebugFile%.temp

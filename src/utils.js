@@ -1,4 +1,4 @@
-ko.utils = new (function () {
+ko.utils = (function () {
     var stringTrimRegex = /^(\s|\u00A0)+|(\s|\u00A0)+$/g;
     
     // Represent the known event types in a compact way, then at runtime transform it into a hash with event name as key (for fast lookup)
@@ -35,7 +35,7 @@ ko.utils = new (function () {
         return (inputType == "checkbox") || (inputType == "radio");
     }
     
-    return {
+    var utils = {
         fieldsIncludedWithJsonPost: ['authenticity_token', /^__RequestVerificationToken(_.*)?$/],
         
         arrayForEach: function (array, action) {
@@ -60,7 +60,7 @@ ko.utils = new (function () {
         },
 
         arrayRemoveItem: function (array, itemToRemove) {
-            var index = ko.utils.arrayIndexOf(array, itemToRemove);
+            var index = utils.arrayIndexOf(array, itemToRemove);
             if (index >= 0)
                 array.splice(index, 1);
         },
@@ -69,7 +69,7 @@ ko.utils = new (function () {
             array = array || [];
             var result = [];
             for (var i = 0, j = array.length; i < j; i++) {
-                if (ko.utils.arrayIndexOf(result, array[i]) < 0)
+                if (utils.arrayIndexOf(result, array[i]) < 0)
                     result.push(array[i]);
             }
             return result;
@@ -129,7 +129,7 @@ ko.utils = new (function () {
         moveNodesToContainerElement: function(nodes) {
             // Ensure it's a real array, as we're about to reparent the nodes and
             // we don't want the underlying collection to change while we're doing that.
-            var nodesArray = ko.utils.makeArray(nodes);
+            var nodesArray = utils.makeArray(nodes);
 
             var container = document.createElement('div');
             for (var i = 0, j = nodesArray.length; i < j; i++)
@@ -138,7 +138,7 @@ ko.utils = new (function () {
         },
 
         setDomNodeChildren: function (domNode, childNodes) {
-            ko.utils.emptyDomNode(domNode);
+            utils.emptyDomNode(domNode);
             if (childNodes) {
                 for (var i = 0, j = childNodes.length; i < j; i++)
                     domNode.appendChild(childNodes[i]);
@@ -174,7 +174,7 @@ ko.utils = new (function () {
             var result = [];
             var tokens = (string || "").split(delimiter);
             for (var i = 0, j = tokens.length; i < j; i++) {
-                var trimmed = ko.utils.stringTrim(tokens[i]);
+                var trimmed = utils.stringTrim(tokens[i]);
                 if (trimmed !== "")
                     result.push(trimmed);
             }
@@ -211,7 +211,7 @@ ko.utils = new (function () {
         },
 
         domNodeIsAttachedToDocument: function (node) {
-            return ko.utils.domNodeIsContainedBy(node, document);
+            return utils.domNodeIsContainedBy(node, document);
         },
 
         registerEventHandler: function (element, eventType, handler) {
@@ -285,11 +285,11 @@ ko.utils = new (function () {
 
         domNodeHasCssClass: function (node, className) {
             var currentClassNames = (node.className || "").split(/\s+/);
-            return ko.utils.arrayIndexOf(currentClassNames, className) >= 0;
+            return utils.arrayIndexOf(currentClassNames, className) >= 0;
         },
 
         toggleDomNodeCssClass: function (node, className, shouldHaveClass) {
-            var hasClass = ko.utils.domNodeHasCssClass(node, className);
+            var hasClass = utils.domNodeHasCssClass(node, className);
             if (shouldHaveClass && !hasClass) {
                 node.className = (node.className || "") + " " + className;
             } else if (hasClass && !shouldHaveClass) {
@@ -298,13 +298,13 @@ ko.utils = new (function () {
                 for (var i = 0; i < currentClassNames.length; i++)
                     if (currentClassNames[i] != className)
                         newClassName += currentClassNames[i] + " ";
-                node.className = ko.utils.stringTrim(newClassName);
+                node.className = utils.stringTrim(newClassName);
             }
         },
 
         range: function (min, max) {
-            min = ko.utils.unwrapObservable(min);
-            max = ko.utils.unwrapObservable(max);
+            min = utils.unwrapObservable(min);
+            max = utils.unwrapObservable(max);
             var result = [];
             for (var i = min; i <= max; i++)
                 result.push(i);
@@ -324,7 +324,7 @@ ko.utils = new (function () {
         ieVersion : ieVersion,
         
         getFormFields: function(form, fieldName) {
-            var fields = ko.utils.makeArray(form.getElementsByTagName("INPUT")).concat(ko.utils.makeArray(form.getElementsByTagName("TEXTAREA")));
+            var fields = utils.makeArray(form.getElementsByTagName("INPUT")).concat(utils.makeArray(form.getElementsByTagName("TEXTAREA")));
             var isMatchingField = (typeof fieldName == 'string') 
                 ? function(field) { return field.name === fieldName }
                 : function(field) { return fieldName.test(field.name) }; // Treat fieldName as regex or object containing predicate
@@ -338,7 +338,7 @@ ko.utils = new (function () {
         
         parseJson: function (jsonString) {
             if (typeof jsonString == "string") {
-                jsonString = ko.utils.stringTrim(jsonString);
+                jsonString = utils.stringTrim(jsonString);
                 if (jsonString) {
                     if (window.JSON && window.JSON.parse) // Use native parsing where available
                         return window.JSON.parse(jsonString);
@@ -351,7 +351,7 @@ ko.utils = new (function () {
         stringifyJson: function (data) {
             if ((typeof JSON == "undefined") || (typeof JSON.stringify == "undefined"))
                 throw new Error("Cannot find JSON.stringify(). Some browsers (e.g., IE < 8) don't support it natively, but you can overcome this by adding a script reference to json2.js, downloadable from http://www.json.org/json2.js");
-            return JSON.stringify(ko.utils.unwrapObservable(data));
+            return JSON.stringify(utils.unwrapObservable(data));
         },
 
         postJson: function (urlOrForm, data, options) {
@@ -365,13 +365,13 @@ ko.utils = new (function () {
                 var originalForm = urlOrForm;
                 url = originalForm.action;
                 for (var i = includeFields.length - 1; i >= 0; i--) {
-                    var fields = ko.utils.getFormFields(originalForm, includeFields[i]);
+                    var fields = utils.getFormFields(originalForm, includeFields[i]);
                     for (var j = fields.length - 1; j >= 0; j--)        				
                         params[fields[j].name] = fields[j].value;
                 }
             }        	
             
-            data = ko.utils.unwrapObservable(data);
+            data = utils.unwrapObservable(data);
             var form = document.createElement("FORM");
             form.style.display = "none";
             form.action = url;
@@ -379,7 +379,7 @@ ko.utils = new (function () {
             for (var key in data) {
                 var input = document.createElement("INPUT");
                 input.name = key;
-                input.value = ko.utils.stringifyJson(ko.utils.unwrapObservable(data[key]));
+                input.value = utils.stringifyJson(utils.unwrapObservable(data[key]));
                 form.appendChild(input);
             }
             for (var key in params) {
@@ -392,29 +392,32 @@ ko.utils = new (function () {
             options['submitter'] ? options['submitter'](form) : form.submit();
             setTimeout(function () { form.parentNode.removeChild(form); }, 0);
         }
-    }
+    };
+
+    return ko.exportProperties(utils,
+        'arrayForEach', utils.arrayForEach,
+        'arrayFirst', utils.arrayFirst,
+        'arrayFilter', utils.arrayFilter,
+        'arrayGetDistinctValues', utils.arrayGetDistinctValues,
+        'arrayIndexOf', utils.arrayIndexOf,
+        'arrayMap', utils.arrayMap,
+        'arrayPushAll', utils.arrayPushAll,
+        'arrayRemoveItem', utils.arrayRemoveItem,
+        'extend', utils.extendInternal,
+        'fieldsIncludedWithJsonPost', utils.fieldsIncludedWithJsonPost,
+        'getFormFields', utils.getFormFields,
+        'postJson', utils.postJson,
+        'parseJson', utils.parseJson,
+        'registerEventHandler', utils.registerEventHandler,
+        'stringifyJson', utils.stringifyJson,
+        'range', utils.range,
+        'toggleDomNodeCssClass', utils.toggleDomNodeCssClass,
+        'triggerEvent', utils.triggerEvent,
+        'unwrapObservable', utils.unwrapObservable
+    );
 })();
 
 ko.exportSymbol('utils', ko.utils);
-ko.exportSymbol('utils.arrayForEach', ko.utils.arrayForEach);
-ko.exportSymbol('utils.arrayFirst', ko.utils.arrayFirst);
-ko.exportSymbol('utils.arrayFilter', ko.utils.arrayFilter);
-ko.exportSymbol('utils.arrayGetDistinctValues', ko.utils.arrayGetDistinctValues);
-ko.exportSymbol('utils.arrayIndexOf', ko.utils.arrayIndexOf);
-ko.exportSymbol('utils.arrayMap', ko.utils.arrayMap);
-ko.exportSymbol('utils.arrayPushAll', ko.utils.arrayPushAll);
-ko.exportSymbol('utils.arrayRemoveItem', ko.utils.arrayRemoveItem);
-ko.exportSymbol('utils.extend', ko.utils.extendInternal);
-ko.exportSymbol('utils.fieldsIncludedWithJsonPost', ko.utils.fieldsIncludedWithJsonPost);
-ko.exportSymbol('utils.getFormFields', ko.utils.getFormFields);
-ko.exportSymbol('utils.postJson', ko.utils.postJson);
-ko.exportSymbol('utils.parseJson', ko.utils.parseJson);
-ko.exportSymbol('utils.registerEventHandler', ko.utils.registerEventHandler);
-ko.exportSymbol('utils.stringifyJson', ko.utils.stringifyJson);
-ko.exportSymbol('utils.range', ko.utils.range);
-ko.exportSymbol('utils.toggleDomNodeCssClass', ko.utils.toggleDomNodeCssClass);
-ko.exportSymbol('utils.triggerEvent', ko.utils.triggerEvent);
-ko.exportSymbol('utils.unwrapObservable', ko.utils.unwrapObservable);
 
 if (!Function.prototype['bind']) {
     // Function.prototype.bind is a standard part of ECMAScript 5th Edition (December 2009, http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-262.pdf)

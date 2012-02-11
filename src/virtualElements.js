@@ -1,4 +1,4 @@
-(function() {
+ko.virtualElements = (function() {
     // "Virtual elements" is an abstraction on top of the usual DOM API which understands the notion that comment nodes
     // may be used to represent hierarchy (in addition to the DOM's natural hierarchy). 
     // If you call the DOM-manipulating functions on ko.virtualElements, you will be able to read and write the state 
@@ -77,7 +77,7 @@
         return captureRemaining;
     }
 
-    ko.virtualElements = {
+    var virtualElements = {
         allowedBindings: {},
 
         childNodes: function(node) {
@@ -88,7 +88,7 @@
             if (!isStartComment(node))
                 ko.utils.emptyDomNode(node);
             else {
-                var virtualChildren = ko.virtualElements.childNodes(node);
+                var virtualChildren = virtualElements.childNodes(node);
                 for (var i = 0, j = virtualChildren.length; i < j; i++)
                     ko.cleanAndRemoveNode(virtualChildren[i]);
             }
@@ -98,7 +98,7 @@
             if (!isStartComment(node))
                 ko.utils.setDomNodeChildren(node, childNodes);
             else {
-                ko.virtualElements.emptyNode(node);
+                virtualElements.emptyNode(node);
                 var endCommentNode = node.nextSibling; // Must be the next sibling, as we just emptied the children
                 for (var i = 0, j = childNodes.length; i < j; i++)
                     endCommentNode.parentNode.insertBefore(childNodes[i], endCommentNode);
@@ -179,13 +179,17 @@
                 } while (childNode = childNode.nextSibling);
             }
         }  
-    };  
+    };
+
+    return ko.exportProperties(virtualElements, 
+        'allowedBindings', virtualElements.allowedBindings,
+        'emptyNode', virtualElements.emptyNode,
+        //'firstChild', virtualElements.firstChild,     // firstChild is not minified
+        'insertAfter', virtualElements.insertAfter,
+        //'nextSibling', virtualElements.nextSibling,   // nextSibling is not minified
+        'prepend', virtualElements.prepend,
+        'setDomNodeChildren', virtualElements.setDomNodeChildren
+    );
 })();
+
 ko.exportSymbol('virtualElements', ko.virtualElements);
-ko.exportSymbol('virtualElements.allowedBindings', ko.virtualElements.allowedBindings);
-ko.exportSymbol('virtualElements.emptyNode', ko.virtualElements.emptyNode);
-//ko.exportSymbol('virtualElements.firstChild', ko.virtualElements.firstChild);     // firstChild is not minified
-ko.exportSymbol('virtualElements.insertAfter', ko.virtualElements.insertAfter);
-//ko.exportSymbol('virtualElements.nextSibling', ko.virtualElements.nextSibling);   // nextSibling is not minified
-ko.exportSymbol('virtualElements.prepend', ko.virtualElements.prepend);
-ko.exportSymbol('virtualElements.setDomNodeChildren', ko.virtualElements.setDomNodeChildren);
