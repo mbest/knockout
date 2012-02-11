@@ -3,7 +3,7 @@
 var eventHandlersWithShortcuts = ['click'];
 ko.utils.arrayForEach(eventHandlersWithShortcuts, function(eventName) {
     ko.bindingHandlers[eventName] = {
-        'flags': bindingFlags_builtIn | bindingFlags_eventHandler,
+        'flags': bindingFlags_eventHandler,
         'init': function(element, valueAccessor, allBindingsAccessor, viewModel) {
             var newValueAccessor = function () {
                 var result = {};
@@ -17,7 +17,7 @@ ko.utils.arrayForEach(eventHandlersWithShortcuts, function(eventName) {
 
 
 ko.bindingHandlers['event'] = {
-    'flags': bindingFlags_builtIn | bindingFlags_eventHandler | bindingFlags_twoLevel,
+    'flags': bindingFlags_eventHandler | bindingFlags_twoLevel,
     'init' : function (element, valueAccessor, allBindingsAccessor, viewModel) {
         var eventsToHandle = valueAccessor() || {};
         for(var eventNameOutsideClosure in eventsToHandle) {
@@ -58,7 +58,7 @@ ko.bindingHandlers['event'] = {
 };
 
 ko.bindingHandlers['submit'] = {
-    'flags': bindingFlags_builtIn | bindingFlags_eventHandler,
+    'flags': bindingFlags_eventHandler,
     'init': function (element, valueAccessor, allBindingsAccessor, viewModel) {
         if (typeof valueAccessor() != "function")
             throw new Error("The value for a submit binding must be a function");
@@ -79,7 +79,6 @@ ko.bindingHandlers['submit'] = {
 };
 
 ko.bindingHandlers['visible'] = {
-    'flags': bindingFlags_builtIn,
     'update': function (element, valueAccessor) {
         var value = ko.utils.unwrapObservable(valueAccessor());
         var isCurrentlyVisible = !(element.style.display == "none");
@@ -91,7 +90,6 @@ ko.bindingHandlers['visible'] = {
 }
 
 ko.bindingHandlers['enable'] = {
-    'flags': bindingFlags_builtIn,
     'update': function (element, valueAccessor) {
         var value = ko.utils.unwrapObservable(valueAccessor());
         if (value && element.disabled)
@@ -102,14 +100,13 @@ ko.bindingHandlers['enable'] = {
 };
 
 ko.bindingHandlers['disable'] = { 
-    'flags': bindingFlags_builtIn,
     'update': function (element, valueAccessor) { 
         ko.bindingHandlers['enable']['update'](element, function() { return !ko.utils.unwrapObservable(valueAccessor()) }); 		
     } 	
 };
 
 ko.bindingHandlers['value'] = {
-    'flags': bindingFlags_builtIn | bindingFlags_twoWay | bindingFlags_contentUpdate,
+    'flags': bindingFlags_twoWay | bindingFlags_contentUpdate,
     'init': function (element, valueAccessor, allBindingsAccessor) { 
         // Always catch "change" event; possibly other events too if asked
         var eventsToCatch = ["change"];
@@ -176,7 +173,7 @@ ko.bindingHandlers['value'] = {
 };
 
 ko.bindingHandlers['options'] = {
-    'flags': bindingFlags_builtIn | bindingFlags_contentBind | bindingFlags_contentSet,
+    'flags': bindingFlags_contentBind | bindingFlags_contentSet,
     'update': function (element, valueAccessor, allBindingsAccessor) {
         if (element.tagName != "SELECT")
             throw new Error("options binding applies only to SELECT elements");
@@ -255,7 +252,7 @@ ko.bindingHandlers['options'] = {
 ko.bindingHandlers['options'].optionValueDomDataKey = ko.utils.domData.nextKey();
 
 ko.bindingHandlers['selectedOptions'] = {
-    'flags': bindingFlags_builtIn | bindingFlags_twoWay | bindingFlags_contentUpdate,
+    'flags': bindingFlags_twoWay | bindingFlags_contentUpdate,
     getSelectedValuesFromSelectNode: function (selectNode) {
         var result = [];
         var nodes = selectNode.childNodes;
@@ -296,7 +293,7 @@ ko.bindingHandlers['selectedOptions'] = {
 };
 
 ko.bindingHandlers['text'] = {
-    'flags': bindingFlags_builtIn | bindingFlags_contentBind | bindingFlags_contentSet | bindingFlags_canUseVirtual,
+    'flags': bindingFlags_contentBind | bindingFlags_contentSet | bindingFlags_canUseVirtual,
     'init': function(element) {
         ko.virtualElements.setDomNodeChildren(element, [document.createTextNode("")]);
     },
@@ -307,7 +304,7 @@ ko.bindingHandlers['text'] = {
 };
 
 ko.bindingHandlers['html'] = {
-    'flags': bindingFlags_builtIn | bindingFlags_contentBind | bindingFlags_contentSet,
+    'flags': bindingFlags_contentBind | bindingFlags_contentSet,
     'update': function (element, valueAccessor) {
         var value = ko.utils.unwrapObservable(valueAccessor());
         ko.utils.setHtml(element, value);
@@ -315,7 +312,7 @@ ko.bindingHandlers['html'] = {
 };
 
 ko.bindingHandlers['css'] = {
-    'flags': bindingFlags_builtIn | bindingFlags_twoLevel,
+    'flags': bindingFlags_twoLevel,
     'update': function (element, valueAccessor) {
         var value = ko.utils.unwrapObservable(valueAccessor() || {});
         for (var className in value) {
@@ -328,7 +325,7 @@ ko.bindingHandlers['css'] = {
 };
 
 ko.bindingHandlers['style'] = {
-    'flags': bindingFlags_builtIn | bindingFlags_twoLevel,
+    'flags': bindingFlags_twoLevel,
     'update': function (element, valueAccessor) {
         var value = ko.utils.unwrapObservable(valueAccessor() || {});
         for (var styleName in value) {
@@ -341,7 +338,7 @@ ko.bindingHandlers['style'] = {
 };
 
 ko.bindingHandlers['uniqueName'] = {
-    'flags': bindingFlags_builtIn | bindingFlags_noValue,
+    'flags': bindingFlags_noValue,
     'init': function (element, valueAccessor) {
         if (valueAccessor()) {
             element.name = "ko_unique_" + (++ko.bindingHandlers['uniqueName'].currentIndex);
@@ -357,7 +354,7 @@ ko.bindingHandlers['uniqueName'] = {
 ko.bindingHandlers['uniqueName'].currentIndex = 0;
 
 ko.bindingHandlers['checked'] = {
-    'flags': bindingFlags_builtIn | bindingFlags_twoWay,
+    'flags': bindingFlags_twoWay,
     'init': function (element, valueAccessor, allBindingsAccessor) {
         var updateHandler = function() {            
             var valueToWrite;
@@ -410,7 +407,7 @@ ko.bindingHandlers['checked'] = {
 };
 
 ko.bindingHandlers['attr'] = {
-    'flags': bindingFlags_builtIn | bindingFlags_twoLevel,
+    'flags': bindingFlags_twoLevel,
     'update': function(element, valueAccessor, allBindingsAccessor) {
         var value = ko.utils.unwrapObservable(valueAccessor()) || {};
         for (var attrName in value) {
@@ -430,7 +427,7 @@ ko.bindingHandlers['attr'] = {
 };
 
 ko.bindingHandlers['withlight'] = {
-    'flags': bindingFlags_builtIn | bindingFlags_contentBind | bindingFlags_canUseVirtual,
+    'flags': bindingFlags_contentBind | bindingFlags_canUseVirtual,
     'init': function(element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
         var innerContext = bindingContext['createChildContext'](function() {
             return ko.utils.unwrapObservable(valueAccessor());
@@ -440,7 +437,7 @@ ko.bindingHandlers['withlight'] = {
 };
 
 ko.bindingHandlers['hasfocus'] = {
-    'flags': bindingFlags_builtIn | bindingFlags_twoWay,
+    'flags': bindingFlags_twoWay,
     'init': function(element, valueAccessor, allBindingsAccessor) {
         var writeValue = function(valueToWrite) {
             var modelValue = valueAccessor();
@@ -466,7 +463,7 @@ ko.bindingHandlers['hasfocus'] = {
 
 var withBoundDomDataKey = ko.utils.domData.nextKey(), withContainerDomDataKey = ko.utils.domData.nextKey();
 ko.bindingHandlers['with'] = {
-    'flags': bindingFlags_builtIn | bindingFlags_contentBind | bindingFlags_canUseVirtual,
+    'flags': bindingFlags_contentBind | bindingFlags_canUseVirtual,
     'update': function(element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
         var isBound = ko.domDataGet(element, withBoundDomDataKey),
             container = ko.domDataGet(element, withContainerDomDataKey),
@@ -504,7 +501,7 @@ function templateBasedBinding(makeOptionsFunction) {
         };
     }
     return {
-        'flags': bindingFlags_builtIn | bindingFlags_contentBind | bindingFlags_canUseVirtual,
+        'flags': bindingFlags_contentBind | bindingFlags_canUseVirtual,
         'init': function(element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
             ko.bindingHandlers['template']['init'](element, makeTemplateValueAccessor(valueAccessor));
         },

@@ -1,12 +1,14 @@
-/** @const */ var bindingFlags_builtIn=01;
-/** @const */ var bindingFlags_twoWay=02;
-/** @const */ var bindingFlags_eventHandler=04;
-/** @const */ var bindingFlags_twoLevel=010;
-/** @const */ var bindingFlags_contentSet=020;
-/** @const */ var bindingFlags_contentBind=040;
-/** @const */ var bindingFlags_contentUpdate=0100;
-/** @const */ var bindingFlags_canUseVirtual=0200;
-/** @const */ var bindingFlags_noValue=0400;
+/** @const */ var bindingFlags_twoWay=01;
+/** @const */ var bindingFlags_eventHandler=02;
+/** @const */ var bindingFlags_twoLevel=04;
+/** @const */ var bindingFlags_contentSet=010;
+/** @const */ var bindingFlags_contentBind=020;
+/** @const */ var bindingFlags_contentUpdate=040;
+/** @const */ var bindingFlags_canUseVirtual=0100;
+/** @const */ var bindingFlags_noValue=0200;
+
+// Internal flag for bindings used by the binding system itself
+/** @const */ var bindingFlags_builtIn=01000;
 
 (function () {
     ko.bindingFlags = {
