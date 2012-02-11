@@ -701,6 +701,30 @@ describe('Binding attribute syntax', {
         ko.applyBindings(null, testNode);
     },
     
+    'Should not be able to set recursive dependencies': function() {
+        ko.bindingHandlers.test1 = { };
+        ko.bindingHandlers.test2 = { };
+
+        testNode.innerHTML = "<div data-bind='test1: true, test2: true, dependencies: {test2: \"test1\", test1: \"test2\"}'></div>";
+
+        var didThrow = false;
+        try { ko.applyBindings(null, testNode) }
+        catch(ex) { didThrow = true; value_of(ex.message).should_contain('recursive') }
+        value_of(didThrow).should_be(true);
+    },
+
+    'Should not be able to set dependencies that conflict with the order set by flags': function() {
+        ko.bindingHandlers.test1 = { flags: ko.bindingFlags.contentSet };
+        ko.bindingHandlers.test2 = { flags: ko.bindingFlags.contentUpdate };
+
+        testNode.innerHTML = "<div data-bind='test1: true, test2: true, dependencies: {test1: \"test2\"}'></div>";
+
+        var didThrow = false;
+        try { ko.applyBindings(null, testNode) }
+        catch(ex) { didThrow = true; value_of(ex.message).should_contain('ordering') }
+        value_of(didThrow).should_be(true);
+    },
+
     'Changing type of binding handler won\'t clear binding cache, but cache can be cleared by calling clearCache': function() {
         var vm = ko.observable(1), updateCalls = 0, didThrow = false;
         ko.bindingHandlers.sometimesRequiresValue = { 

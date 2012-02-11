@@ -261,13 +261,14 @@
                                     : unorderedBindings;
                         }
 
+                        bindingIndexes[bindingKey] = -1;    // Allows for recursive dependencies check
                         ko.utils.arrayForEach(binding.dependencies, function(dependencyKey) {
                             var dependentBinding;
                             if (!(dependencyKey in parsedBindings) || !(dependentBinding = pushBinding(dependencyKey)))
-                                throw new Error("Binding " + bindingKey + " requires missing " + dependencyKey + " binding");
+                                throw new Error("Binding " + bindingKey + " cannot depend on " + dependencyKey + " (missing or recursive)");
                             if (binding.order) {
                                 if (dependentBinding.order > binding.order) {
-                                    throw new Error("Binding " + bindingKey + " cannot depend on " + dependencyKey);
+                                    throw new Error("Binding " + bindingKey + " cannot depend on " + dependencyKey + " (conflicting ordering)");
                                 } else {
                                     var dependentOrder = binding.order == contentBindBinding ? contentBindBinding-1 : binding.order;
                                     dependentBinding.dependentOrder = dependentBinding.dependentOrder ? Math.min(dependentBinding.dependentOrder, dependentOrder) : dependentOrder;
