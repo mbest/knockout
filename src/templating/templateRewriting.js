@@ -60,5 +60,7 @@ ko.templateRewriting = (function () {
     }
 })();
 
+ko.exportSymbol('bindingRewriteValidators', ko.templateRewriting.bindingRewriteValidators);
+
 // Exported only because it has to be referenced by string lookup from within rewritten template
 ko.exportSymbol('__tr_ambtns', ko.templateRewriting.applyMemoizedBindingsToNextSibling);
