@@ -19,7 +19,7 @@
         return new ko.bindingContext(dataItem, this);
     };
     ko.bindingContext.prototype['extend'] = function(extras) {
-        return ko.utils.extend(new ko.bindingContext(this.$data, this), extras);
+        return ko.utils.extend(new ko.bindingContext(this['$data'], this), extras);
     };
 
     function validateThatBindingIsAllowedForVirtualElements(bindingName) {
