@@ -95,7 +95,7 @@
                         if (subscription)
                             subscription.replaceDisposalNodes(targetNodeOrNodeArray);
                     }
-                    }
+                }
             ).addDisposalNodes(targetNodeOrNodeArray);
             return subscription;
         } else {
