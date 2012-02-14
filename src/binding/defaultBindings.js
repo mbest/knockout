@@ -10,7 +10,7 @@ ko.utils.arrayForEach(eventHandlersWithShortcuts, function(eventName) {
                 result[eventName] = valueAccessor();
                 return result;
             };
-            ko.bindingHandlers['event']['init'].call(this, element, newValueAccessor, allBindingsAccessor, viewModel);
+            return ko.bindingHandlers['event']['init'].call(this, element, newValueAccessor, allBindingsAccessor, viewModel);
         }
     }	
 });
@@ -101,7 +101,7 @@ ko.bindingHandlers['enable'] = {
 
 ko.bindingHandlers['disable'] = { 
     'update': function (element, valueAccessor) { 
-        ko.bindingHandlers['enable']['update'](element, function() { return !ko.utils.unwrapObservable(valueAccessor()) }); 		
+        return ko.bindingHandlers['enable']['update'](element, function() { return !ko.utils.unwrapObservable(valueAccessor()) }); 		
     } 	
 };
 
@@ -503,10 +503,10 @@ function templateBasedBinding(makeOptionsFunction) {
     return {
         'flags': bindingFlags_contentBind | bindingFlags_canUseVirtual,
         'init': function(element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
-            ko.bindingHandlers['template']['init'](element, makeTemplateValueAccessor(valueAccessor));
+            return ko.bindingHandlers['template']['init'](element, makeTemplateValueAccessor(valueAccessor));
         },
         'update': function(element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
-            ko.bindingHandlers['template']['update'](element, makeTemplateValueAccessor(valueAccessor), allBindingsAccessor, viewModel, bindingContext);
+            return ko.bindingHandlers['template']['update'](element, makeTemplateValueAccessor(valueAccessor), allBindingsAccessor, viewModel, bindingContext);
         }
     };
 }

@@ -40,14 +40,14 @@
     // Accepts either a data value or a value accessor function; note that an observable qualifies as a value accessor function
     ko.bindingContext = function(dataItemOrValueAccessor, parent, options) {
         var self = this, isFunc = typeof(dataItemOrValueAccessor) == "function";
-        self._subscription = ko.utils.possiblyWrap(parent ?
+        self._subscribable = ko.utils.possiblyWrap(parent ?
             function() {
-                var oldSubscription = self._subscription;   // save previous subscription value
+                var oldSubscribable = self._subscribable;   // save previous subscribable value
                 // copy $root, $options, and any custom properties from parent binding context
                 ko.utils.extendInternal(self, parent);
-                self._subscription = oldSubscription;       // restore subscription value
-                if (parent._subscription)
-                    ko.dependencyDetection.registerDependency(parent._subscription);
+                self._subscribable = oldSubscribable;       // restore subscribable value
+                if (parent._subscribable)
+                    ko.dependencyDetection.registerDependency(parent._subscribable);
                 // set our properties
                 ko.utils.extendInternal(self['$options'], options);
                 self['$parentContext'] = parent;
@@ -146,8 +146,8 @@
             parsedBindings = evaluatedBindings || ko.bindingProvider['instance']['getBindings'](node, bindingContext);
             extraBindings = {};
 
-            if (parsedBindings && bindingContext._subscription)
-                ko.dependencyDetection.registerDependency(bindingContext._subscription);
+            if (parsedBindings && bindingContext._subscribable)
+                ko.dependencyDetection.registerDependency(bindingContext._subscribable);
         }, node);
 
         // These functions make values accessible to bindings.
@@ -189,21 +189,31 @@
                     else
                         bindings[binding.order = contentBindBinding] = binding;
                 }
+                return (initResult && initResult['subscribable']);
             };
         }
         function updateCaller(binding) {
             return function() {
                 if (bindingUpdater)
                     ko.dependencyDetection.registerDependency(bindingUpdater);
+                // dependentBindings is set if we're running in independent mode. Go through each
+                // and create a dependency on it's subscribable.
+                if (binding.dependentBindings)
+                    ko.utils.arrayForEach(binding.dependentBindings, function(dependentBinding) {
+                        if (dependentBinding.subscribable)
+                            ko.dependencyDetection.registerDependency(dependentBinding.subscribable);
+                    });
                 var handlerUpdateFn = binding.handler['update'];
-                handlerUpdateFn(node, binding.valueAccessor, allBindingsAccessor, viewModel, bindingContext);
+                return handlerUpdateFn(node, binding.valueAccessor, allBindingsAccessor, viewModel, bindingContext);
             };
         }
         function callHandlersIndependent(binding) {
+            // Observables accessed in init functions are not tracked
             if (runInits && binding.handler['init'])
-                ko.dependencyDetection.ignore(initCaller(binding));     // Observables accessed in init functions are not tracked
+                binding.subscribable = ko.dependencyDetection.ignore(initCaller(binding));
+            // Observables accessed in update function are tracked
             if (binding.handler['update'])
-                ko.utils.possiblyWrap(updateCaller(binding), node);     // Observables accessed in update function are tracked
+                binding.subscribable = ko.utils.possiblyWrap(updateCaller(binding), node) || binding.subscribable;
         }
         function callHandlersDependent(binding) {
             if (binding.handler['update'])
@@ -259,6 +269,7 @@
                         }
 
                         bindingIndexes[bindingKey] = -1;    // Allows for recursive dependencies check
+                        var dependentBindings = [];
                         ko.utils.arrayForEach(binding.dependencies, function(dependencyKey) {
                             var dependentBinding,
                                 dependencyError = "Binding " + bindingKey + " cannot depend on " + dependencyKey + ": ";
@@ -274,7 +285,11 @@
                             } else if (dependentBinding.order) {
                                 binding.order = dependentBinding.order;
                             }
+                            dependentBindings.push(dependentBinding);
                         });
+                        // Save the dependent bindings if we're running in independent mode.
+                        if (independentBindings && dependentBindings[0])
+                            binding.dependentBindings = dependentBindings;
 
                         bindingIndexes[bindingKey] = allBindings.length;
                         allBindings.push(binding);
@@ -321,8 +336,8 @@
     ko.storedBindingContextForNode = function (node, bindingContext) {
         if (arguments.length == 2) {
             ko.domDataSet(node, storedBindingContextDomDataKey, bindingContext);
-            if (bindingContext._subscription)
-                bindingContext._subscription.addDisposalNodes(node);
+            if (bindingContext._subscribable)
+                bindingContext._subscribable.addDisposalNodes(node);
         }
         else
             return ko.domDataGet(node, storedBindingContextDomDataKey);

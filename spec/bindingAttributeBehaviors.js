@@ -127,6 +127,9 @@ describe('Binding attribute syntax', {
 
     'If the associated DOM element was removed by KO, handler subscriptions are disposed immediately': function () {
         var observable = new ko.observable("A");
+        ko.bindingHandlers.anyHandler = {
+            update: function (element, valueAccessor) { valueAccessor(); }
+        };
         testNode.innerHTML = "<div data-bind='anyHandler: myObservable()'></div>";
         ko.applyBindings({ myObservable: observable }, testNode);
         
@@ -139,6 +142,9 @@ describe('Binding attribute syntax', {
 
     'If the associated DOM element was removed independently of KO, handler subscriptions are disposed on the next evaluation': function () {
         var observable = new ko.observable("A");
+        ko.bindingHandlers.anyHandler = {
+            update: function (element, valueAccessor) { valueAccessor(); }
+        };
         testNode.innerHTML = "<div data-bind='anyHandler: myObservable()'></div>";
         ko.applyBindings({ myObservable: observable }, testNode);
         
@@ -635,6 +641,80 @@ describe('Binding attribute syntax', {
         observable('B');
         value_of(updateCount1).should_be(2);
         value_of(updateCount2).should_be(1);
+    },
+
+    'Update to a dependency should also update the dependent binding (independent mode)': function() {
+        var observable = ko.observable('A'), updateCount1 = 0, updateCount2 = 0;
+        ko.bindingHandlers.test1 = {
+            update: function(element, valueAccessor) {
+                valueAccessor()();  // access value to create a subscription
+                updateCount1++;
+            }
+        };
+        ko.bindingHandlers.test2 = {
+            dependencies: 'test1',
+            update: function() {
+                updateCount2++;
+            }
+        };
+        testNode.innerHTML = "<div data-bind='test1: myObservable, test2: true'></div>";
+
+        ko.applyBindings({ myObservable: observable }, testNode, {independentBindings: true});
+        value_of(updateCount1).should_be(1);
+        value_of(updateCount2).should_be(1);
+
+        // update the observable and check that both bindings were updated
+        observable('B');
+        value_of(updateCount1).should_be(2);
+        value_of(updateCount2).should_be(2);
+    },
+
+    'Binding should be able to return a subscribable value so dependent bindings can be updated (independent mode)': function() {
+        var observable = ko.observable('A'), updateCount1 = 0, updateCount2 = 0;
+        ko.bindingHandlers.test1 = {
+            update: function(element, valueAccessor) {
+                updateCount1++;
+                return ko.dependentObservable(function() {
+                    valueAccessor()();  // access value to create a subscription
+                }, null, {disposeWhenNodeIsRemoved: element});
+            }
+        };
+        ko.bindingHandlers.test2 = {
+            dependencies: 'test1',
+            update: function() {
+                updateCount2++;
+            }
+        };
+        testNode.innerHTML = "<div data-bind='test1: myObservable, test2: true'></div>";
+
+        ko.applyBindings({ myObservable: observable }, testNode, {independentBindings: true});
+        observable('B');
+        value_of(updateCount1).should_be(1);    // update happened inside inner dependentObservable so count isn't updated
+        value_of(updateCount2).should_be(2);
+    },
+
+    'Binding should be able to return a subscribable value from \'init\' so dependent bindings can be updated (independent mode)': function() {
+        var observable = ko.observable('A'), updateCount1 = 0, updateCount2 = 0;
+        ko.bindingHandlers.test1 = {
+            init: function(element, valueAccessor) {
+                return { subscribable: ko.dependentObservable(function() {
+                    updateCount1++;
+                    valueAccessor()();  // access value to create a subscription
+                }, null, {disposeWhenNodeIsRemoved: element}) };
+            }
+        };
+        ko.bindingHandlers.test2 = {
+            dependencies: 'test1',
+            update: function() {
+                updateCount2++;
+            }
+        };
+        testNode.innerHTML = "<div data-bind='test1: myObservable, test2: true'></div>";
+
+        ko.applyBindings({ myObservable: observable }, testNode, {independentBindings: true});
+        observable('B');
+        value_of(updateCount1).should_be(2);
+        value_of(updateCount2).should_be(2);
     },
 
     'Should update all bindings if a extra binding unwraps an observable (only in dependent mode)': function() {

@@ -194,6 +194,7 @@
             
             // It only makes sense to have a single template subscription per element (otherwise which one should have its output displayed?)
             disposeOldSubscriptionAndStoreNewOne(element, templateSubscription);
+            return templateSubscription;
         }
     };
 
