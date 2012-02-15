@@ -34,17 +34,21 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
     var evaluationTimeoutInstance = null;
     function evaluatePossiblyAsync() {
         _needsEvaluation = true;
-        var throttleEvaluationTimeout = dependentObservable['throttleEvaluation'];
-        if (throttleEvaluationTimeout >= 15) {
-            // use setTimeout for values of 15 or greater 
-            clearTimeout(evaluationTimeoutInstance);
-            evaluationTimeoutInstance = setTimeout(evaluateImmediate, throttleEvaluationTimeout);
-        } else if (throttleEvaluationTimeout >= 0) {
-            // use setImmediate for anything less than 15
-            ko.clearImmediate(evaluationTimeoutInstance);
-            evaluationTimeoutInstance = ko.setImmediate(evaluateImmediate);
-        } else
-            evaluateImmediate();
+        if (dependentObservable.asynchronousUpdates) {
+            ko.asynchronousUpdater.add(evaluateImmediate);
+        } else {
+            var throttleEvaluationTimeout = dependentObservable['throttleEvaluation'];
+            if (throttleEvaluationTimeout >= 15) {
+                // use setTimeout for values of 15 or greater 
+                clearTimeout(evaluationTimeoutInstance);
+                evaluationTimeoutInstance = setTimeout(evaluateImmediate, throttleEvaluationTimeout);
+            } else if (throttleEvaluationTimeout >= 0) {
+                // use setImmediate for anything less than 15
+                ko.clearImmediate(evaluationTimeoutInstance);
+                evaluationTimeoutInstance = ko.setImmediate(evaluateImmediate);
+            } else
+                evaluateImmediate();
+        }
     }
 
 
