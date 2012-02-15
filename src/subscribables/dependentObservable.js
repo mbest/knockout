@@ -41,7 +41,7 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
             evaluationTimeoutInstance = setTimeout(evaluateImmediate, throttleEvaluationTimeout);
         } else if (dependentObservable.asynchronousEvaluation || throttleEvaluationTimeout >= 0) {
             // use asynchronousUpdater for anything less than 15
-            ko.asynchronousEvaluator.add(evaluateImmediate);
+            ko.evaluateAsynchronously(evaluateImmediate);
         } else
             evaluateImmediate();
     }

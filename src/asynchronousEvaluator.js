@@ -1,4 +1,5 @@
-ko.asynchronousEvaluator = (function() {
+ko.evaluateAsynchronously = (function() {
+    var setImmediate = !!window['setImmediate'] ? 'setImmediate' : 'setTimeout';    // Use setImmediate function if available; otherwise use setTimeout
     var evaluatorHandler, evaluatorsArray = [];
 
     function processEvaluators() {
@@ -17,10 +18,8 @@ ko.asynchronousEvaluator = (function() {
             return;
         evaluatorsArray.push(evaluator);
         if (!evaluatorHandler)
-            evaluatorHandler = ko.setImmediate(processEvaluators);
+            evaluatorHandler = window[setImmediate](processEvaluators);
     }
 
-    return {
-        add: addEvaluator
-    };
+    return addEvaluator;
 })();
