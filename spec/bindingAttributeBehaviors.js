@@ -763,7 +763,7 @@ describe('Binding attribute syntax', {
         value_of(updateValue).should_be("second value");
     },*/
 
-    'Should process bindings in a certain order based on their type': function() {
+    'Should process bindings in a certain order based on their type and dependencies': function() {
         var lastBindingIndex = 0;
         function checkOrder(bindingIndex) {
             if (bindingIndex < lastBindingIndex)

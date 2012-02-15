@@ -153,7 +153,7 @@ asyncTest("Should update bindings asynchronously if asynchronous option is given
         equal(initPassedValues.length, 1);
         equal(updatePassedValues.length, 2);
         equal(updatePassedValues[1], "B");
-    }, 10);
+    }, 0);
 });
 
 asyncTest("Should update bindings asynchronously if asynchronous and independent options are given", function() {
@@ -188,7 +188,7 @@ asyncTest("Should update bindings asynchronously if asynchronous and independent
         equal(initPassedValues.length, 1);
         equal(updatePassedValues.length, 2);
         equal(updatePassedValues[1], "B");
-    }, 10);
+    }, 0);
 });
 
 asyncTest("Should update with block asynchronously if asynchronous and independent options are given", function() {
@@ -225,7 +225,7 @@ asyncTest("Should update with block asynchronously if asynchronous and independe
         equal(initPassedValues.length, 1);
         equal(updatePassedValues.length, 2);
         equal(updatePassedValues[1], "C");
-    }, 10);
+    }, 0);
 });
 
 asyncTest("Should update template asynchronously if asynchronous and independent options are given", function() {
@@ -262,7 +262,7 @@ asyncTest("Should update template asynchronously if asynchronous and independent
         equal(initPassedValues.length, 1);
         equal(updatePassedValues.length, 2);
         equal(updatePassedValues[1], "B");
-    }, 10);
+    }, 0);
 });
 
 asyncTest("Should update foreach items asynchronously if asynchronous and independent options are given", function() {
@@ -300,5 +300,5 @@ asyncTest("Should update foreach items asynchronously if asynchronous and indepe
         equal(updatePassedValues.length, 2);
         equal(initPassedValues[1], "C");
         equal(updatePassedValues[1], "C");
-    }, 10);
+    }, 0);
 });
