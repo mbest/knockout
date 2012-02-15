@@ -154,10 +154,14 @@
             // Support anonymous templates
             var bindingValue = ko.utils.unwrapObservable(valueAccessor());
             if ((typeof bindingValue != "string") && (!bindingValue['name']) && (element.nodeType == 1 || element.nodeType == 8)) {
-                // It's an anonymous template - store the element contents, then clear the element
-                var templateNodes = ko.virtualElements.childNodes(element),
-                    container = ko.utils.moveNodesToContainerElement(templateNodes); // This also removes the nodes from their current parent
-                new ko.templateSources.anonymousTemplate(element)['nodes'](container);
+                // It's an anonymous template - store the element contents and clear the element
+                // But if the template is already stored, don't do anything (init must have been called on this element before)
+                var templateSource = new ko.templateSources.anonymousTemplate(element);
+                if (!templateSource['nodes']()) {
+                    var templateNodes = ko.virtualElements.childNodes(element),
+                        container = ko.utils.moveNodesToContainerElement(templateNodes); // This also removes the nodes from their current parent
+                    templateSource['nodes'](container);
+                }
             }
         },
         'update': function (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {

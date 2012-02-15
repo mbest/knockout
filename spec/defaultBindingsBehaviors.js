@@ -1309,24 +1309,29 @@ describe('Binding: With Light', {
 
     'Should be able to nest a containerless template within \"withlight\"': function() {
         testNode.innerHTML = "<div data-bind='withlight: someitem'>text" +
-            "<!-- ko if: childprop --><span data-bind='text: childprop'></span><!-- /ko --></div>";
+            "<!-- ko foreach: childprop --><span data-bind='text: $data'></span><!-- /ko --></div>";
 
-        var childprop = ko.observable(undefined);
+        var childprop = ko.observableArray([]);
         var someitem = ko.observable({childprop: childprop});
         var viewModel = {someitem: someitem};
         ko.applyBindings(viewModel, testNode);
 
-        // First it's not there
+        // First it's not there (by template)
         var container = testNode.childNodes[0];
-        value_of(container).should_contain_html("text<!-- ko if: childprop --><!-- /ko -->");
+        value_of(container).should_contain_html("text<!-- ko foreach: childprop --><!-- /ko -->");
 
         // Then it's there
-        childprop('me');
-        value_of(container).should_contain_html("text<!-- ko if: childprop --><span data-bind=\"text: childprop\">me</span><!-- /ko -->");
+        childprop.push('me')
+        value_of(container).should_contain_html("text<!-- ko foreach: childprop --><span data-bind=\"text: $data\">me</span><!-- /ko -->");
+
+        // Then there's a second one
+        childprop.push('me2')
+        value_of(container).should_contain_html("text<!-- ko foreach: childprop --><span data-bind=\"text: $data\">me</span><span data-bind=\"text: $data\">me2</span><!-- /ko -->");
 
         // Then it changes
-        someitem({childprop: 'notme'});
-        value_of(container).should_contain_html("text<!-- ko if: childprop --><span data-bind=\"text: childprop\">notme</span><!-- /ko -->");
+        someitem({childprop: ['notme']});
+        container = testNode.childNodes[0];
+        value_of(container).should_contain_html("text<!-- ko foreach: childprop --><span data-bind=\"text: $data\">notme</span><!-- /ko -->");
     }
 });
 
@@ -1368,10 +1373,11 @@ describe('Binding: With', {
     
     'Should not bind the same elements more than once even if the supplied value notifies a change': function() {
         var countedClicks = 0;
-        var someItem = ko.observable({
+        var someItemContents = {
             childProp: ko.observable('Hello'),
             handleClick: function() { countedClicks++ }
-        });
+        };
+        var someItem = ko.observable(someItemContents);
         
         testNode.innerHTML = "<div data-bind='with: someItem'><span data-bind='click: handleClick, text: childProp'></span></div>";
         ko.applyBindings({ someItem: someItem }, testNode);
@@ -1384,6 +1390,16 @@ describe('Binding: With', {
         
         // Force "update" binding handler to fire, then check we still have one subscriber...
         someItem.valueHasMutated();
+        value_of(someItem().childProp.getSubscriptionsCount()).should_be(1);
+        
+        // ... and one click handler
+        countedClicks = 0;
+        ko.utils.triggerEvent(testNode.childNodes[0].childNodes[0], "click");
+        value_of(countedClicks).should_be(1);		
+
+        // Clear and restore data, then check we still have one subscriber...
+        someItem(null);
+        someItem(someItemContents);
         value_of(someItem().childProp.getSubscriptionsCount()).should_be(1);
         
         // ... and one click handler
@@ -1487,24 +1503,33 @@ describe('Binding: With', {
 
     'Should be able to nest a containerless template within \"with\"': function() {
         testNode.innerHTML = "<div data-bind='with: someitem'>text" +
-            "<!-- ko if: childprop --><span data-bind='text: childprop'></span><!-- /ko --></div>";
+            "<!-- ko foreach: childprop --><span data-bind='text: $data'></span><!-- /ko --></div>";
 
-        var childprop = ko.observable(undefined);
+        var childprop = ko.observableArray([]);
         var someitem = ko.observable({childprop: childprop});
         var viewModel = {someitem: someitem};
         ko.applyBindings(viewModel, testNode);
 
-        // First it's not there
+        // First it's not there (by template)
         var container = testNode.childNodes[0];
-        value_of(container).should_contain_html("text<!-- ko if: childprop --><!-- /ko -->");
+        value_of(container).should_contain_html("text<!-- ko foreach: childprop --><!-- /ko -->");
 
         // Then it's there
-        childprop('me');
-        value_of(container).should_contain_html("text<!-- ko if: childprop --><span data-bind=\"text: childprop\">me</span><!-- /ko -->");
+        childprop.push('me')
+        value_of(container).should_contain_html("text<!-- ko foreach: childprop --><span data-bind=\"text: $data\">me</span><!-- /ko -->");
 
+        // Then there's a second one
+        childprop.push('me2')
+        value_of(container).should_contain_html("text<!-- ko foreach: childprop --><span data-bind=\"text: $data\">me</span><span data-bind=\"text: $data\">me2</span><!-- /ko -->");
+
+        // Then it's not there (by with)
+        someitem(null);
+        value_of(testNode).should_contain_html('<div data-bind="with: someitem"></div>');
+        
         // Then it changes
-        someitem({childprop: 'notme'});
-        value_of(container).should_contain_html("text<!-- ko if: childprop --><span data-bind=\"text: childprop\">notme</span><!-- /ko -->");
+        someitem({childprop: ['notme']});
+        container = testNode.childNodes[0];
+        value_of(container).should_contain_html("text<!-- ko foreach: childprop --><span data-bind=\"text: $data\">notme</span><!-- /ko -->");
     }
 });
 

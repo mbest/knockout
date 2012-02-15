@@ -461,36 +461,32 @@ ko.bindingHandlers['hasfocus'] = {
     }
 };
 
-var withBoundDomDataKey = ko.utils.domData.nextKey(), withContainerDomDataKey = ko.utils.domData.nextKey();
-ko.bindingHandlers['with'] = {
+/*var withDomDataKey = ko.utils.domData.nextKey();
+ko.bindingHandlers['withbroken'] = {
     'flags': bindingFlags_contentBind | bindingFlags_canUseVirtual,
     'update': function(element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
-        var isBound = ko.domDataGet(element, withBoundDomDataKey),
-            container = ko.domDataGet(element, withContainerDomDataKey),
+        var withData = ko.domDataGet(element, withDomDataKey) || {},
+            isBound = withData.isBound, container = withData.container,
             dataValue = ko.utils.unwrapObservable(valueAccessor());
 
         if (!isBound && dataValue) {
-            if (container) {
+            if (container)
                 ko.virtualElements.setDomNodeChildren(element, ko.utils.makeArray(container.childNodes));
-                ko.domDataSet(element, withContainerDomDataKey);  // clear container from data storage
-            }
             var innerContext = bindingContext['createChildContext'](function() {
                 return ko.utils.unwrapObservable(valueAccessor());
             });
             ko.applyBindingsToDescendants(innerContext, element, true);
-            ko.domDataSet(element, withBoundDomDataKey, true);
+            ko.domDataSet(element, withDomDataKey, {isBound: true});
         }
         else if (!dataValue && !container) {
             var nodeArray = ko.virtualElements.childNodes(element);
-            if (isBound) {
+            if (isBound)
                 ko.utils.arrayForEach(nodeArray, ko.disposeNode);
-                ko.domDataSet(element, withBoundDomDataKey, false);
-            }
             container = ko.utils.moveNodesToContainerElement(nodeArray);
-            ko.domDataSet(element, withContainerDomDataKey, container);
+            ko.domDataSet(element, withDomDataKey, {container: container});
         }
     }
-};
+};*/
 
 function templateBasedBinding(makeOptionsFunction) {
     function makeTemplateValueAccessor(valueAccessor) {
@@ -510,6 +506,9 @@ function templateBasedBinding(makeOptionsFunction) {
         }
     };
 }
+
+// "with: someExpression" is equivalent to "template: { if: someExpression, data: someExpression }"
+ko.bindingHandlers['with'] = new templateBasedBinding( function(value, options) { options['if'] = value; options['data'] = value; });
 
 // "if: someExpression" is equivalent to "template: { if: someExpression }"
 ko.bindingHandlers['if'] = templateBasedBinding( function(value, options) { options['if'] = value; });
