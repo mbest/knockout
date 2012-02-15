@@ -15,7 +15,9 @@
 6. The `with` binding no longer uses the template code and thus is faster and more efficient. It no longer clears and re-creates its contents unless necessary (if the `with` value changes to or from a *falsy* value). In addition, the `withlight` binding is available if you know you’ll never have a *falsy* value.
 7. The `text` binding can now be used with container-less syntax: `<!--ko text: value--><!--/ko-->`.
 8. Custom bindings can be set up to run after their descendants’ bindings have run by using the `contentUpdate` flag (see the section below for how to set the flags). This is useful if a binding modifies its descendant elements and needs them to be initialized first.
-9. The minified code is only slightly larger. Even with a lot of new features (and some additional error reporting), the minified version of this update is just 1% larger than the current master *head* (for comparison, the debug version is almost 7% larger).
+9. Bindings can be dependent on other bindings. Dependencies can be set either by the binding handler or in the `data-bind` string. If binding *B* is dependent on binding *A*, Knockout will ensure that *A* is present whenever *B* is present (will report an error if *A* is not), that *A* is run before *B* (but if that can’t happen because of the bindings’ flags, it will report an error), and that *B* is updated whenever *A* is updated (applies only when running in independent mode).
+10. Bindings can be configured to update asynchronously by calling `applyBindings` with the `asynchronousUpdates` option. Normally, updating an observable will immediately update any bindings that use the observable. With this option, the update on the binding will run after the current processing is complete.
+11. The minified code is only slightly larger. Even with a lot of new features (and some additional error reporting), the minified version of this update is less than 2% larger than the current master *head* (for comparison, the debug version is over 9% larger).
 
 ### What are the new interfaces in this update?
 
@@ -28,13 +30,15 @@
    * `contentUpdate`: For bindings that modify or accesses the element’s contents after the content’s bindings have been processed. Bindings with this flag are run after all other bindings for that element and after the element’s contents have been processed.
    * `canUseVirtual`: For bindings that can be used in container-less elements like `<!-- ko if: value --><!-- /ko -->`.
    * `noValue`: For bindings that don’t require a value (default value is *true*).
-2. `ko.applyBindings` accepts a third parameter, `options`, that currently accepts two options, `independentBindings` and `eventHandlersUseObjectForThis`. See items 2 and 5 above for a description of what these options do. Here’s how you would call `ko.applyBindings` with options: `ko.applyBindings(viewModel, node, {independentBindings: true});`
-3. `bindingContext.createChildContext` will accept an observable as a data value, which it will automatically unwrap and track for changes. A binding handler that uses this feature avoids having to create a new context and re-bind its descendants if the data value changes.
+2. `ko.applyBindings` accepts a third parameter, `options`, that currently accepts three options: `independentBindings`, `eventHandlersUseObjectForThis`, and `asynchronousUpdates`. See items 2, 5, and 10 above for a description of what these options do. Here’s how you would call `ko.applyBindings` with options: `ko.applyBindings(viewModel, node, {independentBindings: true});`
+3. `bindingContext.createChildContext` will accept an observable or a function as a data value, which it will automatically unwrap and track for changes. A binding handler that uses this feature avoids having to create a new context and re-bind its descendants if the data value changes.
 4. `ko.cleanAndRemoveNode` is a more descriptive synonym for `ko.removeNode`.
 5. `ko.computed` exports two new methods: `addDisposalNodes` and `replaceDisposalNodes`. The former can be used instead of (or in addition to) the `disposeWhenNodeIsRemoved` option. The big change is that computed observables can track multiple nodes, which can be changed dynamically. Only when all of the tracked nodes are removed will it be disposed.
 6. `ko.applyBindingsToNode` accepts a fourth parameter, `shouldBindDescendants`.
 7. `ko.bindingProvider.instance.clearCache` is a new function that lets you clear the binding cache. (See the last section for why you might want to use it.)
 8. The last parameter to `utils.setDomNodeChildrenFromArrayMapping` is a callback function that is called after nodes are added to the document. This callback is now passed a third parameter, `subscription`, on which it can call `addDisposalNodes` with any of the given nodes that should be watched. If the callback doesn’t call `addDisposalNodes`, `setDomNodeChildrenFromArrayMapping` will just watch all the nodes.
+9. Binding handlers can set a `dependencies` property to specify which other bindings they are dependent on. For a single dependency, the value should be the name of the binding as a string: `dependencies: 'nameOfBinding'`. For multiple dependencies, the value should be an array: `dependencies: ['binding1', 'binding2']`. Dependencies can also be specified in the `data-bind` attribute using the same syntax. If dependencies are specified in both locations, they will be added to each other.
+10. Knockout will use the `setImmediate` function, if available, instead of `setTimeout`, when it needs to do asynchronous evaluation. `setImmediate` can be downloaded from [Github](https://github.com/NobleJS/setImmediate) (it’s also included in the Knockout source in spec/lib).
 
 ### What compatibility issues are there with this update?
 
@@ -44,9 +48,10 @@
    3. Bindings with `contentUpdate`: `value`, `selectedOptions`
 2. A custom binding that manages the binding of its descendants will need to be changed to work with the independent binding setting. In addition to (or instead of) returning a specific object value from its `init` function, it must set a `flags` property for the handler with a value of `ko.bindingFlags.contentBind` (see above for the full list of flags).
 3. `ko.virtualElements.allowedBindings` is deprecated in favor of the `canUseVirtual` flag (see description of flags above).
-4. `ko.jsonExpressionRewriting` is no longer exported. It was heavily modified in this update, and rather than explaining the changes, it was simpler (and space saving) to not export it.
+4. `ko.jsonExpressionRewriting` is no longer exported. It was heavily modified in this update, and rather than explaining the changes, it was simpler (and space saving) to not export it. `ko.jsonExpressionRewriting.bindingRewriteValidators` is now exported as just `ko.bindingRewriteValidators`.
 5. The `text` binding will always create a single text node. Previously some browsers would convert new-lines in the text into `br` nodes. Now they will stay as new-lines in a single text node. Use the `white-space: pre-wrap` style to format the text.
 6. If a normal binding (not listed in item 1 in this section) is specified after a `contentUpdate` binding, it will also be run after the element’s contents have been processed. Probably this won’t be an issue most of the time, but it may be something to watch out for.
+7. If a binding handler manages updates through its own computed observable, it will need to be modified to work well with dependencies and asynchronous updates. To support dependencies, it will need to return the computed observable from its `init` or `update` function (whichever one creates it). From the `init` function, it should return an object with a `subscribable` property set to the computed observable; from the `update` function, it should just return the computed observable directly. To support asynchronous updates, the binding handler will have to read the `$options` property of the binding context and if `asynchronousUpdates` is set, set the `asynchronousEvaluation` property of its computed observable to `true`.
 
 ### The following bugs were fixed as part of this update:
 

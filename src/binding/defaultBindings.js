@@ -127,19 +127,17 @@ ko.bindingHandlers['value'] = {
                 handleEventAsynchronously = true;
                 eventName = eventName.substring("after".length);
             }
-            var runEventHandler = handleEventAsynchronously ? function(handler) { ko.setImmediate(handler) }
-                                                            : function(handler) { handler() };
+            var getEventHandler = handleEventAsynchronously ? function(handler) { return function() { ko.evaluateAsynchronously(handler) } }
+                                                            : function(handler) { return handler };
             
-            ko.utils.registerEventHandler(element, eventName, function () {
-                runEventHandler(function() {
-                    var modelValue = valueAccessor();
-                    var elementValue = ko.selectExtensions.readValue(element);
-                    if (ko.isWriteableObservable(modelValue))
-                        modelValue(elementValue);
-                    else
-                        ko.bindingExpressionRewriting.writeValueToProperty(allBindingsAccessor, 'value', elementValue);
-                });
-            });	    	
+            ko.utils.registerEventHandler(element, eventName, getEventHandler(function() {
+                var modelValue = valueAccessor();
+                var elementValue = ko.selectExtensions.readValue(element);
+                if (ko.isWriteableObservable(modelValue))
+                    modelValue(elementValue);
+                else
+                    ko.bindingExpressionRewriting.writeValueToProperty(allBindingsAccessor, 'value', elementValue);
+            }));	    	
         });
     },
     'update': function (element, valueAccessor) {
@@ -166,7 +164,7 @@ ko.bindingHandlers['value'] = {
                 if (newValue !== ko.selectExtensions.readValue(element))
                     ko.utils.triggerEvent(element, "change");
                 else
-                    ko.setImmediate(applyValueAction);
+                    ko.evaluateAsynchronously(applyValueAction);
             }
         }
     }

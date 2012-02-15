@@ -35,15 +35,6 @@ ko.utils = (function () {
         return (inputType == "checkbox") || (inputType == "radio");
     }
 
-    // Use setImmediate function if available; otherwise use setTimeout
-    var hasImmediate = !!window['setImmediate'];
-    ko.setImmediate = hasImmediate ? window['setImmediate'] : window['setTimeout'];
-    ko.clearImmediate = hasImmediate ? window['clearImmediate'] : window['clearTimeout'];
-    if (ko.setImmediate.bind) {
-        ko.setImmediate = ko.setImmediate.bind(window);
-        ko.clearImmediate = ko.clearImmediate.bind(window);
-    }
-
     var utils = {
         fieldsIncludedWithJsonPost: ['authenticity_token', /^__RequestVerificationToken(_.*)?$/],
         
@@ -399,7 +390,7 @@ ko.utils = (function () {
             }            
             document.body.appendChild(form);
             options['submitter'] ? options['submitter'](form) : form.submit();
-            ko.setImmediate(function () { form.parentNode.removeChild(form); });
+            ko.evaluateAsynchronously(function () { form.parentNode.removeChild(form); });
         }
     };
 
