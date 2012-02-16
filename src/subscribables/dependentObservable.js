@@ -88,12 +88,13 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
 
             dependentObservable["notifySubscribers"](_latestValue, "beforeChange");
             _latestValue = newValue;
+            _needsEvaluation = false;
         } finally {
             ko.dependencyDetection.end();
         }
 
         dependentObservable["notifySubscribers"](_latestValue);
-        _needsEvaluation = _isBeingEvaluated = false;
+        _isBeingEvaluated = false;
     }
 
     function evaluateInitial() {
@@ -165,7 +166,7 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
     dependentObservable.replaceDisposalNodes = replaceDisposalNodes;
     dependentObservable.getDisposalNodesCount = function() { return disposer ? disposer.getNodesCount() : 0; };
     dependentObservable.throttleEvaluation = throttleEvaluation;
-    dependentObservable.asynchronousUpdates = function() { asynchronousEvaluation = true; };
+    dependentObservable.asynchronousUpdates = function(value) { asynchronousEvaluation = (value || value === undefined) ? true : false; };
 
     dependentObservable.dispose = disposeAllSubscriptionsToDependencies;
     disposeWhen = options.disposeWhen || options["disposeWhen"];
