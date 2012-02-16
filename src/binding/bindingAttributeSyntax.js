@@ -216,7 +216,7 @@
             if (binding.handler['update'])
                 binding.subscribable = ko.utils.possiblyWrap(updateCaller(binding), node) || binding.subscribable;
             if (asynchronousUpdates && binding.subscribable)
-                binding.subscribable.asynchronousEvaluation = true;
+                binding.subscribable.asynchronousUpdates();
         }
         function callHandlersDependent(binding) {
             if (binding.handler['update'])
@@ -332,7 +332,7 @@
         }, node);
 
         if (asynchronousUpdates && allBindingsUpdater)
-            allBindingsUpdater.asynchronousEvaluation = true;
+            allBindingsUpdater.asynchronousUpdates();
 
         // Don't want to call init function or bind descendents twice
         runInits = dontBindDescendants = false;        

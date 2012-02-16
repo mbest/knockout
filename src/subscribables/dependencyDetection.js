@@ -33,3 +33,5 @@ ko.dependencyDetection = (function () {
         }
     };
 })();
+
+ko.exportSymbol('ignoreDependencies', ko.ignoreDependencies = ko.dependencyDetection.ignore);

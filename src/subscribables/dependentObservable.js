@@ -31,25 +31,31 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
     }
 
 
-    var evaluationTimeoutInstance = null;
+    var throttleEvaluationTimeout, asynchronousEvaluation, evaluationTimeoutInstance = null;
+    function throttleEvaluation(timeout) {
+        if (timeout >= 15)
+            throttleEvaluationTimeout = timeout;    // use setTimeout for values of 15 or greater 
+        else
+            asynchronousEvaluation = true;          // use asynchronousUpdater for anything less than 15
+    }    
     function evaluatePossiblyAsync() {
+        if (_isBeingEvaluated)
+            return;
         _needsEvaluation = true;
-        var throttleEvaluationTimeout = dependentObservable['throttleEvaluation'];
-        if (throttleEvaluationTimeout >= 15) {
-            // use setTimeout for values of 15 or greater 
+        if (throttleEvaluationTimeout) {
             clearTimeout(evaluationTimeoutInstance);
             evaluationTimeoutInstance = setTimeout(evaluateImmediate, throttleEvaluationTimeout);
-        } else if (dependentObservable.asynchronousEvaluation || dependentObservable['asynchronousEvaluation'] || throttleEvaluationTimeout >= 0) {
-            // use asynchronousUpdater for anything less than 15
+        } else if (asynchronousEvaluation) {
             ko.evaluateAsynchronously(evaluateImmediate);
-        } else
+        } else {
             evaluateImmediate();
+        }
     }
 
 
     var disposeWhen, isBeingEvaluated;
     function evaluateImmediate() {
-        if (_isBeingEvaluated || !_needsEvaluation)
+        if (!_needsEvaluation)
             return;
 
         // disposeWhen won't be set until after initial evaluation
@@ -154,10 +160,12 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
         return _latestValue;
 
     dependentObservable.getDependenciesCount = function () { return _subscriptionsToDependencies.length; };
-    dependentObservable.hasWriteFunction = typeof options["write"] === "function";
+    dependentObservable.hasWriteFunction = typeof writeFunction === "function";
     dependentObservable.addDisposalNodes = addDisposalNodes;
     dependentObservable.replaceDisposalNodes = replaceDisposalNodes;
     dependentObservable.getDisposalNodesCount = function() { return disposer ? disposer.getNodesCount() : 0; };
+    dependentObservable.throttleEvaluation = throttleEvaluation;
+    dependentObservable.asynchronousUpdates = function() { asynchronousEvaluation = true; };
 
     dependentObservable.dispose = disposeAllSubscriptionsToDependencies;
     disposeWhen = options.disposeWhen || options["disposeWhen"];
@@ -174,7 +182,9 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
         'getDependenciesCount', dependentObservable.getDependenciesCount,
         'addDisposalNodes', dependentObservable.addDisposalNodes,
         'replaceDisposalNodes', dependentObservable.replaceDisposalNodes,
-        'getDisposalNodesCount', dependentObservable.getDisposalNodesCount
+        'getDisposalNodesCount', dependentObservable.getDisposalNodesCount,
+        'throttleEvaluation', dependentObservable.throttleEvaluation,
+        'asynchronousUpdates', dependentObservable.asynchronousUpdates
     );
 };
 

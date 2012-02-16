@@ -38,9 +38,9 @@ asyncTest("Should notify subscribers asynchronously after writes stop for the sp
 module("Throttled dependent observables");
 
 asyncTest("Should notify subscribers asynchronously after dependencies stop updating for the specified timeout duration", function() {
-	var underlying = ko.observable();
+	var underlying = ko.observable(), lastUpdateValue;
 	var asyncDepObs = ko.dependentObservable(function() {
-		return underlying();
+		return lastUpdateValue = underlying();
 	}).extend({ throttle: 100 });
 	var notifiedValues = []
 	asyncDepObs.subscribe(function(value) {
@@ -53,7 +53,7 @@ asyncTest("Should notify subscribers asynchronously after dependencies stop upda
 
 	// Mutate
 	underlying('New value');
-	equal(asyncDepObs(), undefined, 'Should not update synchronously');
+	equal(lastUpdateValue, undefined, 'Should not update synchronously');
 	equal(notifiedValues.length, 0);
 	stop();
 
@@ -61,14 +61,14 @@ asyncTest("Should notify subscribers asynchronously after dependencies stop upda
 	setTimeout(function() {
 		// After 50ms, still shouldn't have evaluated
 		start();
-		equal(asyncDepObs(), undefined, 'Should not update until throttle timeout');
+		equal(lastUpdateValue, undefined, 'Should not update until throttle timeout');
 		equal(notifiedValues.length, 0);
 		stop();
 
 		// Wait again
 		setTimeout(function() {
 			start();
-			equal(asyncDepObs(), 'New value');
+			equal(lastUpdateValue, 'New value');
 			equal(notifiedValues.length, 1);
 			equal(notifiedValues[0], 'New value');
 		}, 60);
@@ -191,14 +191,14 @@ asyncTest("Should update bindings asynchronously if asynchronous and independent
     }, 0);
 });
 
-asyncTest("Should update with block asynchronously if asynchronous and independent options are given", function() {
+asyncTest("Should update 'withlight' block asynchronously if asynchronous and independent options are given", function() {
     var observable = new ko.observable("A");
     var initPassedValues = [], updatePassedValues = [];
     ko.bindingHandlers.test = {
         init: function (element, valueAccessor) { initPassedValues.push(valueAccessor()); },
         update: function (element, valueAccessor) { updatePassedValues.push(valueAccessor()); }
     };
-    this.testNode.innerHTML = "<div data-bind='with: myObservable'><div data-bind='test: $data'></div></div>";
+    this.testNode.innerHTML = "<div data-bind='withlight: myObservable'><div data-bind='test: $data'></div></div>";
 
     ko.applyBindings({ myObservable: observable }, this.testNode, {independentBindings: true, asynchronousUpdates: true});
     
@@ -222,7 +222,7 @@ asyncTest("Should update with block asynchronously if asynchronous and independe
     setTimeout(function() {
         start();
         // only the latest value should be used
-        equal(initPassedValues.length, 1);
+        equal(initPassedValues.length, 1);      // 1 if 'withlight' is used; 2 if 'with' is used
         equal(updatePassedValues.length, 2);
         equal(updatePassedValues[1], "C");
     }, 0);
@@ -265,7 +265,7 @@ asyncTest("Should update template asynchronously if asynchronous and independent
     }, 0);
 });
 
-asyncTest("Should update foreach items asynchronously if asynchronous and independent options are given", function() {
+asyncTest("Should update 'foreach' items asynchronously if asynchronous and independent options are given", function() {
     var observable = new ko.observableArray(["A"]);
     var initPassedValues = [], updatePassedValues = [];
     ko.bindingHandlers.test = {

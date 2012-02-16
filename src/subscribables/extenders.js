@@ -4,7 +4,11 @@ ko.extenders = {
 
         // (1) For dependent observables, we throttle *evaluations* so that, no matter how fast its dependencies
         //     notify updates, the target doesn't re-evaluate (and hence doesn't notify) faster than a certain rate
-        target['throttleEvaluation'] = timeout;
+        if (target['throttleEvaluation'])
+            target['throttleEvaluation'](timeout);
+
+        if (!ko.isWriteableObservable(target))
+            return target;
 
         // (2) For writable targets (observables, or writable dependent observables), we throttle *writes*
         //     so the target cannot change value synchronously or faster than a certain rate
