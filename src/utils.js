@@ -43,10 +43,10 @@ ko.utils = (function () {
                 action(array[i]);
         },
 
-        arrayIndexOf: function (array, item) {
+        arrayIndexOf: function (array, item, fromIndex) {
             if (typeof Array.prototype.indexOf == "function")
-                return Array.prototype.indexOf.call(array, item);
-            for (var i = 0, j = array.length; i < j; i++)
+                return Array.prototype.indexOf.call(array, item, fromIndex);
+            for (var i = fromIndex || 0, j = array.length; i < j; i++)
                 if (array[i] === item)
                     return i;
             return -1;
@@ -215,6 +215,7 @@ ko.utils = (function () {
         },
 
         registerEventHandler: function (element, eventType, handler) {
+            handler = ko.tasks.makeProcessedEvaluator(handler);
             if (typeof jQuery != "undefined") {
                 if (isClickOnCheckableElement(element, eventType)) {
                     // For click events on checkboxes, jQuery interferes with the event handling in an awkward way:

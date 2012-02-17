@@ -17,9 +17,9 @@ ko.extenders = {
             'read': target,
             'write': function(value) {
                 clearTimeout(writeTimeoutInstance);
-                writeTimeoutInstance = setTimeout(function() {
+                writeTimeoutInstance = setTimeout(ko.tasks.makeProcessedEvaluator(function() {
                     target(value);
-                }, timeout);                
+                }), timeout);
             }
         });
     },

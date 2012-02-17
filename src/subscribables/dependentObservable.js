@@ -35,7 +35,7 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
     function throttleEvaluation(timeout) {
         // use setTimeout for values of 15 or greater
         throttleEvaluationTimeout = (timeout >= 15) ? timeout : undefined;
-        // use evaluateAsynchronously for anything less than 15
+        // use tasks.processDelayed for anything less than 15
         deferEvaluationSetting = (timeout >= 0);
         return dependentObservable;
     }
@@ -50,9 +50,9 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
         _needsEvaluation = true;
         if (throttleEvaluationTimeout) {
             clearTimeout(evaluationTimeoutInstance);
-            evaluationTimeoutInstance = setTimeout(evaluateImmediate, throttleEvaluationTimeout);
+            evaluationTimeoutInstance = setTimeout(ko.tasks.makeProcessedEvaluator(evaluateImmediate), throttleEvaluationTimeout);
         } else if (deferEvaluationSetting) {
-            ko.evaluateAsynchronously(evaluateImmediate);
+            ko.tasks.processDelayed(evaluateImmediate);
         } else {
             evaluateImmediate();
         }
