@@ -31,17 +31,17 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
     }
 
 
-    var throttleEvaluationTimeout, deferEvaluationSetting, evaluationTimeoutInstance = null;
+    var throttleEvaluationTimeout, deferUpdatesSetting, evaluationTimeoutInstance = null;
     function throttleEvaluation(timeout) {
         // use setTimeout for values of 15 or greater
         throttleEvaluationTimeout = (timeout >= 15) ? timeout : undefined;
         // use tasks.processDelayed for anything less than 15
-        deferEvaluationSetting = (timeout >= 0);
+        deferUpdatesSetting = (timeout >= 0);
         return dependentObservable;
     }
-    function deferEvaluation(value) {
+    function deferUpdates(value) {
         throttleEvaluationTimeout = undefined;
-        deferEvaluationSetting = (value || value === undefined) ? true : false;
+        deferUpdatesSetting = (value || value === undefined) ? true : false;
         return dependentObservable;
     }
     function evaluatePossiblyAsync() {
@@ -51,7 +51,7 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
         if (throttleEvaluationTimeout) {
             clearTimeout(evaluationTimeoutInstance);
             evaluationTimeoutInstance = ko.evaluateAsynchronously(evaluateImmediate, throttleEvaluationTimeout);
-        } else if (deferEvaluationSetting) {
+        } else if (deferUpdatesSetting) {
             ko.tasks.processDelayed(evaluateImmediate);
         } else {
             evaluateImmediate();
@@ -172,7 +172,7 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
         replaceDisposalNodes:   replaceDisposalNodes,
         getDisposalNodesCount:  function() { return disposer ? disposer.getNodesCount() : 0; },
         throttleEvaluation:     throttleEvaluation,
-        deferEvaluation:        deferEvaluation,
+        deferUpdates:           deferUpdates,
         dispose:                disposeAllSubscriptionsToDependencies
     });
 
@@ -192,7 +192,7 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
         'replaceDisposalNodes', dependentObservable.replaceDisposalNodes,
         'getDisposalNodesCount', dependentObservable.getDisposalNodesCount,
         'throttleEvaluation', dependentObservable.throttleEvaluation,
-        'deferEvaluation', dependentObservable.deferEvaluation
+        'deferUpdates', dependentObservable.deferUpdates
     );
 };
 
