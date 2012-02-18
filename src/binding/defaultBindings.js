@@ -244,6 +244,9 @@ ko.bindingHandlers['options'] = {
 
             if (countSelectionsRetained < previousSelectedValues.length)
                 ko.utils.triggerEvent(element, "change");
+
+            // Workaround for IE9 bug
+            ko.utils.ensureSelectElementIsRenderedCorrectly(element);
         }
     }
 };
