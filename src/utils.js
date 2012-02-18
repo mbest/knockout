@@ -215,7 +215,7 @@ ko.utils = (function () {
         },
 
         registerEventHandler: function (element, eventType, handler) {
-            handler = ko.tasks.makeProcessedEvaluator(handler);
+            handler = ko.tasks.makeProcessedCallback(handler);
             if (typeof jQuery != "undefined") {
                 if (isClickOnCheckableElement(element, eventType)) {
                     // For click events on checkboxes, jQuery interferes with the event handling in an awkward way:

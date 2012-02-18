@@ -50,7 +50,7 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
         _needsEvaluation = true;
         if (throttleEvaluationTimeout) {
             clearTimeout(evaluationTimeoutInstance);
-            evaluationTimeoutInstance = setTimeout(ko.tasks.makeProcessedEvaluator(evaluateImmediate), throttleEvaluationTimeout);
+            evaluationTimeoutInstance = ko.evaluateAsynchronously(evaluateImmediate, throttleEvaluationTimeout);
         } else if (deferEvaluationSetting) {
             ko.tasks.processDelayed(evaluateImmediate);
         } else {
