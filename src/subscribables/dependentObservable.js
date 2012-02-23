@@ -1,3 +1,5 @@
+var protoProp = ko.observable.protoProperty; // == "__ko_proto__"
+
 ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunctionTarget, options) {
     var _latestValue,
         _needsEvaluation = true,
@@ -28,6 +30,7 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
             subscription.dispose();
         });
         _subscriptionsToDependencies = [];
+        _needsEvaluation = false;
     }
 
 
@@ -52,12 +55,19 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
             clearTimeout(evaluationTimeoutInstance);
             evaluationTimeoutInstance = ko.evaluateAsynchronously(evaluateImmediate, throttleEvaluationTimeout);
         } else if (deferUpdatesSetting) {
-            ko.tasks.processDelayed(evaluateImmediate);
+            ko.tasks.processDelayed(evaluateImmediate, true, disposalNodes);
         } else {
             evaluateImmediate();
         }
+        dependentObservable["notifySubscribers"](_latestValue, "dirty");
+        if (!_needsEvaluation && throttleEvaluationTimeout)  // The notification might have triggered an evaluation
+            clearTimeout(evaluationTimeoutInstance);
     }
 
+    function addDependency(subscribable) {
+        var event = (subscribable[protoProp] === ko.dependentObservable) ? "dirty" : "change";
+        _subscriptionsToDependencies.push(subscribable.subscribe(evaluatePossiblyAsync, null, event));
+    }
 
     function evaluateImmediate() {
         if (_isBeingEvaluated || !_needsEvaluation)
@@ -80,7 +90,7 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
                 if ((inOld = ko.utils.arrayIndexOf(disposalCandidates, subscribable)) >= 0)
                     disposalCandidates[inOld] = undefined; // Don't want to dispose this subscription, as it's still being used
                 else
-                    _subscriptionsToDependencies.push(subscribable.subscribe(evaluatePossiblyAsync)); // Brand new subscription - add it
+                    addDependency(subscribable); // Brand new subscription - add it
             });
 
             var newValue = readFunction.call(evaluatorFunctionTarget);
@@ -105,9 +115,7 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
     function evaluateInitial() {
         _isBeingEvaluated = true;
         try {
-            ko.dependencyDetection.begin(function(subscribable) {
-                _subscriptionsToDependencies.push(subscribable.subscribe(evaluatePossiblyAsync));
-            });
+            ko.dependencyDetection.begin(addDependency);
             _latestValue = readFunction.call(evaluatorFunctionTarget);
         } finally {
             ko.dependencyDetection.end();
@@ -119,14 +127,21 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
         if (arguments.length > 0) {
             set.apply(dependentObservable, arguments);
         } else {
-            return get();             
+            return get();
         }
     }
     
     function set() {
         if (typeof writeFunction === "function") {
             // Writing a value
+            // Turn off deferred updates for this observable during the write so that the 'write' is registered
+            // immediately (assuming that the read function accesses any observables that are written to).
+            var saveDeferValue = deferUpdatesSetting;
+            deferUpdatesSetting = false;
+
             writeFunction.apply(evaluatorFunctionTarget, arguments);
+
+            deferUpdatesSetting = saveDeferValue;
         } else {
             throw new Error("Cannot write a value to a ko.computed unless you specify a 'write' option. If you wish to read the current value, don't pass any parameters.");
         }
@@ -140,7 +155,7 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
         return _latestValue;
     }
 
-    var disposer;
+    var disposer, disposalNodes = [];
     function addDisposalNodes(nodeOrNodes) {
         if (nodeOrNodes) {
             if (!disposer)
@@ -148,6 +163,7 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
             disposer.addNodeOrNodes(nodeOrNodes);
             dependentObservable.dispose = disposer.dispose;
             disposeWhen = disposer.shouldDispose;
+            disposalNodes = disposer.getNodes();
         }
         return dependentObservable;
     }
@@ -170,7 +186,7 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
         getDependenciesCount:   function () { return _subscriptionsToDependencies.length; },
         addDisposalNodes:       addDisposalNodes,
         replaceDisposalNodes:   replaceDisposalNodes,
-        getDisposalNodesCount:  function() { return disposer ? disposer.getNodesCount() : 0; },
+        getDisposalNodesCount:  function() { return disposalNodes.length; },
         throttleEvaluation:     throttleEvaluation,
         deferUpdates:           deferUpdates,
         dispose:                disposeAllSubscriptionsToDependencies
@@ -196,7 +212,6 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
     );
 };
 
-var protoProp = ko.observable.protoProperty; // == "__ko_proto__"
 ko.dependentObservable[protoProp] = ko.observable;
 
 ko.dependentObservable['fn'] = {};

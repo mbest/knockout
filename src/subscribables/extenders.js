@@ -1,27 +1,26 @@
 ko.extenders = {
     'throttle': function(target, timeout) {
         // Throttling means two things:
-
-        // (1) For dependent observables, we throttle *evaluations* so that, no matter how fast its dependencies
-        //     notify updates, the target doesn't re-evaluate (and hence doesn't notify) faster than a certain rate
-        if (target['throttleEvaluation'])
-            target['throttleEvaluation'](timeout);
-
-        if (!ko.isWriteableObservable(target))
-            return target;
-
-        // (2) For writable targets (observables, or writable dependent observables), we throttle *writes*
-        //     so the target cannot change value synchronously or faster than a certain rate
-        var writeTimeoutInstance = null;
-        return ko.dependentObservable({
-            'read': target,
-            'write': function(value) {
-                clearTimeout(writeTimeoutInstance);
-                writeTimeoutInstance = ko.evaluateAsynchronously(function() {
-                    target(value);
-                }, timeout);
-            }
-        });
+    
+        if (ko.isWriteableObservable(target)) {
+            // (1) For writable targets (observables, or writable dependent observables), we throttle *writes*
+            //     so the target cannot change value synchronously or faster than a certain rate
+            var writeTimeoutInstance = null;
+            return ko.dependentObservable({
+                'read': target,
+                'write': function(value) {
+                    clearTimeout(writeTimeoutInstance);
+                    writeTimeoutInstance = ko.evaluateAsynchronously(function() {
+                        target(value);
+                    }, timeout);
+                }
+            });
+        } else if (target['throttleEvaluation']) {
+            // (2) For dependent observables, we throttle *evaluations* so that, no matter how fast its dependencies
+            //     notify updates, the target doesn't re-evaluate (and hence doesn't notify) faster than a certain rate
+            target['throttleEvaluation'](timeout);            
+        }
+        return target;
     },
 
     'notify': function(target, notifyWhen) {

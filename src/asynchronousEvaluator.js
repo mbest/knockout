@@ -19,7 +19,7 @@ ko.tasks = (function() {
             for (var i = start || 0; i < evaluatorsArray.length; i++) {
                 if (!start)
                     indexProcessing = i;
-                var evaluator = evaluatorsArray[i];
+                var evaluator = evaluatorsArray[i].evaluator;
                 evaluator();
             }
         } finally {
@@ -39,6 +39,13 @@ ko.tasks = (function() {
         processEvaluators();
     }
 
+    function isEvaluatorDuplicate(evaluator) {
+        for (var i = indexProcessing || 0, j = evaluatorsArray.length; i < j; i++)
+            if (evaluatorsArray[i].evaluator == evaluator)
+                return true;
+        return false;
+    }
+
     var tasks = {
         processImmediate: function(evaluator, object, args) {
             pushTaskState();
@@ -49,12 +56,12 @@ ko.tasks = (function() {
             }
         },
 
-        processDelayed: function(evaluator, distinct) {
-            if ((distinct || distinct === undefined) && ko.utils.arrayIndexOf(evaluatorsArray, evaluator, indexProcessing) >= 0) {
+        processDelayed: function(evaluator, distinct, nodes) {
+            if ((distinct || distinct === undefined) && isEvaluatorDuplicate(evaluator)) {
                 // Don't add evaluator if distinct is set (or missing) and evaluator is already in list
                 return;
             }
-            evaluatorsArray.push(evaluator);
+            evaluatorsArray.push({evaluator: evaluator, nodes: nodes});
             if (!taskStack.length && indexProcessing === undefined && !evaluatorHandler) {
                 evaluatorHandler = window[setImmediate](processEvaluatorsCallback);
             }
@@ -67,9 +74,27 @@ ko.tasks = (function() {
         }
     };
 
+    ko.processDeferredBindingUpdatesForNode = function(node) {
+        for (var i = 0, j = evaluatorsArray.length; i < j; i++) {
+            if (evaluatorsArray[i].nodes && ko.utils.arrayIndexOf(evaluatorsArray[i].nodes, node) != -1) {
+                var evaluator = evaluatorsArray[i].evaluator;
+                evaluator();
+            }
+        }
+    };
+
+    ko.processAllDeferredBindingUpdates = function(node) {
+        for (var i = 0, j = evaluatorsArray.length; i < j; i++) {
+            if (evaluatorsArray[i].nodes) {
+                var evaluator = evaluatorsArray[i].evaluator;
+                evaluator();
+            }
+        }
+    };
+
     ko.evaluateAsynchronously = function(evaluator, timeout) {
-        return window[timeout ? setImmediate : 'setTimeout'](tasks.makeProcessedCallback(evaluator), timeout);
-    }
+        return setTimeout(tasks.makeProcessedCallback(evaluator), timeout);
+    };
 
     return ko.exportProperties(tasks,
          'processImmediate', tasks.processImmediate,
@@ -77,5 +102,7 @@ ko.tasks = (function() {
          'makeProcessedCallback', tasks.makeProcessedCallback
     );
 })();
+ko.exportSymbol('processDeferredBindingUpdatesForNode', ko.processDeferredBindingUpdatesForNode);
+ko.exportSymbol('processAllDeferredBindingUpdates', ko.processAllDeferredBindingUpdates);
 ko.exportSymbol('evaluateAsynchronously', ko.evaluateAsynchronously);
 ko.exportSymbol('tasks', ko.tasks);
