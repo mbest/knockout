@@ -7,7 +7,6 @@ knockoutDebugCallback([
     'src/utils.domNodeDisposal.js',
     'src/utils.domManipulation.js',
     'src/memoization.js',
-    'src/asynchronousEvaluator.js',
     'src/subscribables/extenders.js',
     'src/subscribables/subscribable.js',
     'src/subscribables/dependencyDetection.js',

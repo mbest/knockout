@@ -1,5 +1,3 @@
-var protoProp = ko.observable.protoProperty; // == "__ko_proto__"
-
 ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunctionTarget, options) {
     var _latestValue,
         _needsEvaluation = true,
@@ -34,39 +32,19 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
     }
 
 
-    var throttleEvaluationTimeout, deferUpdatesSetting, evaluationTimeoutInstance = null;
-    function throttleEvaluation(timeout) {
-        // use setTimeout for values of 15 or greater
-        throttleEvaluationTimeout = (timeout >= 15) ? timeout : undefined;
-        // use tasks.processDelayed for anything less than 15
-        deferUpdatesSetting = (timeout >= 0);
-        return dependentObservable;
-    }
-    function deferUpdates(value) {
-        throttleEvaluationTimeout = undefined;
-        deferUpdatesSetting = (value || value === undefined) ? true : false;
-        return dependentObservable;
-    }
+    var evaluationTimeoutInstance = null;
     function evaluatePossiblyAsync() {
-        if (_isBeingEvaluated)
-            return;
         _needsEvaluation = true;
-        if (throttleEvaluationTimeout) {
+        var throttleEvaluationTimeout = dependentObservable['throttleEvaluation'];
+        if (throttleEvaluationTimeout && throttleEvaluationTimeout >= 0) {
             clearTimeout(evaluationTimeoutInstance);
-            evaluationTimeoutInstance = ko.evaluateAsynchronously(evaluateImmediate, throttleEvaluationTimeout);
-        } else if (deferUpdatesSetting) {
-            ko.tasks.processDelayed(evaluateImmediate, true, disposalNodes);
-        } else {
+            evaluationTimeoutInstance = setTimeout(evaluateImmediate, throttleEvaluationTimeout);
+        } else
             evaluateImmediate();
-        }
-        dependentObservable["notifySubscribers"](_latestValue, "dirty");
-        if (!_needsEvaluation && throttleEvaluationTimeout)  // The notification might have triggered an evaluation
-            clearTimeout(evaluationTimeoutInstance);
     }
 
     function addDependency(subscribable) {
-        var event = (subscribable[protoProp] === ko.dependentObservable) ? "dirty" : "change";
-        _subscriptionsToDependencies.push(subscribable.subscribe(evaluatePossiblyAsync, null, event));
+        _subscriptionsToDependencies.push(subscribable.subscribe(evaluatePossiblyAsync));
     }
 
     function evaluateImmediate() {
@@ -134,14 +112,7 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
     function set() {
         if (typeof writeFunction === "function") {
             // Writing a value
-            // Turn off deferred updates for this observable during the write so that the 'write' is registered
-            // immediately (assuming that the read function accesses any observables that are written to).
-            var saveDeferValue = deferUpdatesSetting;
-            deferUpdatesSetting = false;
-
             writeFunction.apply(evaluatorFunctionTarget, arguments);
-
-            deferUpdatesSetting = saveDeferValue;
         } else {
             throw new Error("Cannot write a value to a ko.computed unless you specify a 'write' option. If you wish to read the current value, don't pass any parameters.");
         }
@@ -187,8 +158,6 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
         addDisposalNodes:       addDisposalNodes,
         replaceDisposalNodes:   replaceDisposalNodes,
         getDisposalNodesCount:  function() { return disposalNodes.length; },
-        throttleEvaluation:     throttleEvaluation,
-        deferUpdates:           deferUpdates,
         dispose:                disposeAllSubscriptionsToDependencies
     });
 
@@ -206,12 +175,11 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
         'getDependenciesCount', dependentObservable.getDependenciesCount,
         'addDisposalNodes', dependentObservable.addDisposalNodes,
         'replaceDisposalNodes', dependentObservable.replaceDisposalNodes,
-        'getDisposalNodesCount', dependentObservable.getDisposalNodesCount,
-        'throttleEvaluation', dependentObservable.throttleEvaluation,
-        'deferUpdates', dependentObservable.deferUpdates
+        'getDisposalNodesCount', dependentObservable.getDisposalNodesCount
     );
 };
 
+var protoProp = ko.observable.protoProperty; // == "__ko_proto__"
 ko.dependentObservable[protoProp] = ko.observable;
 
 ko.dependentObservable['fn'] = {};

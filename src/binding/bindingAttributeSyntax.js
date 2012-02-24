@@ -113,8 +113,7 @@
     function applyBindingsToNodeAndDescendantsInternal (bindingContext, node, bindingContextsMayDifferFromDomParentElement, bindingsToApply, dontBindDescendants) {
         var isElement = (node.nodeType === 1),
             hasBindings = bindingsToApply || ko.bindingProvider['instance']['nodeHasBindings'](node),
-            independentBindings = bindingContext['$options']['independentBindings'],
-            asynchronousUpdates = bindingContext['$options']['asynchronousUpdates'];
+            independentBindings = bindingContext['$options']['independentBindings'];
 
         if (isElement) // Workaround IE <= 8 HTML parsing weirdness
             ko.virtualElements.normaliseVirtualElementDomStructure(node);
@@ -215,8 +214,6 @@
             // Observables accessed in update function are tracked
             if (binding.handler['update'])
                 binding.subscribable = ko.utils.possiblyWrap(updateCaller(binding), node) || binding.subscribable;
-            if (asynchronousUpdates && binding.subscribable)
-                binding.subscribable.deferUpdates();
         }
         function callHandlersDependent(binding) {
             if (binding.handler['update'])
@@ -236,7 +233,7 @@
         /** @const */ var contentBindBinding = 2;
         /** @const */ var contentUpdateBindings = 3;
 
-        var allBindingsUpdater = ko.utils.possiblyWrap(function() {
+        ko.utils.possiblyWrap(function() {
             if (runInits) {
                 var bindingIndexes = {}, dependencies = parsedBindings[dependenciesName] || {}, 
                     lastIndex = unorderedBindings, thisIndex;
@@ -330,9 +327,6 @@
     
             applyListedBindings(bindings[contentUpdateBindings]);
         }, node);
-
-        if (asynchronousUpdates && allBindingsUpdater)
-            allBindingsUpdater.deferUpdates();
 
         // Don't want to call init function or bind descendents twice
         runInits = dontBindDescendants = false;        

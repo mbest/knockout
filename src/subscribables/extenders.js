@@ -10,15 +10,15 @@ ko.extenders = {
                 'read': target,
                 'write': function(value) {
                     clearTimeout(writeTimeoutInstance);
-                    writeTimeoutInstance = ko.evaluateAsynchronously(function() {
+                    writeTimeoutInstance = setTimeout(function() {
                         target(value);
                     }, timeout);
                 }
             });
-        } else if (target['throttleEvaluation']) {
+        } else {
             // (2) For dependent observables, we throttle *evaluations* so that, no matter how fast its dependencies
             //     notify updates, the target doesn't re-evaluate (and hence doesn't notify) faster than a certain rate
-            target['throttleEvaluation'](timeout);            
+            target['throttleEvaluation'] = timeout;
         }
         return target;
     },

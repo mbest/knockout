@@ -127,7 +127,7 @@ ko.bindingHandlers['value'] = {
                 handleEventAsynchronously = true;
                 eventName = eventName.substring("after".length);
             }
-            var getEventHandler = handleEventAsynchronously ? function(handler) { return function() { ko.evaluateAsynchronously(handler) } }
+            var getEventHandler = handleEventAsynchronously ? function(handler) { return function() { setTimeout(handler) } }
                                                             : function(handler) { return handler };
             
             ko.utils.registerEventHandler(element, eventName, getEventHandler(function() {
@@ -164,7 +164,7 @@ ko.bindingHandlers['value'] = {
                 if (newValue !== ko.selectExtensions.readValue(element))
                     ko.utils.triggerEvent(element, "change");
                 else
-                    ko.evaluateAsynchronously(applyValueAction);
+                    setTimeout(applyValueAction);
             }
         }
     }
