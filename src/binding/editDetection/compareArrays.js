@@ -1,83 +1,94 @@
 
 (function () {
     // Simple calculation based on Levenshtein distance.
-    function calculateEditDistanceMatrix(oldArray, newArray, maxAllowedDistance) {
-        var distances = [];
-        for (var i = 0; i <= newArray.length; i++)
-            distances[i] = [];
-
-        // Top row - transform old array into empty array via deletions
-        for (var i = 0, j = Math.min(oldArray.length, maxAllowedDistance); i <= j; i++)
-            distances[0][i] = i;
-
-        // Left row - transform empty array into new array via additions
-        for (var i = 1, j = Math.min(newArray.length, maxAllowedDistance); i <= j; i++) {
-            distances[i][0] = i;
-        }
-
+    function findEditScript(oldArray, newArray) {
+        var myMin = Math.min,
+            myMax = Math.max,
+            editDistanceMatrix = [],
+            oldIndex, oldIndexMax = oldArray.length,
+            newIndex, newIndexMax = newArray.length,
+            maxEditDistance = myMax(1, newIndexMax - oldIndexMax, oldIndexMax - newIndexMax),
+            maxDistance = oldIndexMax + newIndexMax + 1,
+            thisRow, lastRow;
+    
+        // Left row - transform empty array into new array via additions 
+        for (oldIndex = 0; oldIndex <= oldIndexMax; oldIndex++)
+            editDistanceMatrix[oldIndex] = [oldIndex + 1];
+    
         // Fill out the body of the array
-        var oldIndex, oldIndexMax = oldArray.length, newIndex, newIndexMax = newArray.length;
-        var distanceViaAddition, distanceViaDeletion;
-        for (oldIndex = 1; oldIndex <= oldIndexMax; oldIndex++) {
-            var newIndexMinForRow = Math.max(1, oldIndex - maxAllowedDistance);
-            var newIndexMaxForRow = Math.min(newIndexMax, oldIndex + maxAllowedDistance);
+        //var countComparisons = 0;
+        for (oldIndex = 0; lastRow = thisRow, thisRow = editDistanceMatrix[oldIndex]; oldIndex++) {
+            var newIndexMaxForRow = myMin(newIndexMax, oldIndex + maxEditDistance);
+            var newIndexMinForRow = myMax(1, oldIndex - maxEditDistance);
             for (newIndex = newIndexMinForRow; newIndex <= newIndexMaxForRow; newIndex++) {
-                if (oldArray[oldIndex - 1] === newArray[newIndex - 1])
-                    distances[newIndex][oldIndex] = distances[newIndex - 1][oldIndex - 1];
+                //++countComparisons;
+                if (!oldIndex)  // Top row - transform old array into empty array via deletions
+                    thisRow[newIndex] = newIndex + 1;
+                else if (oldArray[oldIndex - 1] === newArray[newIndex - 1])
+                    thisRow[newIndex] = lastRow[newIndex - 1];                  // copy value (no edit)
                 else {
-                    var northDistance = distances[newIndex - 1][oldIndex] === undefined ? Number.MAX_VALUE : distances[newIndex - 1][oldIndex] + 1;
-                    var westDistance = distances[newIndex][oldIndex - 1] === undefined ? Number.MAX_VALUE : distances[newIndex][oldIndex - 1] + 1;
-                    distances[newIndex][oldIndex] = Math.min(northDistance, westDistance);
+                    var northDistance = thisRow[newIndex - 1] || maxDistance;   // insertion
+                    var westDistance = lastRow[newIndex] || maxDistance;        // deletion
+                    thisRow[newIndex] = myMin(northDistance, westDistance) + 1;
                 }
             }
         }
+        //console.log('matrix('+maxEditDistance+'): countComparisons=' + countComparisons);
 
-        return distances;
-    }
+        var editScript = [], scriptIndex = 0, added = [], deleted = [];
+        for (oldIndex = oldIndexMax, newIndex = newIndexMax; oldIndex || newIndex;) {
+            var meMinusOne = editDistanceMatrix[oldIndex][newIndex] - 1;
+            var distanceViaAdd = newIndex && editDistanceMatrix[oldIndex][newIndex - 1] || maxDistance;
+            var distanceViaDelete = oldIndex && editDistanceMatrix[oldIndex - 1][newIndex] || maxDistance;
+            var distanceViaRetain = newIndex && oldIndex ? editDistanceMatrix[oldIndex - 1][newIndex - 1] : maxDistance;
+            if (distanceViaAdd < meMinusOne) distanceViaAdd = maxDistance;
+            if (distanceViaDelete < meMinusOne) distanceViaDelete = maxDistance;
+            if (distanceViaRetain < meMinusOne) distanceViaRetain = maxDistance;
 
-    function findEditScriptFromEditDistanceMatrix(editDistanceMatrix, oldArray, newArray) {
-        var oldIndex = oldArray.length;
-        var newIndex = newArray.length;
-        var editScript = [];
-        var maxDistance = editDistanceMatrix[newIndex][oldIndex];
-        if (maxDistance === undefined)
-            return null; // maxAllowedDistance must be too small
-        while ((oldIndex > 0) || (newIndex > 0)) {
-            var me = editDistanceMatrix[newIndex][oldIndex];
-            var distanceViaAdd = (newIndex > 0) ? editDistanceMatrix[newIndex - 1][oldIndex] : maxDistance + 1;
-            var distanceViaDelete = (oldIndex > 0) ? editDistanceMatrix[newIndex][oldIndex - 1] : maxDistance + 1;
-            var distanceViaRetain = (newIndex > 0) && (oldIndex > 0) ? editDistanceMatrix[newIndex - 1][oldIndex - 1] : maxDistance + 1;
-            if ((distanceViaAdd === undefined) || (distanceViaAdd < me - 1)) distanceViaAdd = maxDistance + 1;
-            if ((distanceViaDelete === undefined) || (distanceViaDelete < me - 1)) distanceViaDelete = maxDistance + 1;
-            if (distanceViaRetain < me - 1) distanceViaRetain = maxDistance + 1;
-
+            var status, value;
             if ((distanceViaAdd <= distanceViaDelete) && (distanceViaAdd < distanceViaRetain)) {
-                editScript.push({ status: "added", value: newArray[newIndex - 1] });
-                newIndex--;
-            } else if ((distanceViaDelete < distanceViaAdd) && (distanceViaDelete < distanceViaRetain)) {
-                editScript.push({ status: "deleted", value: oldArray[oldIndex - 1] });
-                oldIndex--;
+                value = newArray[--newIndex];
+                status = "added";
+                added.push({scriptIndex: scriptIndex, newIndex: newIndex, val: value});
             } else {
-                editScript.push({ status: "retained", value: oldArray[oldIndex - 1] });
-                newIndex--;
-                oldIndex--;
+                value = oldArray[--oldIndex];
+                if ((distanceViaDelete < distanceViaAdd) && (distanceViaDelete < distanceViaRetain)) {
+                    status = "deleted";
+                    deleted.push({scriptIndex: scriptIndex, oldIndex: oldIndex, val: value});
+                } else {
+                    status = "retained";
+                    newIndex--;
+                }
             }
+            scriptIndex = editScript.push({ 'status': status, 'value': value });
+        }
+        if (deleted.length && added.length) {
+            // Go through the items that have been added and deleted and try to find matches between them.
+            var a, d, addedItem, deletedItem;
+            //var countComparisons = 0, countMoves = 0;
+            for (a = 0; addedItem = added[a]; a++) {
+                for (d = 0; deletedItem = deleted[d]; d++) {
+                    //++countComparisons;
+                    if (addedItem.val === deletedItem.val) {
+                        //++countMoves;
+                        editScript[addedItem.scriptIndex]['moveFrom'] = deletedItem.oldIndex;
+                        editScript[deletedItem.scriptIndex]['moveTo'] = addedItem.newIndex;
+                        deleted.splice(d,1);        // This item is marked as moved; so remove it from deleted list
+                        break;
+                    }
+                }
+            }
+            //console.log('move: countComparisons=' + countComparisons + '; countMoves=' + countMoves);
         }
         return editScript.reverse();
     }
 
-    ko.utils.compareArrays = function (oldArray, newArray, maxEditsToConsider) {
-        if (maxEditsToConsider === undefined) {
-            return ko.utils.compareArrays(oldArray, newArray, 1)                 // First consider likely case where there is at most one edit (very fast)
-                || ko.utils.compareArrays(oldArray, newArray, 10)                // If that fails, account for a fair number of changes while still being fast
-                || ko.utils.compareArrays(oldArray, newArray, Number.MAX_VALUE); // Ultimately give the right answer, even though it may take a long time
-        } else {
-            oldArray = oldArray || [];
-            newArray = newArray || [];
-            var editDistanceMatrix = calculateEditDistanceMatrix(oldArray, newArray, maxEditsToConsider);
-            return findEditScriptFromEditDistanceMatrix(editDistanceMatrix, oldArray, newArray);
-        }
-    };    
+    function compareArrays(oldArray, newArray) {
+        oldArray = oldArray || [];
+        newArray = newArray || [];
+        return findEditScript(oldArray, newArray);
+    };
+    ko.utils.compareArrays = compareArrays; 
 })();
 
 ko.exportSymbol('utils.compareArrays', ko.utils.compareArrays);

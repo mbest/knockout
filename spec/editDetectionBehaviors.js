@@ -52,10 +52,30 @@ describe('Compare Arrays', {
             { status: "added", value: 123 },
             { status: "retained", value: "A" },
             { status: "deleted", value: "B" },
-            { status: "added", value: "E" },
+            { status: "added", value: "E", moveFrom: 4 },
             { status: "retained", value: "C" },
             { status: "retained", value: "D" },
-            { status: "deleted", value: "E" }
+            { status: "deleted", value: "E", moveTo: 2 }
+        ]);
+    },
+    
+    'Should recognize replaced array': function () {
+        var oldArray = ["A", "B", "C", "D", "E"];
+        var newArray = ["F", "G", "H", "I", "J"];
+        var compareResult = ko.utils.compareArrays(oldArray, newArray);
+        // the order of added and deleted doesn't really matter
+        compareResult.sort(function(a, b) { return a.status.localeCompare(b.status) });
+        value_of(compareResult).should_be([
+            { status: "added", value: "F"},
+            { status: "added", value: "G"},
+            { status: "added", value: "H"},
+            { status: "added", value: "I"},
+            { status: "added", value: "J"},
+            { status: "deleted", value: "A"},
+            { status: "deleted", value: "B"},
+            { status: "deleted", value: "C"},
+            { status: "deleted", value: "D"},
+            { status: "deleted", value: "E"}
         ]);
     }
 });
