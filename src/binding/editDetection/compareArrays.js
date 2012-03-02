@@ -11,7 +11,7 @@
             maxDistance = oldIndexMax + newIndexMax + 1,
             thisRow, lastRow;
     
-        // Left row - transform empty array into new array via additions 
+        // Left row - transform old array into empty array via deletions 
         for (oldIndex = 0; oldIndex <= oldIndexMax; oldIndex++)
             editDistanceMatrix[oldIndex] = [oldIndex + 1];
     
@@ -22,47 +22,42 @@
             var newIndexMinForRow = myMax(1, oldIndex - maxEditDistance);
             for (newIndex = newIndexMinForRow; newIndex <= newIndexMaxForRow; newIndex++) {
                 //++countComparisons;
-                if (!oldIndex)  // Top row - transform old array into empty array via deletions
+                if (!oldIndex)  // Top row - transform empty array into new array via additions
                     thisRow[newIndex] = newIndex + 1;
                 else if (oldArray[oldIndex - 1] === newArray[newIndex - 1])
                     thisRow[newIndex] = lastRow[newIndex - 1];                  // copy value (no edit)
                 else {
-                    var northDistance = thisRow[newIndex - 1] || maxDistance;   // insertion
-                    var westDistance = lastRow[newIndex] || maxDistance;        // deletion
+                    var northDistance = lastRow[newIndex] || maxDistance;       // deletion
+                    var westDistance = thisRow[newIndex - 1] || maxDistance;    // insertion
                     thisRow[newIndex] = myMin(northDistance, westDistance) + 1;
                 }
             }
         }
         //console.log('matrix('+maxEditDistance+'): countComparisons=' + countComparisons);
 
-        var editScript = [], scriptIndex = 0, added = [], deleted = [];
+        var editScript = [], added = [], deleted = [], addedOrDeleted;
         for (oldIndex = oldIndexMax, newIndex = newIndexMax; oldIndex || newIndex;) {
-            var meMinusOne = editDistanceMatrix[oldIndex][newIndex] - 1;
-            var distanceViaAdd = newIndex && editDistanceMatrix[oldIndex][newIndex - 1] || maxDistance;
-            var distanceViaDelete = oldIndex && editDistanceMatrix[oldIndex - 1][newIndex] || maxDistance;
-            var distanceViaRetain = newIndex && oldIndex ? editDistanceMatrix[oldIndex - 1][newIndex - 1] : maxDistance;
-            if (distanceViaAdd < meMinusOne) distanceViaAdd = maxDistance;
-            if (distanceViaDelete < meMinusOne) distanceViaDelete = maxDistance;
-            if (distanceViaRetain < meMinusOne) distanceViaRetain = maxDistance;
-
-            var status, value;
-            if ((distanceViaAdd <= distanceViaDelete) && (distanceViaAdd < distanceViaRetain)) {
-                value = newArray[--newIndex];
-                status = "added";
-                added.push({scriptIndex: scriptIndex, newIndex: newIndex, val: value});
+            var meMinusOne = editDistanceMatrix[oldIndex][newIndex] - 1, status, value, scriptItem, moveList, index;
+            if (meMinusOne === (oldIndex && editDistanceMatrix[oldIndex - 1][newIndex] || maxDistance)) {
+                value = oldArray[index = --oldIndex];
+                status = "deleted";
+                moveList = deleted;
             } else {
-                value = oldArray[--oldIndex];
-                if ((distanceViaDelete < distanceViaAdd) && (distanceViaDelete < distanceViaRetain)) {
-                    status = "deleted";
-                    deleted.push({scriptIndex: scriptIndex, oldIndex: oldIndex, val: value});
+                value = newArray[index = --newIndex];
+                if (meMinusOne === (editDistanceMatrix[oldIndex][newIndex] || maxDistance)) {
+                    status = "added";
+                    moveList = added;
                 } else {
                     status = "retained";
-                    newIndex--;
+                    moveList = undefined;
+                    --oldIndex;
                 }
             }
-            scriptIndex = editScript.push({ 'status': status, 'value': value });
+            editScript.push(scriptItem = { 'status': status, 'value': value });
+            if (moveList)
+                addedOrDeleted = moveList.push({scriptItem: scriptItem, itemIndex: index, val: value});
         }
-        if (deleted.length && added.length) {
+        if (addedOrDeleted) {
             // Go through the items that have been added and deleted and try to find matches between them.
             var a, d, addedItem, deletedItem;
             //var countComparisons = 0, countMoves = 0;
@@ -71,8 +66,8 @@
                     //++countComparisons;
                     if (addedItem.val === deletedItem.val) {
                         //++countMoves;
-                        editScript[addedItem.scriptIndex]['moveFrom'] = deletedItem.oldIndex;
-                        editScript[deletedItem.scriptIndex]['moveTo'] = addedItem.newIndex;
+                        addedItem.scriptItem['moveFrom'] = deletedItem.itemIndex;
+                        deletedItem.scriptItem['moveTo'] = addedItem.itemIndex;
                         deleted.splice(d,1);        // This item is marked as moved; so remove it from deleted list
                         break;
                     }
