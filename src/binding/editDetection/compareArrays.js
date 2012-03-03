@@ -1,7 +1,10 @@
 
-(function () {
+ko.utils.compareArrays = (function () {
     // Simple calculation based on Levenshtein distance.
-    function findEditScript(oldArray, newArray) {
+    function compareArrays(oldArray, newArray) {
+        oldArray = oldArray || [];
+        newArray = newArray || [];
+
         var myMin = Math.min,
             myMax = Math.max,
             editDistanceMatrix = [],
@@ -9,7 +12,8 @@
             newIndex, newIndexMax = newArray.length,
             maxEditDistance = myMax(1, newIndexMax - oldIndexMax, oldIndexMax - newIndexMax),
             maxDistance = oldIndexMax + newIndexMax + 1,
-            thisRow, lastRow;
+            thisRow, lastRow,
+            newIndexMaxForRow, newIndexMinForRow;
     
         // Left row - transform old array into empty array via deletions 
         for (oldIndex = 0; oldIndex <= oldIndexMax; oldIndex++)
@@ -18,8 +22,8 @@
         // Fill out the body of the array
         //var countComparisons = 0;
         for (oldIndex = 0; lastRow = thisRow, thisRow = editDistanceMatrix[oldIndex]; oldIndex++) {
-            var newIndexMaxForRow = myMin(newIndexMax, oldIndex + maxEditDistance);
-            var newIndexMinForRow = myMax(1, oldIndex - maxEditDistance);
+            newIndexMaxForRow = myMin(newIndexMax, oldIndex + maxEditDistance);
+            newIndexMinForRow = myMax(1, oldIndex - maxEditDistance);
             for (newIndex = newIndexMinForRow; newIndex <= newIndexMaxForRow; newIndex++) {
                 //++countComparisons;
                 if (!oldIndex)  // Top row - transform empty array into new array via additions
@@ -35,28 +39,28 @@
         }
         //console.log('matrix('+maxEditDistance+'): countComparisons=' + countComparisons);
 
-        var editScript = [], added = [], deleted = [], addedOrDeleted;
+        var editScript = [], meMinusOne, added = [], deleted = [], addedOrDeleted;
         for (oldIndex = oldIndexMax, newIndex = newIndexMax; oldIndex || newIndex;) {
-            var meMinusOne = editDistanceMatrix[oldIndex][newIndex] - 1, status, value, scriptItem, moveList, index;
-            if (meMinusOne === (oldIndex && editDistanceMatrix[oldIndex - 1][newIndex] || maxDistance)) {
-                value = oldArray[index = --oldIndex];
-                status = "deleted";
-                moveList = deleted;
+            meMinusOne = editDistanceMatrix[oldIndex][newIndex] - 1;
+            if (newIndex && meMinusOne === editDistanceMatrix[oldIndex][newIndex-1]) {
+                addedOrDeleted = added.push(editScript[editScript.length] = {
+                    'status': "added",
+                    'value': newArray[--newIndex],
+                    'to': newIndex });
+            } else if (oldIndex && meMinusOne === editDistanceMatrix[oldIndex - 1][newIndex]) {
+                addedOrDeleted = deleted.push(editScript[editScript.length] = {
+                    'status': "deleted",
+                    'value': oldArray[--oldIndex],
+                    'from': oldIndex });
             } else {
-                value = newArray[index = --newIndex];
-                if (meMinusOne === (editDistanceMatrix[oldIndex][newIndex] || maxDistance)) {
-                    status = "added";
-                    moveList = added;
-                } else {
-                    status = "retained";
-                    moveList = undefined;
-                    --oldIndex;
-                }
+                editScript.push({
+                    'status': "retained",
+                    'value': newArray[--newIndex],
+                    'from': --oldIndex,
+                    'to': newIndex });
             }
-            editScript.push(scriptItem = { 'status': status, 'value': value });
-            if (moveList)
-                addedOrDeleted = moveList.push({scriptItem: scriptItem, itemIndex: index, val: value});
         }
+
         if (addedOrDeleted) {
             // Go through the items that have been added and deleted and try to find matches between them.
             var a, d, addedItem, deletedItem;
@@ -64,10 +68,10 @@
             for (a = 0; addedItem = added[a]; a++) {
                 for (d = 0; deletedItem = deleted[d]; d++) {
                     //++countComparisons;
-                    if (addedItem.val === deletedItem.val) {
+                    if (addedItem['value'] === deletedItem['value']) {
                         //++countMoves;
-                        addedItem.scriptItem['moveFrom'] = deletedItem.itemIndex;
-                        deletedItem.scriptItem['moveTo'] = addedItem.itemIndex;
+                        addedItem['moveFrom'] = deletedItem['from'];
+                        deletedItem['moveTo'] = addedItem['to'];
                         deleted.splice(d,1);        // This item is marked as moved; so remove it from deleted list
                         break;
                     }
@@ -78,12 +82,7 @@
         return editScript.reverse();
     }
 
-    function compareArrays(oldArray, newArray) {
-        oldArray = oldArray || [];
-        newArray = newArray || [];
-        return findEditScript(oldArray, newArray);
-    };
-    ko.utils.compareArrays = compareArrays; 
+    return compareArrays; 
 })();
 
 ko.exportSymbol('utils.compareArrays', ko.utils.compareArrays);
