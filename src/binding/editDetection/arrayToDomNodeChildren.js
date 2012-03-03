@@ -88,9 +88,9 @@
                         // Queue these nodes for later removal
                         ko.utils.arrayForEach(fixUpVirtualElements(lastMappingResult[editScriptItem['from']].domNodes), function (node) {
                             nodesToDelete.push({
-                              element: node,
-                              index: i,
-                              value: editScriptItem['value']
+                              _element: node,
+                              _index: i,
+                              _value: editScriptItem['value']
                             });
                             insertAfterNode = node;
                         });
@@ -98,15 +98,14 @@
                     break;
 
                 case "added": 
-                    var mappedNodes, movingNodes;
+                    var mappedNodes, movingNodes, valueToMap;
                     if (editScript[i]['moveFrom'] !== undefined) {
                         var dataToRetain = lastMappingResult[editScript[i]['moveFrom']];
                         mappedNodes = dataToRetain.domNodes;
                         movingNodes = true;
                         newMappingResult.push(dataToRetain);
                     } else {
-                        var valueToMap = editScriptItem['value'];
-                        var mapData = mapNodeAndRefreshWhenChanged(domNode, mapping, valueToMap, callbackAfterAddingNodes);
+                        var mapData = mapNodeAndRefreshWhenChanged(domNode, mapping, valueToMap = editScriptItem['value'], callbackAfterAddingNodes);
                         mappedNodes = mapData.mappedNodes;
                         movingNodes = false;
                     
@@ -117,9 +116,9 @@
                         var node = mappedNodes[nodeIndex];
                         if (!movingNodes) {
                             nodesAdded.push({
-                              element: node,
-                              index: i,
-                              value: editScriptItem['value']
+                              _element: node,
+                              _index: i,
+                              _value: valueToMap
                             });
                         }
                         if (insertAfterNode == null) {
@@ -137,23 +136,23 @@
             }
         }
         
-        ko.utils.arrayForEach(nodesToDelete, function (node) { ko.cleanNode(node.element) });
+        ko.utils.arrayForEach(nodesToDelete, function (node) { ko.cleanNode(node._element) });
 
         var invokedBeforeRemoveCallback = false;
         if (!isFirstExecution) {
             if (options['afterAdd']) {
                 for (var i = 0; i < nodesAdded.length; i++)
-                    options['afterAdd'](nodesAdded[i].element, nodesAdded[i].index, nodesAdded[i].value);
+                    options['afterAdd'](nodesAdded[i]._element, nodesAdded[i]._index, nodesAdded[i]._value);
             }
             if (options['beforeRemove']) {
                 for (var i = 0; i < nodesToDelete.length; i++)
-                    options['beforeRemove'](nodesToDelete[i].element, nodesToDelete[i].index, nodesToDelete[i].value);
+                    options['beforeRemove'](nodesToDelete[i]._element, nodesToDelete[i]._index, nodesToDelete[i]._value);
                 invokedBeforeRemoveCallback = true;
             }
         }
         if (!invokedBeforeRemoveCallback)
             ko.utils.arrayForEach(nodesToDelete, function (node) {
-                ko.removeNode(node.element);
+                ko.removeNode(node._element);
             });
 
         // Store a copy of the array items we just considered so we can difference it next time
