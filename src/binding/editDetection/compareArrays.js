@@ -10,14 +10,17 @@ ko.utils.compareArrays = (function () {
             editDistanceMatrix = [],
             oldIndex, oldIndexMax = oldArray.length,
             newIndex, newIndexMax = newArray.length,
-            maxEditDistance = myMax(1, newIndexMax - oldIndexMax, oldIndexMax - newIndexMax),
+            maxEditDistance = Math.abs(newIndexMax - oldIndexMax) || 1,
             maxDistance = oldIndexMax + newIndexMax + 1,
             thisRow, lastRow,
             newIndexMaxForRow, newIndexMinForRow;
     
-        // Left row - transform old array into empty array via deletions 
         for (oldIndex = 0; oldIndex <= oldIndexMax; oldIndex++)
-            editDistanceMatrix[oldIndex] = [oldIndex + 1];
+            editDistanceMatrix.push([]);
+    
+        // Left row - transform old array into empty array via deletions
+        for (oldIndex = 0, newIndexMaxForRow = myMin(oldIndexMax, maxEditDistance); oldIndex <= newIndexMaxForRow; oldIndex++)
+            editDistanceMatrix[oldIndex][0] = oldIndex + 1;
     
         // Fill out the body of the array
         //var countComparisons = 0;
