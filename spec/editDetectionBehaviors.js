@@ -173,7 +173,7 @@ describe('Array to DOM node children mapping', {
         value_of(mappingInvocations).should_be([]);
     },
 
-    'Should handle sequences of mixed insertions and deletions': function () {
+    'Should handle sequences of mixed insertions, deletions, and moves': function () {
         var mappingInvocations = [];
         var mapping = function (arrayItem) {
             mappingInvocations.push(arrayItem);
@@ -195,6 +195,11 @@ describe('Array to DOM node children mapping', {
         ko.utils.setDomNodeChildrenFromArrayMapping(testNode, ["A", "B", "C"], mapping); // Add at beginning and end
         value_of(ko.utils.arrayMap(testNode.childNodes, function (x) { return x.innerHTML })).should_be(["A", "B", "C"]);
         value_of(mappingInvocations).should_be(["A", "C"]);
+
+        mappingInvocations = [];
+        ko.utils.setDomNodeChildrenFromArrayMapping(testNode, ["C", "B", "A"], mapping); // Move items
+        value_of(ko.utils.arrayMap(testNode.childNodes, function (x) { return x.innerHTML })).should_be(["C", "B", "A"]);
+        value_of(mappingInvocations).should_be([]);
 
         mappingInvocations = [];
         ko.utils.setDomNodeChildrenFromArrayMapping(testNode, [1, null, "B"], mapping); // Add to beginning; delete from end

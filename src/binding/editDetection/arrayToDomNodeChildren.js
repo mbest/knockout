@@ -101,7 +101,7 @@
                     var mappedNodes, movingNodes, valueToMap;
                     if (editScript[i]['moveFrom'] !== undefined) {
                         var dataToRetain = lastMappingResult[editScript[i]['moveFrom']];
-                        mappedNodes = dataToRetain.domNodes;
+                        mappedNodes = fixUpVirtualElements(dataToRetain.domNodes);
                         movingNodes = true;
                         newMappingResult.push(dataToRetain);
                     } else {
