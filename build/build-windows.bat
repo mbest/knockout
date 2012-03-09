@@ -25,11 +25,14 @@ echo })(window,document,navigator); >> %OutDebugFile%.temp
 del %OutDebugFile%_all.temp
 
 @rem Now call Google Closure Compiler to produce a minified version
-tools\curl -d output_info=compiled_code -d output_format=text -d compilation_level=ADVANCED_OPTIMIZATIONS --data-urlencode output_wrapper="(function() {%%output%%})();" --data-urlencode js_code@%OutDebugFile%.temp "http://closure-compiler.appspot.com/compile" > %OutMinFile%.temp
+tools\curl -d output_info=compiled_code -d output_format=text -d compilation_level=ADVANCED_OPTIMIZATIONS --data-urlencode output_wrapper="(function() {%%output%%})();" --data-urlencode "js_code=/**@const*/var DEBUG=false;" --data-urlencode js_code@%OutDebugFile%.temp "http://closure-compiler.appspot.com/compile" > %OutMinFile%.temp
 
 @rem Finalise each file by prefixing with version header and surrounding in function closure
 copy /y fragments\version-header.js %OutDebugFile%
-type %OutDebugFile%.temp >> %OutDebugFile%
+echo (function(){>> %OutDebugFile%
+echo var DEBUG=true;>> %OutDebugFile%
+type %OutDebugFile%.temp                            >> %OutDebugFile%
+echo })();>> %OutDebugFile%
 del %OutDebugFile%.temp
 
 copy /y fragments\version-header.js %OutMinFile%
@@ -39,3 +42,4 @@ del %OutMinFile%.temp
 @rem Inject the version number string
 set /p Version= <fragments\version.txt
 cscript tools\searchReplace.js "##VERSION##" %VERSION% %OutDebugFile% %OutMinFile%
+cscript tools\searchReplace.js "\r\n" "\n" %OutDebugFile%  %OutMinFile%

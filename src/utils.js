@@ -283,17 +283,13 @@ ko.utils = (function () {
                 { returnValueIfNoDependencies: true, disposalNodes: nodeOrNodes });
         },
 
-        domNodeHasCssClass: function (node, className) {
-            var currentClassNames = (node.className || "").split(/\s+/);
-            return utils.arrayIndexOf(currentClassNames, className) >= 0;
-        },
-
         toggleDomNodeCssClass: function (node, className, shouldHaveClass) {
-            var hasClass = utils.domNodeHasCssClass(node, className);
+            var currentClassNames = (node.className || "").split(/\s+/);
+            var hasClass = utils.arrayIndexOf(currentClassNames, className) >= 0;
+
             if (shouldHaveClass && !hasClass) {
-                node.className = (node.className || "") + " " + className;
+                node.className += (currentClassNames[0] ? " " : "") + className;
             } else if (hasClass && !shouldHaveClass) {
-                var currentClassNames = (node.className || "").split(/\s+/);
                 var newClassName = "";
                 for (var i = 0; i < currentClassNames.length; i++)
                     if (currentClassNames[i] != className)
@@ -332,7 +328,7 @@ ko.utils = (function () {
         isIe6 : isIe6,
         isIe7 : isIe7,
         ieVersion : ieVersion,
-        
+
         getFormFields: function(form, fieldName) {
             var fields = utils.makeArray(form.getElementsByTagName("INPUT")).concat(utils.makeArray(form.getElementsByTagName("TEXTAREA")));
             var isMatchingField = (typeof fieldName == 'string') 
@@ -358,10 +354,10 @@ ko.utils = (function () {
             return null;
         },
 
-        stringifyJson: function (data) {
+        stringifyJson: function (data, replacer, space) {   // replacer and space are optional 
             if ((typeof JSON == "undefined") || (typeof JSON.stringify == "undefined"))
                 throw new Error("Cannot find JSON.stringify(). Some browsers (e.g., IE < 8) don't support it natively, but you can overcome this by adding a script reference to json2.js, downloadable from http://www.json.org/json2.js");
-            return JSON.stringify(utils.unwrapObservable(data));
+            return JSON.stringify(utils.unwrapObservable(data), replacer, space);
         },
 
         postJson: function (urlOrForm, data, options) {

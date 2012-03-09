@@ -16,7 +16,7 @@ ko.bindingExpressionRewriting = (function () {
     }
 
     function isWriteableValue(expression) {
-        if (ko.utils.arrayIndexOf(javaScriptReservedWords, expression.toLowerCase()) >= 0)
+        if (ko.utils.arrayIndexOf(javaScriptReservedWords, expression) >= 0)
             return false;
         return expression.match(javaScriptAssignmentTarget) !== null;
     }
