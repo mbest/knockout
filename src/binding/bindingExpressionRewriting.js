@@ -21,8 +21,13 @@ ko.bindingExpressionRewriting = (function () {
         return expression.match(javaScriptAssignmentTarget) !== null;
     }
 
+    function isFunctionLiteral(expression) {
+        // match function literal, which must start with function end with }
+        return expression.match(/^\(*function\s*\(.*}\)*$/) !== null;
+    }
+
     function isPossiblyUnwrappedObservable(expression) {
-        // look for parentheses in the expression, but ignore initial parentheses
+        // match parentheses in the expression, but ignore initial parentheses
         return expression.match(/[^(]+\(/) !== null;
     }
 
@@ -149,7 +154,8 @@ ko.bindingExpressionRewriting = (function () {
                             // object and converting to "binding.key: value"
                             insertPropertyAccessorsHelper(val, binding, key);
                         } else {
-                            if (binding && isWriteableValue(val)) {
+                            var canWrap = !isFunctionLiteral(val);
+                            if (canWrap && binding && isWriteableValue(val)) {
                                 if (eventHandlersUseObjectForThis && binding['flags'] & bindingFlags_eventHandler) {
                                     // call function literal in an anonymous function so that it is called
                                     // with appropriate "this" value
@@ -161,7 +167,7 @@ ko.bindingExpressionRewriting = (function () {
                                     propertyAccessorResultStrings.push(quotedKey + ":function(_z){" + val + "=_z;}");
                                 }
                             }
-                            if (independentBindings && !(binding && binding['flags'] & bindingFlags_eventHandler) && isPossiblyUnwrappedObservable(val)) {
+                            if (independentBindings && canWrap && isPossiblyUnwrappedObservable(val)) {
                                 // Try to prevent observables from being accessed when parsing a binding;
                                 // Instead they will be "unwrapped" within the context of the specific binding handler
                                 val = 'ko.bindingValueWrap(function(){return ' + val + '})';
