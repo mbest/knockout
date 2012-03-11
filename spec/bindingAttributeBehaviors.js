@@ -227,6 +227,42 @@ describe('Binding attribute syntax', {
         value_of(testNode).should_contain_text("Third view model");
     },
 
+    'Should be able to get all updates to observables in both init and update': function() {
+        var lastBoundValueInit, lastBoundValueUpdate;
+        ko.bindingHandlers.testInit = {
+            init: function(element, valueAccessor) {
+                ko.dependentObservable(function() {
+                    lastBoundValueInit = ko.utils.unwrapObservable(valueAccessor());
+                });
+            }
+        };
+        ko.bindingHandlers.testUpdate = {
+            update: function(element, valueAccessor) {
+                lastBoundValueUpdate = ko.utils.unwrapObservable(valueAccessor());
+            }
+        };
+        testNode.innerHTML = "<div data-bind='testInit: myProp()'></div><div data-bind='testUpdate: myProp()'></div>";
+        var vm = ko.observable({ myProp: ko.observable("initial value") });
+        ko.applyBindings(vm, testNode);
+        value_of(lastBoundValueInit).should_be("initial value");
+        value_of(lastBoundValueUpdate).should_be("initial value");
+
+        // update value of observable
+        vm().myProp("second value");
+        value_of(lastBoundValueInit).should_be("second value");
+        value_of(lastBoundValueUpdate).should_be("second value");
+        
+        // update value of observable to another observable
+        vm().myProp(ko.observable("third value"));
+        value_of(lastBoundValueInit).should_be("third value");
+        value_of(lastBoundValueUpdate).should_be("third value");
+
+        // update view model with brand-new property
+        vm({ myProp: function() {return "fourth value"; }});
+        value_of(lastBoundValueInit).should_be("fourth value");
+        value_of(lastBoundValueUpdate).should_be("fourth value");
+    },
+
     'Should be able to specify two-level bindings through a sub-object and through dot syntax': function() {
         var results = {}, firstName = ko.observable('bob'), lastName = ko.observable('smith');
         ko.bindingHandlers.twoLevelBinding = {

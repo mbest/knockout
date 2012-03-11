@@ -167,7 +167,7 @@ ko.bindingExpressionRewriting = (function () {
                                     propertyAccessorResultStrings.push(quotedKey + ":function(_z){" + val + "=_z;}");
                                 }
                             }
-                            if (independentBindings && canWrap && isPossiblyUnwrappedObservable(val)) {
+                            if ((binding || independentBindings) && canWrap && isPossiblyUnwrappedObservable(val)) {
                                 // Try to prevent observables from being accessed when parsing a binding;
                                 // Instead they will be "unwrapped" within the context of the specific binding handler
                                 val = 'ko.bindingValueWrap(function(){return ' + val + '})';

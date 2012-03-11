@@ -154,8 +154,13 @@
         function makeValueAccessor(fullKey, subKey) {
             return subKey
             ? function() {
+                if (bindingUpdater)
+                    bindingUpdater();
                 var _z = {}; _z[subKey] = unwrapBindingValue(parsedBindings[fullKey]); return _z;
-            } : function () {
+            }
+            : function () {
+                if (bindingUpdater)
+                    bindingUpdater();
                 return unwrapBindingValue(parsedBindings[fullKey]);
             };
         }
@@ -194,8 +199,6 @@
         }
         function updateCaller(binding) {
             return function() {
-                if (bindingUpdater)
-                    ko.dependencyDetection.registerDependency(bindingUpdater);
                 // dependentBindings is set if we're running in independent mode. Go through each
                 // and create a dependency on it's subscribable.
                 if (binding.dependentBindings)
@@ -315,6 +318,10 @@
                         lastIndex = thisIndex;
                 }
             }
+
+            // For backward compatibility: make sure all bindings are updated if binding is re-parsed
+            if (!independentBindings && bindingUpdater)
+                bindingUpdater();
 
             // Apply the bindings in the correct order
             applyListedBindings(bindings[unorderedBindings]);
