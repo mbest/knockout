@@ -11,18 +11,24 @@ ko.virtualElements = (function() {
     // but it does give them a nonstandard alternative property called "text" that it can read reliably. Other browsers don't have that property.
     // So, use node.text where available, and node.nodeValue elsewhere
     var commentNodesHaveTextProperty = document.createComment("test").text === "<!--test-->";
+    var startCommentRegex = function (bindingProvider) {
+        return commentNodesHaveTextProperty ? new RegExp("^<!--\\s*" + ko.bindingProvider.configuration(bindingProvider).virtualElementTag + "\\s+(.*\\:.*)\\s*-->$") : new RegExp("^\\s*" + ko.bindingProvider.configuration(bindingProvider).virtualElementTag + "\\s+(.*\\:.*)\\s*$");
+    };
 
-    var startCommentRegex = commentNodesHaveTextProperty ? /^<!--\s*ko\s+(.*\:.*)\s*-->$/ : /^\s*ko\s+(.*\:.*)\s*$/;
-    var endCommentRegex =   commentNodesHaveTextProperty ? /^<!--\s*\/ko\s*-->$/ : /^\s*\/ko\s*$/;
+    var endCommentRegex = function (bindingProvider) {
+        return commentNodesHaveTextProperty ? new RegExp("^<!--\\s*\\/" + ko.bindingProvider.configuration(bindingProvider).virtualElementTag + "\\s*-->$") : new RegExp("^\\s*\\/" + ko.bindingProvider.configuration(bindingProvider).virtualElementTag + "\\s*$");
+    };
     var htmlTagsWithOptionallyClosingChildren = { 'ul': true, 'ol': true };
 
+
     function isStartComment(node) {
-        return (node.nodeType == 8) && (commentNodesHaveTextProperty ? node.text : node.nodeValue).match(startCommentRegex);
+        return (node.nodeType == 8) && (commentNodesHaveTextProperty ? node.text : node.nodeValue).match(startCommentRegex());
     }
 
     function isEndComment(node) {
-        return (node.nodeType == 8) && (commentNodesHaveTextProperty ? node.text : node.nodeValue).match(endCommentRegex);
+        return (node.nodeType == 8) && (commentNodesHaveTextProperty ? node.text : node.nodeValue).match(endCommentRegex());
     }
+
 
     function getVirtualChildren(startComment, allowUnbalanced) {
         var currentNode = startComment;

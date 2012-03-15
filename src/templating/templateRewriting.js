@@ -1,7 +1,11 @@
 
 ko.templateRewriting = (function () {
-    var memoizeDataBindingAttributeSyntaxRegex = /(<[a-z]+\d*(\s+(?!data-bind=)[a-z0-9\-]+(=(\"[^\"]*\"|\'[^\']*\'))?)*\s+)data-bind=(["'])([\s\S]*?)\5/gi;
-    var memoizeVirtualContainerBindingSyntaxRegex = /<!--\s*ko\b\s*([\s\S]*?)\s*-->/g;
+    var memoizeDataBindingAttributeSyntaxRegex = function (bindingProvider) {
+        return new RegExp("(<[a-z]+\\d*(\\s+(?!" + ko.bindingProvider.configuration(bindingProvider).bindingAttribute + "=)[a-z0-9\\-]+(=(\\\"[^\\\"]*\\\"|\\'[^\\']*\\'))?)*\\s+)" + ko.bindingProvider.configuration(bindingProvider).bindingAttribute + "=([\"'])([\\s\\S]*?)\\5", "gi");
+    };
+    var memoizeVirtualContainerBindingSyntaxRegex = function (bindingProvider) {
+        return new RegExp("<!--\\s*" + ko.bindingProvider.configuration(bindingProvider).virtualElementTag + "\\b\\s*([\\s\\S]*?)\\s*-->", "g");
+    }
 
     function validateDataBindValuesForRewriting(keyValueArray) {
         var allValidators = ko.templateRewriting.bindingRewriteValidators;
@@ -44,10 +48,10 @@ ko.templateRewriting = (function () {
         },
 
         memoizeBindingAttributeSyntax: function (htmlString, templateEngine) {
-            return htmlString.replace(memoizeDataBindingAttributeSyntaxRegex, function () {
-                return constructMemoizedTagReplacement(/* dataBindAttributeValue: */ arguments[6], /* tagToRetain: */ arguments[1], templateEngine);
-            }).replace(memoizeVirtualContainerBindingSyntaxRegex, function() {
-                return constructMemoizedTagReplacement(/* dataBindAttributeValue: */ arguments[1], /* tagToRetain: */ "<!-- ko -->", templateEngine);              
+            return htmlString.replace(memoizeDataBindingAttributeSyntaxRegex(), function () {
+                return constructMemoizedTagReplacement(/* dataBindAttributeValue: */arguments[6], /* tagToRetain: */arguments[1], templateEngine);
+            }).replace(memoizeVirtualContainerBindingSyntaxRegex(), function () {
+                return constructMemoizedTagReplacement(/* dataBindAttributeValue: */arguments[1], /* tagToRetain: */"<!-- ko -->", templateEngine);
             });
         },
 
