@@ -11,3 +11,10 @@ desktop.ini
 .eprj
 perf/*
 *.orig
+
+MBestKnockout.csproj
+MBestKnockout.sln
+Properties/AssemblyInfo.cs
+Web.config
+Web.Debug.config
+Web.Release.config
