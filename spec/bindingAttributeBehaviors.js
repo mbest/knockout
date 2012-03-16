@@ -13,6 +13,9 @@ function (testConfiguration) {
             testNode.id = "testNode";
             document.body.appendChild(testNode);
             ko.bindingProvider["instance"] = new ko.bindingProvider(myConfiguration);
+            virtualElementTag = ko.bindingProvider["instance"].configuration.virtualElementTag;
+            bindingAttribute = ko.bindingProvider["instance"].configuration.bindingAttribute;
+
         },
         
         after_each : function() {
@@ -29,7 +32,7 @@ function (testConfiguration) {
                     didInit = true;
                 }
             };
-            testNode.innerHTML = "<div id='testElement' " + ko.bindingProvider.configuration().bindingAttribute + "='test:123'></div>";
+            testNode.innerHTML = "<div id='testElement' " + bindingAttribute + "='test:123'></div>";
             ko.applyBindings();
             value_of(didInit).should_be(true);
 
@@ -47,7 +50,7 @@ function (testConfiguration) {
                     didInit = true;
                 }
             };
-            testNode.innerHTML = "<div id='testElement' " + ko.bindingProvider.configuration().bindingAttribute + "='test:123'></div>";
+            testNode.innerHTML = "<div id='testElement' " + bindingAttribute + "='test:123'></div>";
             ko.applyBindings(suppliedViewModel);
             value_of(didInit).should_be(true);
 
@@ -65,9 +68,9 @@ function (testConfiguration) {
                     didInit = true;
                 }
             };
-            testNode.innerHTML = "<div id='testElement' " + ko.bindingProvider.configuration().bindingAttribute + "='test:123'></div>";
+            testNode.innerHTML = "<div id='testElement' " + bindingAttribute + "='test:123'></div>";
             var shouldNotMatchNode = document.createElement("DIV");
-            shouldNotMatchNode.innerHTML = "<div id='shouldNotMatchThisElement' " + ko.bindingProvider.configuration().bindingAttribute + "='test:123'></div>";
+            shouldNotMatchNode.innerHTML = "<div id='shouldNotMatchThisElement' " + bindingAttribute + "='test:123'></div>";
             document.body.appendChild(shouldNotMatchNode);
             try {
                 ko.applyBindings(suppliedViewModel, testNode);
@@ -78,12 +81,12 @@ function (testConfiguration) {
         },
 
         'Should tolerate whitespace and nonexistent handlers': function () {
-            testNode.innerHTML = "<div " + ko.bindingProvider.configuration().bindingAttribute + "=' nonexistentHandler : \"Hello\" '></div>";
+            testNode.innerHTML = "<div " + bindingAttribute + "=' nonexistentHandler : \"Hello\" '></div>";
             ko.applyBindings(null, testNode); // No exception means success
         },
 
         'Should tolerate arbitrary literals as the values for a handler': function () {
-            testNode.innerHTML = "<div " + ko.bindingProvider.configuration().bindingAttribute + "='stringLiteral: \"hello\", numberLiteral: 123, boolLiteral: true, objectLiteral: {}, functionLiteral: function() { }'></div>";
+            testNode.innerHTML = "<div " + bindingAttribute + "='stringLiteral: \"hello\", numberLiteral: 123, boolLiteral: true, objectLiteral: {}, functionLiteral: function() { }'></div>";
             ko.applyBindings(null, testNode); // No exception means success
         },
 
@@ -109,7 +112,7 @@ function (testConfiguration) {
                     value_of(allBindingsAccessor().another).should_be(123);
                 }
             }
-            testNode.innerHTML = "<div id='testElement' " + ko.bindingProvider.configuration().bindingAttribute + "='test:\"Hello\", another:123'></div>";
+            testNode.innerHTML = "<div id='testElement' " + bindingAttribute + "='test:\"Hello\", another:123'></div>";
             ko.applyBindings(null, testNode);
             value_of(methodsInvoked.length).should_be(2);
             value_of(methodsInvoked[0]).should_be("init");
@@ -123,7 +126,7 @@ function (testConfiguration) {
                 init: function (element, valueAccessor) { initPassedValues.push(valueAccessor()()); },
                 update: function (element, valueAccessor) { updatePassedValues.push(valueAccessor()()); }
             };
-            testNode.innerHTML = "<div " + ko.bindingProvider.configuration().bindingAttribute + "='test: myObservable'></div>";
+            testNode.innerHTML = "<div " + bindingAttribute + "='test: myObservable'></div>";
 
             ko.applyBindings({ myObservable: observable }, testNode);
             value_of(initPassedValues.length).should_be(1);
@@ -142,7 +145,7 @@ function (testConfiguration) {
             ko.bindingHandlers.anyHandler = {
                 update: function (element, valueAccessor) { valueAccessor(); }
             };
-            testNode.innerHTML = "<div " + ko.bindingProvider.configuration().bindingAttribute + "='anyHandler: myObservable()'></div>";
+            testNode.innerHTML = "<div " + bindingAttribute + "='anyHandler: myObservable()'></div>";
             ko.applyBindings({ myObservable: observable }, testNode);
 
             value_of(observable.getSubscriptionsCount()).should_be(1);
@@ -157,7 +160,7 @@ function (testConfiguration) {
             ko.bindingHandlers.anyHandler = {
                 update: function (element, valueAccessor) { valueAccessor(); }
             };
-            testNode.innerHTML = "<div " + ko.bindingProvider.configuration().bindingAttribute + "='anyHandler: myObservable()'></div>";
+            testNode.innerHTML = "<div " + bindingAttribute + "='anyHandler: myObservable()'></div>";
             ko.applyBindings({ myObservable: observable }, testNode);
 
             value_of(observable.getSubscriptionsCount()).should_be(1);
@@ -172,7 +175,7 @@ function (testConfiguration) {
             var observable = new ko.observable({ message: "hello" });
             var passedValues = [];
             ko.bindingHandlers.test = { update: function (element, valueAccessor) { passedValues.push(valueAccessor()); } };
-            testNode.innerHTML = "<div " + ko.bindingProvider.configuration().bindingAttribute + "='test: myObservable().message'></div>";
+            testNode.innerHTML = "<div " + bindingAttribute + "='test: myObservable().message'></div>";
 
             ko.applyBindings({ myObservable: observable }, testNode);
             value_of(passedValues.length).should_be(1);
@@ -184,13 +187,13 @@ function (testConfiguration) {
         },
 
         'Should be able to refer to the bound object itself (at the root scope, the viewmodel) via $data': function () {
-            testNode.innerHTML = "<div " + ko.bindingProvider.configuration().bindingAttribute + "='text: $data.someProp'></div>";
+            testNode.innerHTML = "<div " + bindingAttribute + "='text: $data.someProp'></div>";
             ko.applyBindings({ someProp: 'My prop value' }, testNode);
             value_of(testNode).should_contain_text("My prop value");
         },
 
         'Should be able to update bindings (including callbacks) using an observable view model': function () {
-            testNode.innerHTML = "<input " + ko.bindingProvider.configuration().bindingAttribute + "='value:someProp' />";
+            testNode.innerHTML = "<input " + bindingAttribute + "='value:someProp' />";
             var input = testNode.childNodes[0], vm = ko.observable({ someProp: 'My prop value' });
             ko.applyBindings(vm, input);
 
@@ -225,7 +228,7 @@ function (testConfiguration) {
                 }
             };
 
-            testNode.innerHTML = "<div " + ko.bindingProvider.configuration().bindingAttribute + "='setChildContext:obj1'><span " + ko.bindingProvider.configuration().bindingAttribute + "='text:prop1'></span><span " + ko.bindingProvider.configuration().bindingAttribute + "='text:$root.prop2'></span></div>";
+            testNode.innerHTML = "<div " + bindingAttribute + "='setChildContext:obj1'><span " + bindingAttribute + "='text:prop1'></span><span " + bindingAttribute + "='text:$root.prop2'></span></div>";
             var vm = ko.observable({ obj1: { prop1: "First " }, prop2: "view model" });
             ko.applyBindings(vm, testNode);
             value_of(testNode).should_contain_text("First view model");
@@ -253,7 +256,7 @@ function (testConfiguration) {
                     lastBoundValueUpdate = ko.utils.unwrapObservable(valueAccessor());
                 }
             };
-            testNode.innerHTML = "<div " + ko.bindingProvider.configuration().bindingAttribute + "='testInit: myProp()'></div><div " + ko.bindingProvider.configuration().bindingAttribute + "='testUpdate: myProp()'></div>";
+            testNode.innerHTML = "<div " + bindingAttribute + "='testInit: myProp()'></div><div " + bindingAttribute + "='testUpdate: myProp()'></div>";
             var vm = ko.observable({ myProp: ko.observable("initial value") });
             ko.applyBindings(vm, testNode);
             value_of(lastBoundValueInit).should_be("initial value");
@@ -286,7 +289,7 @@ function (testConfiguration) {
                     }
                 }
             };
-            testNode.innerHTML = "<div " + ko.bindingProvider.configuration().bindingAttribute + "='twoLevelBinding: {first: firstName, full: firstName()+\" \"+lastName()}, twoLevelBinding.last: lastName'></div>";
+            testNode.innerHTML = "<div " + bindingAttribute + "='twoLevelBinding: {first: firstName, full: firstName()+\" \"+lastName()}, twoLevelBinding.last: lastName'></div>";
             ko.applyBindings({ firstName: firstName, lastName: lastName }, testNode);
             value_of(results.first).should_be("bob");
             value_of(results.last).should_be("smith");
@@ -316,7 +319,7 @@ function (testConfiguration) {
                     }
                 }
             };
-            testNode.innerHTML = "<div " + ko.bindingProvider.configuration().bindingAttribute + "='testEvent: topLevelFunction'></div><div " + ko.bindingProvider.configuration().bindingAttribute + "='testEvent: level2.secondLevelFunction'></div>";
+            testNode.innerHTML = "<div " + bindingAttribute + "='testEvent: topLevelFunction'></div><div " + bindingAttribute + "='testEvent: level2.secondLevelFunction'></div>";
             ko.applyBindings(vm, testNode, { eventHandlersUseObjectForThis: true });
             value_of(eventCalls).should_be(2);
         },
@@ -327,7 +330,7 @@ function (testConfiguration) {
                 flags: ko.bindingFlags.noValue,
                 init: function (element, valueAccessor) { if (valueAccessor()) initCalls++; }
             }
-            testNode.innerHTML = "<div " + ko.bindingProvider.configuration().bindingAttribute + "='doesntRequireValue, dummy: false'></div><div " + ko.bindingProvider.configuration().bindingAttribute + "='doesntRequireValue: true, dummy: false'></div>";
+            testNode.innerHTML = "<div " + bindingAttribute + "='doesntRequireValue, dummy: false'></div><div " + bindingAttribute + "='doesntRequireValue: true, dummy: false'></div>";
             ko.applyBindings(null, testNode);
             value_of(initCalls).should_be(2);
         },
@@ -337,7 +340,7 @@ function (testConfiguration) {
             ko.bindingHandlers.doesRequireValue = {
                 init: function (element, valueAccessor) { if (valueAccessor()) initCalls++; }
             }
-            testNode.innerHTML = "<div " + ko.bindingProvider.configuration().bindingAttribute + "='doesRequireValue, dummy: false'></div><div " + ko.bindingProvider.configuration().bindingAttribute + "='doesRequireValue: true, dummy: false'></div>";
+            testNode.innerHTML = "<div " + bindingAttribute + "='doesRequireValue, dummy: false'></div><div " + bindingAttribute + "='doesRequireValue: true, dummy: false'></div>";
 
             try { ko.applyBindings(null, testNode) }
             catch (ex) { didThrow = true; value_of(ex.message).should_contain('Unable to parse bindings') }
@@ -348,10 +351,10 @@ function (testConfiguration) {
             ko.bindingHandlers.test = {
                 flags: ko.bindingFlags.contentBind
             };
-            testNode.innerHTML = "<div " + ko.bindingProvider.configuration().bindingAttribute + "='test: true'>"
-                           + "<div " + ko.bindingProvider.configuration().bindingAttribute + "='text: 123'>456</div>"
+            testNode.innerHTML = "<div " + bindingAttribute + "='test: true'>"
+                           + "<div " + bindingAttribute + "='text: 123'>456</div>"
                            + "</div>"
-                           + "<div " + ko.bindingProvider.configuration().bindingAttribute + "='text: 123'>456</div>";
+                           + "<div " + bindingAttribute + "='text: 123'>456</div>";
             ko.applyBindings(null, testNode);
 
             value_of(testNode.childNodes[0].childNodes[0].innerHTML).should_be("456");
@@ -363,7 +366,7 @@ function (testConfiguration) {
                 flags: ko.bindingFlags.contentBind
             };
             ko.bindingHandlers.test2 = ko.bindingHandlers.test1;
-            testNode.innerHTML = "<div " + ko.bindingProvider.configuration().bindingAttribute + "='test1: true, test2: true'></div>"
+            testNode.innerHTML = "<div " + bindingAttribute + "='test1: true, test2: true'></div>"
             var didThrow = false;
 
             try { ko.applyBindings(null, testNode) }
@@ -375,7 +378,7 @@ function (testConfiguration) {
             ko.bindingHandlers.test = {
                 init: function () { return { controlsDescendantBindings: true} }
             };
-            testNode.innerHTML = "<div " + ko.bindingProvider.configuration().bindingAttribute + "='test: true'></div>"
+            testNode.innerHTML = "<div " + bindingAttribute + "='test: true'></div>"
             var didThrow = false;
 
             try { ko.applyBindings(null, testNode, { independentBindings: true }) }
@@ -387,7 +390,7 @@ function (testConfiguration) {
             ko.bindingHandlers.test = {
                 init: function () { return { controlsDescendantBindings: true} }
             };
-            testNode.innerHTML = "<div " + ko.bindingProvider.configuration().bindingAttribute + "='test: true'></div>"
+            testNode.innerHTML = "<div " + bindingAttribute + "='test: true'></div>"
 
             ko.applyBindings(null, testNode);
             // shouldn't throw any error
@@ -398,7 +401,7 @@ function (testConfiguration) {
                 flags: ko.bindingFlags.contentBind,
                 init: function () { return { controlsDescendantBindings: true} }
             };
-            testNode.innerHTML = "<div " + ko.bindingProvider.configuration().bindingAttribute + "='test: true'></div>"
+            testNode.innerHTML = "<div " + bindingAttribute + "='test: true'></div>"
 
             ko.applyBindings(null, testNode, { independentBindings: true });
             // shouldn't throw any error
@@ -409,14 +412,14 @@ function (testConfiguration) {
                 flags: ko.bindingFlags.contentBind,
                 init: function () { return { controlsDescendantBindings: true} }
             };
-            testNode.innerHTML = "<div " + ko.bindingProvider.configuration().bindingAttribute + "='test: true'></div>"
+            testNode.innerHTML = "<div " + bindingAttribute + "='test: true'></div>"
 
             ko.applyBindings(null, testNode);
             // shouldn't throw any error
         },
 
         'Should use properties on the view model in preference to properties on the binding context': function () {
-            testNode.innerHTML = "<div " + ko.bindingProvider.configuration().bindingAttribute + "='text: $data.someProp'></div>";
+            testNode.innerHTML = "<div " + bindingAttribute + "='text: $data.someProp'></div>";
             ko.applyBindings({ '$data': { someProp: 'Inner value' }, someProp: 'Outer value' }, testNode);
             value_of(testNode).should_contain_text("Inner value");
         },
@@ -428,7 +431,7 @@ function (testConfiguration) {
                     ko.applyBindingsToDescendants(bindingContext.extend({ '$customProp': 'my value' }), element);
                 }
             };
-            testNode.innerHTML = "<div " + ko.bindingProvider.configuration().bindingAttribute + "='with: true'><div " + ko.bindingProvider.configuration().bindingAttribute + "='addCustomProperty: true'><div " + ko.bindingProvider.configuration().bindingAttribute + "='text: $customProp'></div></div></div>";
+            testNode.innerHTML = "<div " + bindingAttribute + "='with: true'><div " + bindingAttribute + "='addCustomProperty: true'><div " + bindingAttribute + "='text: $customProp'></div></div></div>";
             ko.applyBindings(null, testNode);
             value_of(testNode).should_contain_text("my value");
             value_of(ko.contextFor(testNode.childNodes[0].childNodes[0].childNodes[0]).$customProp).should_be("my value");
@@ -442,13 +445,13 @@ function (testConfiguration) {
                     ko.applyBindingsToDescendants(bindingContext.extend({ '$customProp': 'my value' }), element);
                 }
             };
-            testNode.innerHTML = "<div " + ko.bindingProvider.configuration().bindingAttribute + "='addCustomProperty: true'><div " + ko.bindingProvider.configuration().bindingAttribute + "='with: true'><div " + ko.bindingProvider.configuration().bindingAttribute + "='text: $customProp'></div></div></div>";
+            testNode.innerHTML = "<div " + bindingAttribute + "='addCustomProperty: true'><div " + bindingAttribute + "='with: true'><div " + bindingAttribute + "='text: $customProp'></div></div></div>";
             ko.applyBindings(null, testNode);
             value_of(testNode).should_contain_text("my value");
         },
 
         'Should be able to retrieve the binding context associated with any node': function () {
-            testNode.innerHTML = "<div><div " + ko.bindingProvider.configuration().bindingAttribute + "='text: name'></div></div>";
+            testNode.innerHTML = "<div><div " + bindingAttribute + "='text: name'></div></div>";
             ko.applyBindings({ name: 'Bert' }, testNode.childNodes[0]);
 
             value_of(testNode.childNodes[0].childNodes[0]).should_contain_text("Bert");
@@ -467,7 +470,7 @@ function (testConfiguration) {
         },
 
         'Should not be allowed to use containerless binding syntax for bindings other than whitelisted ones': function () {
-            testNode.innerHTML = "Hello <!-- " + ko.bindingProvider.configuration().virtualElementTag + " visible: false -->Some text<!--  /" + ko.bindingProvider.configuration().virtualElementTag + "  --> Goodbye"
+            testNode.innerHTML = "Hello <!-- " + virtualElementTag + " visible: false -->Some text<!--  /" + virtualElementTag + "  --> Goodbye"
             var didThrow = false;
             try {
                 ko.applyBindings(null, testNode);
@@ -484,7 +487,7 @@ function (testConfiguration) {
                 flags: ko.bindingFlags.canUseVirtual,
                 init: function () { initCalls++; }
             };
-            testNode.innerHTML = "Hello <!-- " + ko.bindingProvider.configuration().virtualElementTag + " test: false -->Some text<!--  /" + ko.bindingProvider.configuration().virtualElementTag + "  --> Goodbye"
+            testNode.innerHTML = "Hello <!-- " + virtualElementTag + " test: false -->Some text<!--  /" + virtualElementTag + "  --> Goodbye"
             ko.applyBindings(null, testNode);
 
             value_of(initCalls).should_be(1);
@@ -496,7 +499,7 @@ function (testConfiguration) {
             ko.bindingHandlers.test = { init: function () { initCalls++ } };
             ko.virtualElements.allowedBindings['test'] = true;
 
-            testNode.innerHTML = "Hello <!-- " + ko.bindingProvider.configuration().virtualElementTag + " test: false -->Some text<!--  /" + ko.bindingProvider.configuration().virtualElementTag + "  --> Goodbye"
+            testNode.innerHTML = "Hello <!-- " + virtualElementTag + " test: false -->Some text<!--  /" + virtualElementTag + "  --> Goodbye"
             ko.applyBindings(null, testNode);
 
             value_of(initCalls).should_be(1);
@@ -516,7 +519,7 @@ function (testConfiguration) {
                     }
                 }
             };
-            testNode.innerHTML = "Hello <!-- " + ko.bindingProvider.configuration().virtualElementTag + " test: false -->Some text<!--  /" + ko.bindingProvider.configuration().virtualElementTag + "  --> Goodbye"
+            testNode.innerHTML = "Hello <!-- " + virtualElementTag + " test: false -->Some text<!--  /" + virtualElementTag + "  --> Goodbye"
             ko.applyBindings(null, testNode);
 
             value_of(countNodes).should_be(1);
@@ -529,7 +532,7 @@ function (testConfiguration) {
                 flags: ko.bindingFlags.canUseVirtual,
                 init: function () { initCalls++; }
             };
-            testNode.innerHTML = "Hello <!-- if: true --><!-- " + ko.bindingProvider.configuration().virtualElementTag + " test: false -->Some text<!--  /" + ko.bindingProvider.configuration().virtualElementTag + "  --><!--  /" + ko.bindingProvider.configuration().virtualElementTag + "  --> Goodbye"
+            testNode.innerHTML = "Hello <!-- if: true --><!-- " + virtualElementTag + " test: false -->Some text<!--  /" + virtualElementTag + "  --><!--  /" + virtualElementTag + "  --> Goodbye"
             ko.applyBindings(null, testNode);
 
             value_of(initCalls).should_be(1);
@@ -540,13 +543,13 @@ function (testConfiguration) {
             delete ko.bindingHandlers.nonexistentHandler;
             var initCalls = 0;
             ko.bindingHandlers.test = { init: function () { initCalls++; } };
-            testNode.innerHTML = "<div " + ko.bindingProvider.configuration().bindingAttribute + "='template: {\"if\":true}'>xxx<!-- " + ko.bindingProvider.configuration().virtualElementTag + " nonexistentHandler: true --><span " + ko.bindingProvider.configuration().bindingAttribute + "='test: true'></span><!--  /" + ko.bindingProvider.configuration().virtualElementTag + "  --></div>";
+            testNode.innerHTML = "<div " + bindingAttribute + "='template: {\"if\":true}'>xxx<!-- " + virtualElementTag + " nonexistentHandler: true --><span " + bindingAttribute + "='test: true'></span><!--  /" + virtualElementTag + "  --></div>";
             ko.applyBindings({}, testNode);
             value_of(initCalls).should_be(1);
         },
 
         'Should automatically bind virtual descendants of containerless markers if no binding controlsDescendantBindings': function () {
-            testNode.innerHTML = "Hello <!-- " + ko.bindingProvider.configuration().virtualElementTag + " dummy: false --><span " + ko.bindingProvider.configuration().bindingAttribute + "='text: \"WasBound\"'>Some text</span><!--  /" + ko.bindingProvider.configuration().virtualElementTag + "  --> Goodbye";
+            testNode.innerHTML = "Hello <!-- " + virtualElementTag + " dummy: false --><span " + bindingAttribute + "='text: \"WasBound\"'>Some text</span><!--  /" + virtualElementTag + "  --> Goodbye";
             ko.applyBindings(null, testNode);
             value_of(testNode).should_contain_text("Hello WasBound Goodbye");
         },
@@ -560,7 +563,7 @@ function (testConfiguration) {
                 }
             };
 
-            testNode.innerHTML = "Hello <!-- " + ko.bindingProvider.configuration().virtualElementTag + " bindChildrenWithCustomContext: true --><div>Some text</div><!--  /" + ko.bindingProvider.configuration().virtualElementTag + "  --> Goodbye"
+            testNode.innerHTML = "Hello <!-- " + virtualElementTag + " bindChildrenWithCustomContext: true --><div>Some text</div><!--  /" + virtualElementTag + "  --> Goodbye"
             ko.applyBindings(null, testNode);
 
             value_of(ko.dataFor(testNode.childNodes[2]).myCustomData).should_be(123);
@@ -576,7 +579,7 @@ function (testConfiguration) {
                 }
             };
 
-            testNode.innerHTML = "Hello <div " + ko.bindingProvider.configuration().bindingAttribute + "='bindChildrenWithCustomContext: true'><!-- " + ko.bindingProvider.configuration().virtualElementTag + " nonexistentHandler: 123 --><div>Some text</div><!--  /" + ko.bindingProvider.configuration().virtualElementTag + "  --></div> Goodbye"
+            testNode.innerHTML = "Hello <div " + bindingAttribute + "='bindChildrenWithCustomContext: true'><!-- " + virtualElementTag + " nonexistentHandler: 123 --><div>Some text</div><!--  /" + virtualElementTag + "  --></div> Goodbye"
             ko.applyBindings(null, testNode);
 
             value_of(ko.dataFor(testNode.childNodes[1].childNodes[0]).myCustomData).should_be(123);
@@ -593,7 +596,7 @@ function (testConfiguration) {
                 }
             };
 
-            testNode.innerHTML = "Hello <div " + ko.bindingProvider.configuration().bindingAttribute + "='bindChildrenWithCustomContext: true'><!-- " + ko.bindingProvider.configuration().virtualElementTag + " with: myCustomData --><div>Some text</div><!--  /" + ko.bindingProvider.configuration().virtualElementTag + "  --></div> Goodbye"
+            testNode.innerHTML = "Hello <div " + bindingAttribute + "='bindChildrenWithCustomContext: true'><!-- " + virtualElementTag + " with: myCustomData --><div>Some text</div><!--  /" + virtualElementTag + "  --></div> Goodbye"
             ko.applyBindings(null, testNode);
 
             value_of(ko.contextFor(testNode.childNodes[1].childNodes[0]).customValue).should_be('xyz');
@@ -617,7 +620,7 @@ function (testConfiguration) {
                     value('B');
                 }
             };
-            testNode.innerHTML = "<div " + ko.bindingProvider.configuration().bindingAttribute + "='test: myObservable'></div>";
+            testNode.innerHTML = "<div " + bindingAttribute + "='test: myObservable'></div>";
 
             ko.applyBindings({ myObservable: observable }, testNode);
             value_of(initCalls).should_be(1);
@@ -646,7 +649,7 @@ function (testConfiguration) {
                     hasUpdatedSecondBinding = true;
                 }
             }
-            testNode.innerHTML = "<div " + ko.bindingProvider.configuration().bindingAttribute + "='test1: myObservable, test2: true'></div>";
+            testNode.innerHTML = "<div " + bindingAttribute + "='test1: myObservable, test2: true'></div>";
 
             ko.applyBindings({ myObservable: observable }, testNode);
             value_of(hasUpdatedSecondBinding).should_be(true);
@@ -660,7 +663,7 @@ function (testConfiguration) {
                     value();
                 }
             }
-            testNode.innerHTML = "<div " + ko.bindingProvider.configuration().bindingAttribute + "='if: true'><div " + ko.bindingProvider.configuration().bindingAttribute + "='test: myObservable'></div></div>";
+            testNode.innerHTML = "<div " + bindingAttribute + "='if: true'><div " + bindingAttribute + "='test: myObservable'></div></div>";
 
             ko.applyBindings({ myObservable: observable }, testNode, { independentBindings: true });
             value_of(observable.getSubscriptionsCount()).should_be(0);
@@ -679,7 +682,7 @@ function (testConfiguration) {
                     updateCount2++;
                 }
             };
-            testNode.innerHTML = "<div " + ko.bindingProvider.configuration().bindingAttribute + "='test1: myObservable, test2: true'></div>";
+            testNode.innerHTML = "<div " + bindingAttribute + "='test1: myObservable, test2: true'></div>";
 
             ko.applyBindings({ myObservable: observable }, testNode, { independentBindings: true });
             value_of(updateCount1).should_be(1);
@@ -705,7 +708,7 @@ function (testConfiguration) {
                     updateCount2++;
                 }
             };
-            testNode.innerHTML = "<div " + ko.bindingProvider.configuration().bindingAttribute + "='test1: myObservable, test2: true'></div>";
+            testNode.innerHTML = "<div " + bindingAttribute + "='test1: myObservable, test2: true'></div>";
 
             ko.applyBindings({ myObservable: observable }, testNode, { independentBindings: true });
             value_of(updateCount1).should_be(1);
@@ -733,7 +736,7 @@ function (testConfiguration) {
                     updateCount2++;
                 }
             };
-            testNode.innerHTML = "<div " + ko.bindingProvider.configuration().bindingAttribute + "='test1: myObservable, test2: true'></div>";
+            testNode.innerHTML = "<div " + bindingAttribute + "='test1: myObservable, test2: true'></div>";
 
             ko.applyBindings({ myObservable: observable }, testNode, { independentBindings: true });
             observable('B');
@@ -758,7 +761,7 @@ function (testConfiguration) {
                     updateCount2++;
                 }
             };
-            testNode.innerHTML = "<div " + ko.bindingProvider.configuration().bindingAttribute + "='test1: myObservable, test2: true'></div>";
+            testNode.innerHTML = "<div " + bindingAttribute + "='test1: myObservable, test2: true'></div>";
 
             ko.applyBindings({ myObservable: observable }, testNode, { independentBindings: true });
             observable('B');
@@ -772,7 +775,7 @@ function (testConfiguration) {
             ko.bindingHandlers.existentHandler = {
                 update: function () { countUpdates++; }
             }
-            testNode.innerHTML = "<div " + ko.bindingProvider.configuration().bindingAttribute + "='existentHandler: true, nonexistentHandler: myObservable()'></div>";
+            testNode.innerHTML = "<div " + bindingAttribute + "='existentHandler: true, nonexistentHandler: myObservable()'></div>";
 
             // dependent mode: should update
             ko.applyBindings({ myObservable: observable }, testNode);
@@ -803,7 +806,7 @@ function (testConfiguration) {
         updateValue = allBindingsAccessor().nonexistentHandler;
         }
         }
-        testNode.innerHTML = "<div " + ko.bindingProvider.configuration().bindingAttribute + "='existentHandler: myObservable, nonexistentHandler: myNonObservable'></div>";
+        testNode.innerHTML = "<div " + bindingAttribute + "='existentHandler: myObservable, nonexistentHandler: myNonObservable'></div>";
 
         ko.applyBindings(vm, testNode);
         value_of(updateValue).should_be("first value");
@@ -825,7 +828,7 @@ function (testConfiguration) {
             ko.bindingHandlers.test4 = { flags: ko.bindingFlags.contentUpdate, update: function () { checkOrder(4); } };
             ko.bindingHandlers.test5 = { update: function () { checkOrder(5); } };
 
-            testNode.innerHTML = "<div " + ko.bindingProvider.configuration().bindingAttribute + "='test5: true, test4: true, test3: true, test2: true, test1: true, dependencies: {test2: \"test1\", test5: \"test4\"}'></div>";
+            testNode.innerHTML = "<div " + bindingAttribute + "='test5: true, test4: true, test3: true, test2: true, test1: true, dependencies: {test2: \"test1\", test5: \"test4\"}'></div>";
 
             ko.applyBindings(null, testNode);
         },
@@ -834,7 +837,7 @@ function (testConfiguration) {
             ko.bindingHandlers.test1 = {};
             ko.bindingHandlers.test2 = {};
 
-            testNode.innerHTML = "<div " + ko.bindingProvider.configuration().bindingAttribute + "='test1: true, test2: true, dependencies: {test2: \"test1\", test1: \"test2\"}'></div>";
+            testNode.innerHTML = "<div " + bindingAttribute + "='test1: true, test2: true, dependencies: {test2: \"test1\", test1: \"test2\"}'></div>";
 
             var didThrow = false;
             try { ko.applyBindings(null, testNode) }
@@ -846,7 +849,7 @@ function (testConfiguration) {
             ko.bindingHandlers.test1 = { flags: ko.bindingFlags.contentSet };
             ko.bindingHandlers.test2 = { flags: ko.bindingFlags.contentUpdate };
 
-            testNode.innerHTML = "<div " + ko.bindingProvider.configuration().bindingAttribute + "='test1: true, test2: true, dependencies: {test1: \"test2\"}'></div>";
+            testNode.innerHTML = "<div " + bindingAttribute + "='test1: true, test2: true, dependencies: {test1: \"test2\"}'></div>";
 
             var didThrow = false;
             try { ko.applyBindings(null, testNode) }
@@ -860,7 +863,7 @@ function (testConfiguration) {
                 flags: ko.bindingFlags.noValue,
                 update: function () { updateCalls++; }
             }
-            testNode.innerHTML = "<div " + ko.bindingProvider.configuration().bindingAttribute + "='sometimesRequiresValue'></div>";
+            testNode.innerHTML = "<div " + bindingAttribute + "='sometimesRequiresValue'></div>";
             // first time works fine
             ko.applyBindings(vm, testNode);
             value_of(updateCalls).should_be(1);
