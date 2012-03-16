@@ -1,4 +1,4 @@
-// Knockout JavaScript library v2.1.0pre+mbest/smart-binding/beta.3
+// Knockout JavaScript library v2.1.0pre+mbest/smart-binding/beta.3+GilesBradshaw/BindingProviderConfiguration
 // (c) Steven Sanderson - http://knockoutjs.com/
 // License: MIT (http://www.opensource.org/licenses/mit-license.php)
 
@@ -43,7 +43,7 @@ ko.exportProperties = function(owner /*name, object, name, object ...*/) {
     }
     return owner;
 };
-ko.version = "2.1.0pre+mbest/smart-binding/beta.3";
+ko.version = "2.1.0pre+mbest/smart-binding/beta.3+GilesBradshaw/BindingProviderConfiguration";
 
 ko.exportSymbol('version', ko.version);
 ko.utils = (function () {
