@@ -117,30 +117,42 @@ ko.bindingHandlers['value'] = {
             ko.utils.arrayPushAll(eventsToCatch, requestedEventsToCatch);
             eventsToCatch = ko.utils.arrayGetDistinctValues(eventsToCatch);
         }
-        
+
+        var valueUpdateHandler = function() {
+            var modelValue = valueAccessor();
+            var elementValue = ko.selectExtensions.readValue(element);
+            ko.bindingExpressionRewriting.writeValueToProperty(modelValue, allBindingsAccessor, 'value', elementValue, /* checkIfDifferent: */ true);
+        }
+
+        // Workaround for https://github.com/SteveSanderson/knockout/issues/122
+        // IE doesn't fire "change" events on textboxes if the user selects a value from its autocomplete list
+        var ieAutoCompleteHackNeeded = ko.utils.ieVersion && element.tagName.toLowerCase() == "input" && element.type == "text"
+                                       && element.autocomplete != "off" && (!element.form || element.form.autocomplete != "off");
+        if (ieAutoCompleteHackNeeded && ko.utils.arrayIndexOf(eventsToCatch, "propertychange") == -1) {
+            var propertyChangedFired = false;
+            ko.utils.registerEventHandler(element, "propertychange", function () { propertyChangedFired = true });
+            ko.utils.registerEventHandler(element, "blur", function() {
+                if (propertyChangedFired) {
+                    propertyChangedFired = false;
+                    valueUpdateHandler();
+                }
+            });
+        }
+
         ko.utils.arrayForEach(eventsToCatch, function(eventName) {
             // The syntax "after<eventname>" means "run the handler asynchronously after the event"
             // This is useful, for example, to catch "keydown" events after the browser has updated the control
             // (otherwise, ko.selectExtensions.readValue(this) will receive the control's value *before* the key event)
-            var handleEventAsynchronously = false;
+            var handler = valueUpdateHandler;
             if (ko.utils.stringStartsWith(eventName, "after")) {
-                handleEventAsynchronously = true;
+                handler = function() { setTimeout(valueUpdateHandler, 0) };
                 eventName = eventName.substring("after".length);
             }
-            var getEventHandler = handleEventAsynchronously ? function(handler) { return function() { setTimeout(handler) } }
-                                                            : function(handler) { return handler };
-            
-            ko.utils.registerEventHandler(element, eventName, getEventHandler(function() {
-                var modelValue = valueAccessor();
-                var elementValue = ko.selectExtensions.readValue(element);
-                if (ko.isWriteableObservable(modelValue))
-                    modelValue(elementValue);
-                else
-                    ko.bindingExpressionRewriting.writeValueToProperty(allBindingsAccessor, 'value', elementValue);
-            }));	    	
+            ko.utils.registerEventHandler(element, eventName, handler);
         });
     },
     'update': function (element, valueAccessor) {
+        var valueIsSelectOption = ko.utils.tagNameLower(element) === "select";
         var newValue = ko.utils.unwrapObservable(valueAccessor());
         var elementValue = ko.selectExtensions.readValue(element);
         var valueHasChanged = (newValue != elementValue);
@@ -157,7 +169,6 @@ ko.bindingHandlers['value'] = {
             // Workaround for IE6 bug: It won't reliably apply values to SELECT nodes during the same execution thread
             // right after you've changed the set of OPTION nodes on it. So for that node type, we'll schedule a second thread
             // to apply the value as well.
-            var valueIsSelectOption = element.tagName == "SELECT";
             if (valueIsSelectOption) {
                 // If you try to set a model value that can't be represented in an already-populated dropdown, reject that change,
                 // because you're not allowed to have a model value that disagrees with a visible UI selection.
@@ -173,12 +184,12 @@ ko.bindingHandlers['value'] = {
 ko.bindingHandlers['options'] = {
     'flags': bindingFlags_contentBind | bindingFlags_contentSet,
     'update': function (element, valueAccessor, allBindingsAccessor) {
-        if (element.tagName != "SELECT")
+        if (ko.utils.tagNameLower(element) !== "select")
             throw new Error("options binding applies only to SELECT elements");
 
         var selectWasPreviouslyEmpty = element.length == 0;
         var previousSelectedValues = ko.utils.arrayMap(ko.utils.arrayFilter(element.childNodes, function (node) {
-            return node.tagName && node.tagName == "OPTION" && node.selected;
+            return node.tagName && (ko.utils.tagNameLower(node) === "option") && node.selected;
         }), function (node) {
             return ko.selectExtensions.readValue(node) || node.innerText || node.textContent;
         });
@@ -199,13 +210,13 @@ ko.bindingHandlers['options'] = {
             if (typeof value.length != "number")
                 value = [value];
             if (allBindings['optionsCaption']) {
-                var option = document.createElement("OPTION");
+                var option = document.createElement("option");
                 ko.utils.setHtml(option, allBindings['optionsCaption']);
                 ko.selectExtensions.writeValue(option, undefined);
                 element.appendChild(option);
             }
             for (var i = 0, j = value.length; i < j; i++) {
-                var option = document.createElement("OPTION");
+                var option = document.createElement("option");
                 
                 // Apply a value to the option element
                 var optionValue = typeof allBindings['optionsValue'] == "string" ? value[i][allBindings['optionsValue']] : value[i];
@@ -230,7 +241,7 @@ ko.bindingHandlers['options'] = {
 
             // IE6 doesn't like us to assign selection to OPTION nodes before they're added to the document.
             // That's why we first added them without selection. Now it's time to set the selection.
-            var newOptions = element.getElementsByTagName("OPTION");
+            var newOptions = element.getElementsByTagName("option");
             var countSelectionsRetained = 0;
             for (var i = 0, j = newOptions.length; i < j; i++) {
                 if (ko.utils.arrayIndexOf(previousSelectedValues, ko.selectExtensions.readValue(newOptions[i])) >= 0) {
@@ -256,10 +267,10 @@ ko.bindingHandlers['selectedOptions'] = {
         var result = [];
         var nodes = selectNode.childNodes;
         for (var i = 0, j = nodes.length; i < j; i++) {
-            var node = nodes[i];
-            if ((node.tagName == "OPTION") && node.selected)
+            var node = nodes[i], tagName = ko.utils.tagNameLower(node);
+            if (tagName == "option" && node.selected)
                 result.push(ko.selectExtensions.readValue(node));
-            else if (node.tagName == "OPTGROUP") {
+            else if (tagName == "optgroup") {
                 var selectedValuesFromOptGroup = ko.bindingHandlers['selectedOptions'].getSelectedValuesFromSelectNode(node);
                 Array.prototype.splice.apply(result, [result.length, 0].concat(selectedValuesFromOptGroup)); // Add new entries to existing 'result' instance
             }
@@ -268,15 +279,13 @@ ko.bindingHandlers['selectedOptions'] = {
     },
     'init': function (element, valueAccessor, allBindingsAccessor) {
         ko.utils.registerEventHandler(element, "change", function () { 
-            var value = valueAccessor(), valueToWrite = ko.bindingHandlers['selectedOptions'].getSelectedValuesFromSelectNode(this);
-            if (ko.isWriteableObservable(value))
-                value(valueToWrite);
-            else
-                ko.bindingExpressionRewriting.writeValueToProperty(allBindingsAccessor, 'value', valueToWrite);
+            var value = valueAccessor();
+            var valueToWrite = ko.bindingHandlers['selectedOptions'].getSelectedValuesFromSelectNode(this);
+            ko.bindingExpressionRewriting.writeValueToProperty(value, allBindingsAccessor, 'value', valueToWrite);
         });    	
     },
     'update': function (element, valueAccessor) {
-        if (element.tagName != "SELECT")
+        if (ko.utils.tagNameLower(element) != "select")
             throw new Error("values binding applies only to SELECT elements");
 
         var newValue = ko.utils.unwrapObservable(valueAccessor());
@@ -284,7 +293,7 @@ ko.bindingHandlers['selectedOptions'] = {
             var nodes = element.childNodes;
             for (var i = 0, j = nodes.length; i < j; i++) {
                 var node = nodes[i];
-                if (node.tagName == "OPTION")
+                if (ko.utils.tagNameLower(node) === "option")
                     ko.utils.setOptionNodeSelectionState(node, ko.utils.arrayIndexOf(newValue, ko.selectExtensions.readValue(node)) >= 0);
             }
         }
@@ -374,12 +383,8 @@ ko.bindingHandlers['checked'] = {
                     modelValue.push(element.value);
                 else if ((!element.checked) && (existingEntryIndex >= 0))
                     modelValue.splice(existingEntryIndex, 1);
-            } else if (ko.isWriteableObservable(modelValue)) {            	
-                if (modelValue() !== valueToWrite) { // Suppress repeated events when there's nothing new to notify (some browsers raise them)
-                    modelValue(valueToWrite);
-                }
             } else {
-                ko.bindingExpressionRewriting.writeValueToProperty(allBindingsAccessor, 'checked', valueToWrite);
+                ko.bindingExpressionRewriting.writeValueToProperty(modelValue, allBindingsAccessor, 'checked', valueToWrite, true);
             }
         };
         ko.utils.registerEventHandler(element, "click", updateHandler);
@@ -454,13 +459,7 @@ ko.bindingHandlers['hasfocus'] = {
     'init': function(element, valueAccessor, allBindingsAccessor) {
         var writeValue = function(valueToWrite) {
             var modelValue = valueAccessor();
-            if (valueToWrite == ko.utils.unwrapObservable(modelValue))
-                return;
-
-            if (ko.isWriteableObservable(modelValue))
-                modelValue(valueToWrite);
-            else
-                ko.bindingExpressionRewriting.writeValueToProperty(allBindingsAccessor, 'hasfocus', valueToWrite);
+            ko.bindingExpressionRewriting.writeValueToProperty(modelValue, allBindingsAccessor, 'hasfocus', valueToWrite, true);
         };
         ko.utils.registerEventHandler(element, "focus", function() { writeValue(true) });
         ko.utils.registerEventHandler(element, "focusin", function() { writeValue(true) }); // For IE
