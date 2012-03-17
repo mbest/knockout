@@ -1,4 +1,5 @@
 function prepareTestNode() {
+    ko.bindingProvider.instance = new ko.bindingProvider();
     var existingNode = document.getElementById("testNode");
     if (existingNode != null)
         existingNode.parentNode.removeChild(existingNode);
