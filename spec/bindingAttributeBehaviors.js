@@ -431,7 +431,7 @@ function (testConfiguration) {
                     ko.applyBindingsToDescendants(bindingContext.extend({ '$customProp': 'my value' }), element);
                 }
             };
-        testNode.innerHTML = "<div data-bind='with: sub'><div data-bind='addCustomProperty: true'><div data-bind='text: $customProp'></div></div></div>";
+            testNode.innerHTML = "<div " + bindingAttribute + "='with: sub'><div " + bindingAttribute + "='addCustomProperty: true'><div " + bindingAttribute + "='text: $customProp'></div></div></div>";
         var vm = { sub: {} };
         ko.applyBindings(vm, testNode);
             value_of(testNode).should_contain_text("my value");

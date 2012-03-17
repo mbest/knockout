@@ -483,7 +483,7 @@ var defaultBindingsBehaviors =
             var myobservable = new ko.observable(123).extend({ notify: 'always' });
             var numUpdates = 0;
             myobservable.subscribe(function() { numUpdates++ });
-            testNode.innerHTML = "<input data-bind='value:someProp' />";
+            testNode.innerHTML = "<input " + bindingAttribute + "='value:someProp' />";
             ko.applyBindings({ someProp: myobservable }, testNode);
 
             // First try change then blur
