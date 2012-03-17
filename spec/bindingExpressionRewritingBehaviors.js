@@ -38,11 +38,11 @@ describe('Binding Expression Rewriting', {
         );
         value_of(result.length).should_be(3);
         value_of(result[0].key).should_be("myObject");
-        value_of(result[0].value).should_be("{ someChild: { }, someChildArray: [1,2,3], \"quotedChildProp\": 'string value' }");
+        value_of(result[0].value).should_be("{someChild:{},someChildArray:[1,2,3],\"quotedChildProp\":'string value'}");
         value_of(result[1].key).should_be("someFn");
-        value_of(result[1].value).should_be("function(a, b, c) { var regex = /}/; var str='/})({'; return {}; }");
+        value_of(result[1].value).should_be("function(a,b,c){var regex =/}/; var str='/})({'; return{};}");
         value_of(result[2].key).should_be("myArray");
-        value_of(result[2].value).should_be("[{}, function() { }, \"my'Str\", 'my\"Str']");
+        value_of(result[2].value).should_be("[{},function(){},\"my'Str\",'my\"Str']");
     },
 
     'Should be able to cope with malformed syntax (things that aren\'t key-value pairs)': function() {
@@ -52,7 +52,8 @@ describe('Binding Expression Rewriting', {
         value_of(result[1].unknown).should_be("mal:formed2");
         value_of(result[2].key).should_be("good");
         value_of(result[2].value).should_be("3");
-        value_of(result[3].unknown).should_be("{ malformed: 4 }");
+        value_of(result[3].key).should_be("malformed");
+        value_of(result[3].value).should_be("{:4}");
     },
 
     'Should ensure all keys are wrapped in quotes': function() {
@@ -99,17 +100,17 @@ describe('Binding Expression Rewriting', {
             var accessor = function(key) { return parsedRewritten[key]; };
 
             // update simple property
-            ko.bindingExpressionRewriting.writeValueToProperty(accessor, 'b.a', "stan");
+            ko.bindingExpressionRewriting.writeValueToProperty(null, accessor, 'b.a', "stan");
             value_of(model.prop1).should_be("stan");
 
             // update sub-property (two methods)
-            ko.bindingExpressionRewriting.writeValueToProperty(accessor, 'b.b', "smith");
+            ko.bindingExpressionRewriting.writeValueToProperty(null, accessor, 'b.b', "smith");
             value_of(model.obj2.prop2).should_be("smith");
-            ko.bindingExpressionRewriting.writeValueToProperty(accessor, 'b.c', "sloan");
+            ko.bindingExpressionRewriting.writeValueToProperty(null, accessor, 'b.c', "sloan");
             value_of(model.obj2.prop2).should_be("sloan");
 
             // update property of object returned by a function (won't update)
-            ko.bindingExpressionRewriting.writeValueToProperty(accessor, 'b.d', "smart");
+            ko.bindingExpressionRewriting.writeValueToProperty(null, accessor, 'b.d', "smart");
             value_of(model.obj2.prop2).should_be("sloan");
         }
         delete ko.bindingHandlers.b;

@@ -15,7 +15,7 @@
         }
     }
 
-    function activateBindingsOnContinuousNodeArray(continuousNodeArray, bindingContext, subscription) {
+    function activateBindingsOnContinuousNodeArray(continuousNodeArray, bindingContext) {
         // To be used on any nodes that have been rendered by a template and have been inserted into some parent element
         // Walks through continuousNodeArray (which *must* be continuous, i.e., an uninterrupted sequence of sibling nodes, because
         // the algorithm for walking them relies on this), and for each top-level item in the virtual-element sense,
@@ -29,8 +29,6 @@
             // whereas a regular applyBindings won't introduce new memoized nodes
             invokeForEachNodeOrCommentInContinuousRange(firstNode, lastNode, function(node) {
                 ko.applyBindings(bindingContext, node);
-                if (subscription)
-                    subscription.addDisposalNodes(node);
             });
             invokeForEachNodeOrCommentInContinuousRange(firstNode, lastNode, function(node) {
                 ko.memoization.unmemoizeDomNodeAndDescendants(node, [bindingContext]);
@@ -114,9 +112,9 @@
         };
 
         // This will be called whenever setDomNodeChildrenFromArrayMapping has added nodes to targetNode
-        var activateBindingsCallback = function(arrayValue, addedNodesArray, subscription) {
+        var activateBindingsCallback = function(arrayValue, addedNodesArray) {
             var bindingContext = (lastContext && arrayValue == lastArrayValue) ? lastContext : createInnerBindingContext(arrayValue);
-            activateBindingsOnContinuousNodeArray(addedNodesArray, bindingContext, subscription);
+            activateBindingsOnContinuousNodeArray(addedNodesArray, bindingContext);
             if (options['afterRender'])
                 options['afterRender'](addedNodesArray, bindingContext['$data']);                                                
         };

@@ -1,19 +1,7 @@
 
 ko.bindingExpressionRewriting = (function () {
-    var restoreCapturedTokensRegex = /\@ko_token_(\d+)\@/g;
     var javaScriptAssignmentTarget = /^[\_$a-z][\_$a-z0-9]*(\[.*?\])*(\.[\_$a-z][\_$a-z0-9]*(\[.*?\])*)*$/i;
     var javaScriptReservedWords = ["true", "false", "null"];
-
-    function restoreTokens(string, tokens) {
-        var prevValue = null;
-        while (string != prevValue) { // Keep restoring tokens until it no longer makes a difference (they may be nested)
-            prevValue = string;
-            string = string.replace(restoreCapturedTokensRegex, function (match, tokenIndex) {
-                return tokens[tokenIndex];
-            });
-        }
-        return ko.utils.stringTrim(string);
-    }
 
     function isWriteableValue(expression) {
         if (ko.utils.arrayIndexOf(javaScriptReservedWords, expression) >= 0)
@@ -31,106 +19,69 @@ ko.bindingExpressionRewriting = (function () {
         return expression.match(/[^(]+\(/) !== null;
     }
 
-    function stripQuotes(key) {
-        switch (key.length && key.charAt(0)) {
-            case "'":
-            case '"':
-                return key.substring(1, key.length - 1);
-            default:
-                return key;
-        }
-
-    }
-
     function ensureQuoted(key) {
         return "'" + key + "'";
     }
+
+    var stringCommon = '\\0-\\x08\\x0a-\\x1f\\\\]|\\\\(?:["\'/\\\\bfnrt]|u[0-9A-Fa-f]{4}))*';
+    var stringDouble = '(?:"(?:[^"' + stringCommon + '")';
+    var stringSingle = "(?:'(?:[^'" + stringCommon + "')";
+    var stringRegexp = '(?:/(?:[^/' + stringCommon + '/)';
+    var specials = ',"\'\\{\\}\\(\\)\\[\\]/:';
+    var everyThingElse = '(?:[^\\s' + specials + '][^' + specials + ']*[^\\s' + specials + '])';
+    var oneNotSpace = '[^\\s]';
+
+    var bindingToken = RegExp(
+        '(?:' + stringDouble
+        + '|' + stringSingle
+        + '|' + stringRegexp
+        + '|' + everyThingElse
+        + '|' + oneNotSpace
+        + ')', 'g');
 
     return {
         parseObjectLiteral: function(objectLiteralString) {
             // A full tokeniser+lexer would add too much weight to this library, so here's a simple parser
             // that is sufficient just to split an object literal string into a set of top-level key-value pairs
-
             var str = ko.utils.stringTrim(objectLiteralString);
-            if (str.length < 3)
-                return [];
-            if (str.charAt(0) === "{")// Ignore any braces surrounding the whole object literal
-                str = str.substring(1, str.length - 1);
-
-            // Pull out any string literals and regex literals
-            var tokens = [];
-            var tokenStart = null, tokenEndChar;
-            for (var position = 0; position < str.length; position++) {
-                var c = str.charAt(position);
-                if (tokenStart === null) {
-                    switch (c) {
-                        case '"':
-                        case "'":
-                        case "/":
-                            tokenStart = position;
-                            tokenEndChar = c;
-                            break;
+            if (str.charCodeAt(0) === 123) // '{' Ignore braces surrounding the whole object literal
+                str = str.slice(1, -1);
+    
+            // Split into tokens
+            var result = [],
+                toks = str.match(bindingToken),
+                key, values, depth = 0;
+                
+            // append a comma so that the last item gets added to result
+            toks.push(',');
+    
+            for (var i = 0, n = toks.length; i < n; ++i) {
+                var tok = toks[i], c = tok.charCodeAt(0);
+                if (c === 44) { // ","
+                    if (depth <= 0) {
+                        result.push(values ? {'key': key, 'value': values.join('')} : {'unknown': key});
+                        key = values = depth = 0;
+                        continue;
                     }
-                } else if ((c == tokenEndChar) && (str.charAt(position - 1) !== "\\")) {
-                    var token = str.substring(tokenStart, position + 1);
-                    tokens.push(token);
-                    var replacement = "@ko_token_" + (tokens.length - 1) + "@";
-                    str = str.substring(0, tokenStart) + replacement + str.substring(position + 1);
-                    position -= (token.length - replacement.length);
-                    tokenStart = null;
+                } else if (c === 58) { // ":"
+                    if (!values)
+                        continue;
+                } else if (c === 40 || c === 123 || c === 91) { // '(', '{', '['
+                    ++depth;
+                } else if (c === 41 || c === 125 || c === 93) { // ')', '}', ']'
+                    --depth;
+                } else if (!key) {
+                    key = (c === 34 || c === 39) // '"', "'"
+                        ? tok.slice(1, -1)
+                        : tok;
+                    continue;
                 }
+                if (values)
+                    values.push(tok);
+                else 
+                    values = [tok];
             }
-
-            // Next pull out balanced paren, brace, and bracket blocks
-            tokenStart = null;
-            tokenEndChar = null;
-            var tokenDepth = 0, tokenStartChar = null;
-            for (var position = 0; position < str.length; position++) {
-                var c = str.charAt(position);
-                if (tokenStart === null) {
-                    switch (c) {
-                        case "{": tokenStart = position; tokenStartChar = c;
-                                  tokenEndChar = "}";
-                                  break;
-                        case "(": tokenStart = position; tokenStartChar = c;
-                                  tokenEndChar = ")";
-                                  break;
-                        case "[": tokenStart = position; tokenStartChar = c;
-                                  tokenEndChar = "]";
-                                  break;
-                    }
-                }
-
-                if (c === tokenStartChar)
-                    tokenDepth++;
-                else if (c === tokenEndChar) {
-                    tokenDepth--;
-                    if (tokenDepth === 0) {
-                        var token = str.substring(tokenStart, position + 1);
-                        tokens.push(token);
-                        var replacement = "@ko_token_" + (tokens.length - 1) + "@";
-                        str = str.substring(0, tokenStart) + replacement + str.substring(position + 1);
-                        position -= (token.length - replacement.length);
-                        tokenStart = null;                            
-                    }
-                }
-            }
-
-            // Now we can safely split on commas to get the key/value pairs
-            var result = [];
-            var keyValuePairs = str.split(",");
-            for (var i = 0, j = keyValuePairs.length; i < j; i++) {
-                var pair = keyValuePairs[i];
-                var colonPos = pair.indexOf(":");
-                if ((colonPos > 0) && (colonPos < pair.length - 1)) {
-                    var key = pair.substring(0, colonPos);
-                    var value = pair.substring(colonPos + 1);
-                    result.push({ 'key': stripQuotes(restoreTokens(key, tokens)), 'value': restoreTokens(value, tokens) });
-                } else {
-                    result.push({ 'unknown': stripQuotes(restoreTokens(pair, tokens)) });
-                }
-            }
-            return result;            
+            return result;        
         },
 
         insertPropertyAccessors: function (objectLiteralStringOrKeyValueArray, bindingOptions) {
@@ -205,10 +156,23 @@ ko.bindingExpressionRewriting = (function () {
             return false;
         },
 
-        writeValueToProperty: function(allBindingsAccessor, key, value) {
-            var propWriters = allBindingsAccessor('_ko_property_writers');
-            if (propWriters && propWriters[key])
-                propWriters[key](value);
+        // Internal, private KO utility for updating model properties from within bindings
+        // property:            If the property being updated is (or might be) an observable, pass it here
+        //                      If it turns out to be a writable observable, it will be written to directly
+        // allBindingsAccessor: All bindings in the current execution context.
+        //                      This will be searched for a '_ko_property_writers' property in case you're writing to a non-observable
+        // key:                 The key identifying the property to be written. Example: for { hasFocus: myValue }, write to 'myValue' by specifying the key 'hasFocus'
+        // value:               The value to be written
+        // checkIfDifferent:    If true, and if the property being written is a writable observable, the value will only be written if
+        //                      it is !== existing value on that writable observable
+        writeValueToProperty: function(property, allBindingsAccessor, key, value, checkIfDifferent) {
+            if (!property || !ko.isWriteableObservable(property)) {
+                var propWriters = allBindingsAccessor('_ko_property_writers');
+                if (propWriters && propWriters[key])
+                    propWriters[key](value);
+            } else if (!checkIfDifferent || property() !== value) {
+                property(value);
+            }
         }
     };
 })();

@@ -431,11 +431,16 @@ function (testConfiguration) {
                     ko.applyBindingsToDescendants(bindingContext.extend({ '$customProp': 'my value' }), element);
                 }
             };
-            testNode.innerHTML = "<div " + bindingAttribute + "='with: true'><div " + bindingAttribute + "='addCustomProperty: true'><div " + bindingAttribute + "='text: $customProp'></div></div></div>";
-            ko.applyBindings(null, testNode);
+        testNode.innerHTML = "<div data-bind='with: sub'><div data-bind='addCustomProperty: true'><div data-bind='text: $customProp'></div></div></div>";
+        var vm = { sub: {} };
+        ko.applyBindings(vm, testNode);
             value_of(testNode).should_contain_text("my value");
             value_of(ko.contextFor(testNode.childNodes[0].childNodes[0].childNodes[0]).$customProp).should_be("my value");
             value_of(ko.contextFor(testNode.childNodes[0].childNodes[0]).$customProp).should_be(undefined); // Should not affect original binding context
+
+        // vale of $data and $parent should be unchanged in extended context
+        value_of(ko.contextFor(testNode.childNodes[0].childNodes[0].childNodes[0]).$data).should_be(vm.sub);
+        value_of(ko.contextFor(testNode.childNodes[0].childNodes[0].childNodes[0]).$parent).should_be(vm);
         },
 
         'Binding contexts should inherit any custom properties from ancestor binding contexts': function () {
@@ -559,7 +564,7 @@ function (testConfiguration) {
                 flags: ko.bindingFlags.canUseVirtual | ko.bindingFlags.contentBind,
                 init: function (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
                     var innerContext = bindingContext.createChildContext({ myCustomData: 123 });
-                    ko.applyBindingsToDescendants(innerContext, element, true);
+                ko.applyBindingsToDescendants(innerContext, element);
                 }
             };
 
@@ -575,7 +580,7 @@ function (testConfiguration) {
                 flags: ko.bindingFlags.contentBind,
                 init: function (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
                     var innerContext = bindingContext.createChildContext({ myCustomData: 123 });
-                    ko.applyBindingsToDescendants(innerContext, element, true);
+                ko.applyBindingsToDescendants(innerContext, element);
                 }
             };
 
@@ -592,7 +597,7 @@ function (testConfiguration) {
                 init: function (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
                     var innerContext = bindingContext.createChildContext({ myCustomData: 123 });
                     innerContext.customValue = 'xyz';
-                    ko.applyBindingsToDescendants(innerContext, element, true);
+                ko.applyBindingsToDescendants(innerContext, element);
                 }
             };
 
