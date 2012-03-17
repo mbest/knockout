@@ -23,12 +23,11 @@ ko.bindingExpressionRewriting = (function () {
         return "'" + key + "'";
     }
 
-    var stringCommon = '\\0-\\x08\\x0a-\\x1f\\\\]|\\\\(?:["\'/\\\\bfnrt]|u[0-9A-Fa-f]{4}))*';
-    var stringDouble = '(?:"(?:[^"' + stringCommon + '")';
-    var stringSingle = "(?:'(?:[^'" + stringCommon + "')";
-    var stringRegexp = '(?:/(?:[^/' + stringCommon + '/)';
-    var specials = ',"\'\\{\\}\\(\\)\\[\\]/:';
-    var everyThingElse = '(?:[^\\s' + specials + '][^' + specials + ']*[^\\s' + specials + '])';
+    var stringDouble = '(?:"(?:[^"\\\\]|\\\\.)*")';
+    var stringSingle = "(?:'(?:[^'\\\\]|\\\\.)*')";
+    var stringRegexp = '(?:/(?:[^/\\\\]|\\\\.)*/)';
+    var specials = ',"\'{}()/:[\\]';
+    var everyThingElse = '(?:[^\\s:,][^' + specials + ']*[^\\s' + specials + '])';
     var oneNotSpace = '[^\\s]';
 
     var bindingToken = RegExp(
