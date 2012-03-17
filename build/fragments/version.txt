@@ -1,1 +1,1 @@
-2.1.0pre+mbest/smart-binding/beta.3
+2.1.0pre+mbest/smart-binding/beta.3+GilesBradshaw/BindingProviderConfiguration
