@@ -8,8 +8,7 @@
     //   previously mapped - retain those nodes, and just insert/delete other ones
 
     // "callbackAfterAddingNodes" will be invoked after any "mapping"-generated nodes are inserted into the container node
-    // You can use this, for example, to activate bindings on those nodes. Your function must also call
-    // addDisposalNodes with the given mappedNodes and subscription.
+    // You can use this, for example, to activate bindings on those nodes.
 
     function fixUpVirtualElements(contiguousNodeArray) {
         // Ensures that contiguousNodeArray really *is* an array of contiguous siblings, even if some of the interior
@@ -34,15 +33,16 @@
     }
 
     function defaultCallbackAfterAddingNodes(value, mappedNodes, subscription) {
-        subscription.addDisposalNodes(mappedNodes);
+        subscription.addDisposalNodes(mappedNodes[0]);
+        if (mappedNodes.length > 1)
+            subscription.addDisposalNodes(mappedNodes[mappedNodes.length]);
     }
 
     function wrapCallbackAfterAddingNodes(originalCallback) {
         return originalCallback 
             ? function(value, mappedNodes, subscription) {
-                originalCallback(value, mappedNodes, subscription);
-                if (mappedNodes.length && !subscription.getDisposalNodesCount())
-                    subscription.addDisposalNodes(mappedNodes);
+                originalCallback(value, mappedNodes);
+                defaultCallbackAfterAddingNodes(value, mappedNodes, subscription);
             }
             : defaultCallbackAfterAddingNodes;
     }
