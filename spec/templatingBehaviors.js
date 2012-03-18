@@ -92,6 +92,7 @@ dummyTemplateEngine.prototype = new ko.templateEngine();
 
 describe('Templating', {
     before_each: function () {
+        ko.bindingProvider.instance.clearCache();
         ko.setTemplateEngine(new ko.nativeTemplateEngine());
         var existingNode = document.getElementById("templatingTarget");
         if (existingNode != null)
