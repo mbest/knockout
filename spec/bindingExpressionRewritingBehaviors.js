@@ -31,30 +31,31 @@ describe('Binding Expression Rewriting', {
     },
 
     'Should be able to parse object literals containing child objects, arrays, function literals, and newlines': function() {
+        // The parsing may or may not keep unnecessary spaces. So to avoid confusion, avoid unnecessary spaces. 
         var result = ko.bindingExpressionRewriting.parseObjectLiteral(
-            "myObject : { someChild: { }, someChildArray: [1,2,3], \"quotedChildProp\": 'string value' },\n"
-          + "someFn: function(a, b, c) { var regex = /}/; var str='/})({'; return {}; },"
-          + "myArray : [{}, function() { }, \"my'Str\", 'my\"Str']"
+            "myObject:{someChild:{},someChildArray:[1,2,3],\"quotedChildProp\":'string value'},\n"
+          + "someFn:function(a,b,c){var regex=/}/;var str='/})({';return{};},"
+          + "myArray:[{},function(){},\"my'Str\",'my\"Str']"
         );
         value_of(result.length).should_be(3);
         value_of(result[0].key).should_be("myObject");
-        value_of(result[0].value).should_be("{ someChild:{},someChildArray:[1,2,3],\"quotedChildProp\":'string value'}");
+        value_of(result[0].value).should_be("{someChild:{},someChildArray:[1,2,3],\"quotedChildProp\":'string value'}");
         value_of(result[1].key).should_be("someFn");
-        value_of(result[1].value).should_be("function(a,b,c){ var regex =/}/; var str='/})({'; return{};}");
+        value_of(result[1].value).should_be("function(a,b,c){var regex=/}/;var str='/})({';return{};}");
         value_of(result[2].key).should_be("myArray");
         value_of(result[2].value).should_be("[{},function(){},\"my'Str\",'my\"Str']");
     },
 
     'Should be able to cope with malformed syntax (things that aren\'t key-value pairs)': function() {
-        var result = ko.bindingExpressionRewriting.parseObjectLiteral("malformed1, 'mal:formed2', good:3, { malformed: 4 }");
-        value_of(result.length).should_be(4);
+        var result = ko.bindingExpressionRewriting.parseObjectLiteral("malformed1, 'mal:formed2', good:3, { malformed: 4 }, good5:5");
+        value_of(result.length).should_be(5);
         value_of(result[0].unknown).should_be("malformed1");
         value_of(result[1].unknown).should_be("mal:formed2");
         value_of(result[2].key).should_be("good");
         value_of(result[2].value).should_be("3");
-        // this is what the value is but there's not really any "should" that applies
-        //value_of(result[3].key).should_be("4");
-        //value_of(result[3].value).should_be("{ malformed:}");
+        value_of(result[4].key).should_be("good5");
+        value_of(result[4].value).should_be("5");
+        // There's not really a good 'should' value for "{ malformed: 4 }", so don't check
     },
 
     'Should ensure all keys are wrapped in quotes': function() {
