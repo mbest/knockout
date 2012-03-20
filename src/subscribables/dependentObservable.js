@@ -48,8 +48,13 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
     }
 
     function evaluateImmediate() {
-        if (_isBeingEvaluated || !_needsEvaluation)
+        if (_isBeingEvaluated || !_needsEvaluation) {
+            // If the evaluation of a ko.computed causes side effects, it's possible that it will trigger its own re-evaluation.
+            // This is not desirable (it's hard for a developer to realise a chain of dependencies might cause this, and they almost
+            // certainly didn't intend infinite re-evaluations). So, for predictability, we simply prevent ko.computeds from causing
+            // their own re-evaluation. Further discussion at https://github.com/SteveSanderson/knockout/pull/387
             return;
+        }
 
         // disposeWhen won't be set until after initial evaluation
         if (disposeWhen && disposeWhen()) {
@@ -78,11 +83,11 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
                 if (disposalCandidates[i])
                     _subscriptionsToDependencies.splice(i, 1)[0].dispose();
             }
+            _needsEvaluation = false;
 
             dependentObservable["notifySubscribers"](_latestValue, "beforeChange");
             _latestValue = newValue;
             if (DEBUG) dependentObservable._latestValue = _latestValue;
-            _needsEvaluation = false;
         } finally {
             ko.dependencyDetection.end();
         }
