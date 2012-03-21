@@ -136,19 +136,30 @@
             return;
         }
 
-        // Parse bindings; track observables so that the bindng are reparsed if needed
-        var parsedBindings, extraBindings, viewModel = bindingContext['$data'];
+        // Parse bindings; track observables so that the bindings are reparsed if needed
+        var parsedBindings, extraBindings = {}, viewModel = bindingContext['$data'], runInits = true;
         var bindingUpdater = ko.utils.possiblyWrap(function() {
             // Make sure dependencies binding is set correctly
             ko.bindingHandlers[dependenciesName] = dependenciesBinding;
+
             // Use evaluatedBindings if given, otherwise fall back on asking the bindings provider to give us some bindings
             var evaluatedBindings = (typeof bindingsToApply == "function") ? bindingsToApply() : bindingsToApply;
             parsedBindings = evaluatedBindings || ko.bindingProvider['instance']['getBindings'](node, bindingContext);
-            extraBindings = {};
+
+            // update extraBindings from parsedBindings (only if init already done) 
+            if (independentBindings && !runInits) {
+                for (var bindingKey in extraBindings)
+                    extraBindings[bindingKey] = parsedBindings[bindingKey];
+            }
 
             if (parsedBindings && bindingContext._subscribable)
                 ko.dependencyDetection.registerDependency(bindingContext._subscribable);
         }, node);
+
+        // In independent mode, don't allow parsing to set any dependencies (except on bindingContext)
+        if (independentBindings && bindingUpdater && (!bindingContext._subscribable || bindingUpdater.getDependenciesCount() > 1)) {
+            throw new Error("In independent mode, binding provider must not access any observables.");
+        }
 
         // These functions make values accessible to bindings.
         function makeValueAccessor(fullKey, subKey) {
@@ -228,7 +239,6 @@
 
         var allBindingsAccessor = independentBindings ? allBindingsAccessorIndependent : allBindingsAccessorDependent,
             callHandlers = independentBindings ? callHandlersIndependent : callHandlersDependent,
-            runInits = true,
             allBindings = [],
             bindings = [[], [], undefined, []];
         /** @const */ var unorderedBindings = 0;
