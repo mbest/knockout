@@ -685,7 +685,7 @@ describe('Binding attribute syntax', {
         value_of(updateCount2).should_be(1);
     },
 
-    'Update to a dependency should also update the dependent binding (independent mode)': function() {
+    'Update to an independent (needed) binding should also update the dependent binding (independent mode)': function() {
         var observable = ko.observable('A'), updateCount1 = 0, updateCount2 = 0;
         ko.bindingHandlers.test1 = {
             update: function(element, valueAccessor) {
@@ -694,7 +694,7 @@ describe('Binding attribute syntax', {
             }
         };
         ko.bindingHandlers.test2 = {
-            dependencies: 'test1',
+            needs: 'test1',
             update: function() {
                 updateCount2++;
             }
@@ -722,7 +722,7 @@ describe('Binding attribute syntax', {
             }
         };
         ko.bindingHandlers.test2 = {
-            dependencies: 'test1',
+            needs: 'test1',
             update: function() {
                 updateCount2++;
             }
@@ -746,7 +746,7 @@ describe('Binding attribute syntax', {
             }
         };
         ko.bindingHandlers.test2 = {
-            dependencies: 'test1',
+            needs: 'test1',
             update: function() {
                 updateCount2++;
             }
@@ -818,7 +818,7 @@ describe('Binding attribute syntax', {
         ko.bindingHandlers.test4 = { flags: ko.bindingFlags.contentUpdate, update: function() { checkOrder(4); } };
         ko.bindingHandlers.test5 = { update: function() { checkOrder(5); } };
 
-        testNode.innerHTML = "<div data-bind='test5: true, test4: true, test3: true, test2: true, test1: true, dependencies: {test2: \"test1\", test5: \"test4\"}'></div>";
+        testNode.innerHTML = "<div data-bind='test5: true, test4: true, test3: true, test2: true, test1: true, needs: {test2: \"test1\", test5: \"test4\"}'></div>";
 
         ko.applyBindings(null, testNode);
     },
@@ -827,7 +827,7 @@ describe('Binding attribute syntax', {
         ko.bindingHandlers.test1 = { };
         ko.bindingHandlers.test2 = { };
 
-        testNode.innerHTML = "<div data-bind='test1: true, test2: true, dependencies: {test2: \"test1\", test1: \"test2\"}'></div>";
+        testNode.innerHTML = "<div data-bind='test1: true, test2: true, needs: {test2: \"test1\", test1: \"test2\"}'></div>";
 
         var didThrow = false;
         try { ko.applyBindings(null, testNode) }
@@ -839,7 +839,7 @@ describe('Binding attribute syntax', {
         ko.bindingHandlers.test1 = { flags: ko.bindingFlags.contentSet };
         ko.bindingHandlers.test2 = { flags: ko.bindingFlags.contentUpdate };
 
-        testNode.innerHTML = "<div data-bind='test1: true, test2: true, dependencies: {test1: \"test2\"}'></div>";
+        testNode.innerHTML = "<div data-bind='test1: true, test2: true, needs: {test1: \"test2\"}'></div>";
 
         var didThrow = false;
         try { ko.applyBindings(null, testNode) }

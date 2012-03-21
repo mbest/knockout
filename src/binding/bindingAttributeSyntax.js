@@ -70,25 +70,29 @@
         return ko.utils.extendInternal(clone, properties);
     };
 
-    function getTwoLevelBindingData(bindingKey) {
+    function getTwoLevelBindingData(bindingKey, justHandler) {
         var dotPos = bindingKey.indexOf(".");
         if (dotPos > 0) {
             var realKey = bindingKey.substring(0, dotPos), binding = ko.bindingHandlers[realKey];
             if (binding) {
                 if (!(binding['flags'] & bindingFlags_twoLevel))
                     throw new Error(realKey + " does not support two-level binding");
-                return {
-                    key: realKey,
-                    subKey: bindingKey.substring(dotPos + 1),
-                    handler: binding
-                };
+                return justHandler
+                    ? binding
+                    : { key: realKey, subKey: bindingKey.substring(dotPos + 1), handler: binding };
             }
         }
-        return {};
     }
-    
+
+    function getBindingData(bindingKey) {
+        var handler = ko.bindingHandlers[bindingKey];
+        return handler
+            ? { handler: handler, key: bindingKey }
+            : getTwoLevelBindingData(bindingKey);
+    }
+
     ko.getBindingHandler = function(bindingKey) {
-        return ko.bindingHandlers[bindingKey] || getTwoLevelBindingData(bindingKey).handler;
+        return ko.bindingHandlers[bindingKey] || getTwoLevelBindingData(bindingKey, true /* justHandler */);
     };
 
     ko.bindingValueWrap = function(valueFunction) {
@@ -109,7 +113,7 @@
         }
     }
 
-    var dependenciesName = 'dependencies', dependenciesBinding = { 'flags': bindingFlags_builtIn };
+    var needsName = 'needs', needsBinding = { 'flags': bindingFlags_builtIn };
     function applyBindingsToNodeAndDescendantsInternal (bindingContext, node, bindingContextsMayDifferFromDomParentElement, bindingsToApply, dontBindDescendants) {
         var isElement = (node.nodeType === 1),
             hasBindings = bindingsToApply || ko.bindingProvider['instance']['nodeHasBindings'](node),
@@ -139,8 +143,8 @@
         // Parse bindings; track observables so that the bindings are reparsed if needed
         var parsedBindings, extraBindings = {}, viewModel = bindingContext['$data'], runInits = true;
         var bindingUpdater = ko.utils.possiblyWrap(function() {
-            // Make sure dependencies binding is set correctly
-            ko.bindingHandlers[dependenciesName] = dependenciesBinding;
+            // Make sure needs binding is set correctly
+            ko.bindingHandlers[needsName] = needsBinding;
 
             // Use evaluatedBindings if given, otherwise fall back on asking the bindings provider to give us some bindings
             var evaluatedBindings = (typeof bindingsToApply == "function") ? bindingsToApply() : bindingsToApply;
@@ -190,6 +194,9 @@
         function multiContentBindError(key1, key2) {
             throw new Error("Multiple bindings (" + key1 + " and " + key2 + ") are trying to control descendant bindings of the same element. You cannot use these bindings together on the same element.");
         }
+        function needBindingError(bindingKey, needKey, error) {
+            throw new Error("Binding " + bindingKey + " cannot 'need' " + needKey + ": " + error);
+        }
 
         // These functions call the binding handler functions
         function initCaller(binding) {
@@ -210,12 +217,12 @@
         }
         function updateCaller(binding) {
             return function() {
-                // dependentBindings is set if we're running in independent mode. Go through each
+                // needBindings is set if we're running in independent mode. Go through each
                 // and create a dependency on it's subscribable.
-                if (binding.dependentBindings)
-                    ko.utils.arrayForEach(binding.dependentBindings, function(dependentBinding) {
-                        if (dependentBinding.subscribable)
-                            ko.dependencyDetection.registerDependency(dependentBinding.subscribable);
+                if (binding.needBindings)
+                    ko.utils.arrayForEach(binding.needBindings, function(needBinding) {
+                        if (needBinding.subscribable)
+                            ko.dependencyDetection.registerDependency(needBinding.subscribable);
                     });
                 var handlerUpdateFn = binding.handler['update'];
                 return handlerUpdateFn(node, binding.valueAccessor, allBindingsAccessor, viewModel, bindingContext);
@@ -248,7 +255,7 @@
 
         ko.utils.possiblyWrap(function() {
             if (runInits) {
-                var bindingIndexes = {}, dependencies = parsedBindings[dependenciesName] || {}, 
+                var bindingIndexes = {}, needs = parsedBindings[needsName] || {}, 
                     lastIndex = unorderedBindings, thisIndex;
 
                 // Get binding handlers, call init function if not in independent mode, and determine run order
@@ -256,14 +263,14 @@
                     if (bindingKey in bindingIndexes)
                         return allBindings[bindingIndexes[bindingKey]];
 
-                    var handler = ko.bindingHandlers[bindingKey],
-                        binding = handler ? { handler: handler, key: bindingKey } : getTwoLevelBindingData(bindingKey);
+                    var binding = getBindingData(bindingKey);
+                    if (binding) {
+                        var handler = binding.handler,
+                            dependentOrder;
 
-                    if (handler = binding.handler) {
                         binding.flags = handler['flags'];
                         validateThatBindingIsAllowedForVirtualElements(binding);
                         binding.valueAccessor = makeValueAccessor(bindingKey, binding.subKey);
-                        binding.dependencies = [].concat(handler[dependenciesName] || [], dependencies[bindingKey] || []);
 
                         if (!independentBindings && handler['init'])
                             initCaller(binding)();
@@ -272,8 +279,9 @@
                             if (bindings[contentBindBinding])
                                 multiContentBindError(bindings[contentBindBinding].key, binding.key);
                             bindings[binding.order = contentBindBinding] = binding;
+                            dependentOrder = contentBindBinding - 1;
                         } else {
-                            binding.order = 
+                            dependentOrder = binding.order = 
                                 (binding.flags & bindingFlags_contentSet)
                                     ? contentSetBindings
                                 : (binding.flags & bindingFlags_contentUpdate)
@@ -281,31 +289,24 @@
                                     : unorderedBindings;
                         }
 
-                        bindingIndexes[bindingKey] = -1;    // Allows for recursive dependencies check
-                        var dependentBindings = [];
-                        ko.utils.arrayForEach(binding.dependencies, function(dependencyKey) {
-                            var dependentBinding,
-                                dependencyError = "Binding " + bindingKey + " cannot depend on " + dependencyKey + ": ";
-                            if (!(dependencyKey in parsedBindings) || !(dependentBinding = pushBinding(dependencyKey)))
-                                throw new Error(dependencyError + "missing or recursive");
-                            if (binding.order) {
-                                if (dependentBinding.order > binding.order) {
-                                    throw new Error(dependencyError + "conflicting ordering");
-                                } else {
-                                    var dependentOrder = binding.order == contentBindBinding ? contentBindBinding-1 : binding.order;
-                                    dependentBinding.dependentOrder = dependentBinding.dependentOrder ? Math.min(dependentBinding.dependentOrder, dependentOrder) : dependentOrder;
-                                }
-                            } else if (dependentBinding.order) {
-                                binding.order = dependentBinding.order;
-                            }
-                            dependentBindings.push(dependentBinding);
-                        });
-                        // Save the dependent bindings if we're running in independent mode.
-                        if (independentBindings && dependentBindings[0])
-                            binding.dependentBindings = dependentBindings;
+                        if (handler[needsName] || needs[bindingKey]) {
+                            bindingIndexes[bindingKey] = -1;    // Allows for recursive needs check
+                            binding.needBindings = [];
+                            ko.utils.arrayForEach([].concat(handler[needsName] || [], needs[bindingKey] || []), function(needKey) {
+                                var needBinding;
+                                if (!(needKey in parsedBindings) || !(needBinding = pushBinding(needKey)))
+                                    needBindingError(bindingKey, needKey, "missing or recursive");
+                                if (!binding.order)
+                                    binding.order = needBinding.order;
+                                else if (needBinding.order <= binding.order)
+                                    needBinding.dependentOrder = Math.min(needBinding.dependentOrder || contentUpdateBindings, dependentOrder);
+                                else
+                                    needBindingError(bindingKey, needKey, "conflicting ordering");
+                                binding.needBindings.push(needBinding);
+                            });
+                        }
 
-                        bindingIndexes[bindingKey] = allBindings.length;
-                        allBindings.push(binding);
+                        bindingIndexes[bindingKey] = allBindings.push(binding) - 1;
                         return binding;
                     }
                     if (independentBindings)
