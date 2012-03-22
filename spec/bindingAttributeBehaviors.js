@@ -66,6 +66,11 @@ describe('Binding attribute syntax', {
         }
     },
 
+    'Should tolerate empty or only white-space binding strings': function() {
+        testNode.innerHTML = "<div data-bind=''></div><div data-bind='   '></div>";
+        ko.applyBindings(null, testNode); // No exception means success
+    },
+
     'Should tolerate whitespace and nonexistent handlers': function () {
         testNode.innerHTML = "<div data-bind=' nonexistentHandler : \"Hello\" '></div>";
         ko.applyBindings(null, testNode); // No exception means success

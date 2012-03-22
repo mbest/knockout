@@ -255,7 +255,7 @@
 
         ko.utils.possiblyWrap(function() {
             if (runInits) {
-                var bindingIndexes = {}, needs = parsedBindings[needsName] || {}, 
+                var bindingIndexes = {}, needs = parsedBindings && parsedBindings[needsName] || {}, 
                     lastIndex = unorderedBindings, thisIndex;
 
                 // Get binding handlers, call init function if not in independent mode, and determine run order

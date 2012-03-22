@@ -50,35 +50,37 @@ ko.bindingExpressionRewriting = (function () {
             var result = [],
                 toks = str.match(bindingToken),
                 key, values, depth = 0;
-                
-            // append a comma so that the last item gets added to result
-            toks.push(',');
+
+            if (toks) {
+                // append a comma so that the last item gets added to result
+                toks.push(',');
     
-            for (var i = 0, n = toks.length; i < n; ++i) {
-                var tok = toks[i], c = tok.charCodeAt(0);
-                if (c === 44) { // ","
-                    if (depth <= 0) {
-                        result.push(values ? {'key': key, 'value': values.join('')} : {'unknown': key});
-                        key = values = depth = 0;
+                for (var i = 0, n = toks.length; i < n; ++i) {
+                    var tok = toks[i], c = tok.charCodeAt(0);
+                    if (c === 44) { // ","
+                        if (depth <= 0) {
+                            result.push(values ? {'key': key, 'value': values.join('')} : {'unknown': key});
+                            key = values = depth = 0;
+                            continue;
+                        }
+                    } else if (c === 58) { // ":"
+                        if (!values)
+                            continue;
+                    } else if (c === 40 || c === 123 || c === 91) { // '(', '{', '['
+                        ++depth;
+                    } else if (c === 41 || c === 125 || c === 93) { // ')', '}', ']'
+                        --depth;
+                    } else if (!key) {
+                        key = (c === 34 || c === 39) // '"', "'"
+                            ? tok.slice(1, -1)
+                            : tok;
                         continue;
                     }
-                } else if (c === 58) { // ":"
-                    if (!values)
-                        continue;
-                } else if (c === 40 || c === 123 || c === 91) { // '(', '{', '['
-                    ++depth;
-                } else if (c === 41 || c === 125 || c === 93) { // ')', '}', ']'
-                    --depth;
-                } else if (!key) {
-                    key = (c === 34 || c === 39) // '"', "'"
-                        ? tok.slice(1, -1)
-                        : tok;
-                    continue;
+                    if (values)
+                        values.push(tok);
+                    else 
+                        values = [tok];
                 }
-                if (values)
-                    values.push(tok);
-                else 
-                    values = [tok];
             }
             return result;        
         },
