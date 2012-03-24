@@ -1,5 +1,5 @@
 ko.utils = (function () {
-    var stringTrimRegex = /^(\s|\u00A0)+|(\s|\u00A0)+$/g;
+    var stringTrimRegex = /^[\s\u00A0]+|[\s\u00A0]+$/g;
     
     // Represent the known event types in a compact way, then at runtime transform it into a hash with event name as key (for fast lookup)
     var knownEvents = {}, knownEventTypesByEventName = {};
