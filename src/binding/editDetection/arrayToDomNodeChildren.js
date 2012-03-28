@@ -33,7 +33,7 @@
         return contiguousNodeArray;
     }
 
-    function defaultCallbackAfterAddingNodes(value, mappedNodes, subscription) {
+    function defaultCallbackAfterAddingNodes(value, mappedNodes, index, subscription) {
         subscription.addDisposalNodes(mappedNodes[0]);
         if (mappedNodes.length > 1)
             subscription.addDisposalNodes(mappedNodes[mappedNodes.length]);
@@ -41,24 +41,24 @@
 
     function wrapCallbackAfterAddingNodes(originalCallback) {
         return originalCallback 
-            ? function(value, mappedNodes, subscription) {
-                originalCallback(value, mappedNodes);
-                defaultCallbackAfterAddingNodes(value, mappedNodes, subscription);
+            ? function(value, mappedNodes, index, subscription) {
+                originalCallback(value, mappedNodes, index);
+                defaultCallbackAfterAddingNodes(value, mappedNodes, index, subscription);
             }
             : defaultCallbackAfterAddingNodes;
     }
 
-    function mapNodeAndRefreshWhenChanged(containerNode, mapping, valueToMap, callbackAfterAddingNodes) {
+    function mapNodeAndRefreshWhenChanged(containerNode, mapping, valueToMap, callbackAfterAddingNodes, index) {
         // Map this array value inside a dependentObservable so we re-map when any dependency changes
         var mappedNodes = [];
         var dependentObservable = ko.dependentObservable(function() {
-            var newMappedNodes = mapping(valueToMap) || [];
+            var newMappedNodes = mapping(valueToMap, index) || [];
             
             // On subsequent evaluations, just replace the previously-inserted DOM nodes
             if (mappedNodes.length > 0) {
                 dependentObservable.replaceDisposalNodes();    // must clear before calling replaceDomNodes
                 ko.utils.replaceDomNodes(fixUpVirtualElements(mappedNodes), newMappedNodes);
-                callbackAfterAddingNodes(valueToMap, newMappedNodes, dependentObservable);
+                callbackAfterAddingNodes(valueToMap, newMappedNodes, index, dependentObservable);
             }
             
             // Replace the contents of the mappedNodes array, thereby updating the record
@@ -91,6 +91,7 @@
                 case "retained":
                     // Just keep the information - don't touch the nodes
                     var dataToRetain = lastMappingResult[editScriptItem['from']];
+                    dataToRetain.indexObservable(editScriptItem['to']);
                     newMappingResult.push(dataToRetain);
                     if (dataToRetain.domNodes.length > 0)
                         insertAfterNode = dataToRetain.domNodes[dataToRetain.domNodes.length - 1];
@@ -117,16 +118,23 @@
                     var mappedNodes, movingNodes, valueToMap;
                     if (editScript[i]['moveFrom'] !== undefined) {
                         var dataToRetain = lastMappingResult[editScript[i]['moveFrom']];
+                        dataToRetain.indexObservable(editScriptItem['to']);
                         mappedNodes = fixUpVirtualElements(dataToRetain.domNodes);
                         movingNodes = true;
                         newMappingResult.push(dataToRetain);
                     } else {
-                        var mapData = mapNodeAndRefreshWhenChanged(domNode, mapping, valueToMap = editScriptItem['value'], callbackAfterAddingNodes);
+                        var indexObservable = ko.observable(editScriptItem['to']);
+                        var mapData = mapNodeAndRefreshWhenChanged(domNode, mapping, valueToMap = editScriptItem['value'], callbackAfterAddingNodes, indexObservable);
                         mappedNodes = mapData.mappedNodes;
                         movingNodes = false;
                     
                         // On the first evaluation, insert the nodes at the current insertion point
-                        newMappingResult.push({ arrayEntry: valueToMap, domNodes: mappedNodes, dependentObservable: mapData.dependentObservable });
+                        newMappingResultIndex = newMappingResult.push({
+                            arrayEntry: editScript[i].value,
+                            domNodes: mappedNodes,
+                            dependentObservable: mapData.dependentObservable,
+                            indexObservable: indexObservable
+                        });
                     }
                     for (var nodeIndex = 0, nodeIndexMax = mappedNodes.length; nodeIndex < nodeIndexMax; nodeIndex++) {
                         var node = mappedNodes[nodeIndex];
@@ -147,7 +155,7 @@
                         insertAfterNode = node;
                     }
                     if (!movingNodes)
-                        callbackAfterAddingNodes(valueToMap, mappedNodes, mapData.dependentObservable);
+                        callbackAfterAddingNodes(valueToMap, mappedNodes, indexObservable, mapData.dependentObservable);
                     break;
             }
         }
@@ -166,10 +174,11 @@
                 invokedBeforeRemoveCallback = true;
             }
         }
-        if (!invokedBeforeRemoveCallback)
-            ko.utils.arrayForEach(nodesToDelete, function (node) {
-                ko.cleanAndRemoveNode(node._element);
-            });
+        if (!invokedBeforeRemoveCallback && nodesToDelete.length) {
+            var commonParent = nodesToDelete[0]._element.parentNode;
+            for (var i = 0; i < nodesToDelete.length; i++)
+                commonParent.removeChild(nodesToDelete[i]._element);
+        }
 
         // Store a copy of the array items we just considered so we can difference it next time
         ko.domDataSet(domNode, lastMappingResultDomDataKey, newMappingResult);
