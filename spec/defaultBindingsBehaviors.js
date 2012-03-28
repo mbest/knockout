@@ -1671,6 +1671,17 @@ describe('Binding: Foreach', {
         value_of(testNode).should_contain_html('<div data-bind="foreach: someitems">a<!-- ko if:true -->b<!-- /ko --></div>');
     },
 
+    'Should move all nodes corresponding to a moved array item, even if they were generated via containerless templates': function() {
+        testNode.innerHTML = "<div data-bind='foreach: someitems'><!-- ko if:true --><span data-bind='text: $data'></span><!-- /ko --></div>";
+        var someitems = ko.observableArray([1,2,3]);
+        ko.applyBindings({ someitems: someitems }, testNode);
+        value_of(testNode).should_contain_text('123');
+
+        // Now move items, and check the corresponding child nodes are correct
+        someitems([3,2,1]);
+        value_of(testNode).should_contain_text('321');
+    },
+
     'Should update all nodes corresponding to a changed array item, even if they were generated via containerless templates': function() {
         testNode.innerHTML = "<div data-bind='foreach: someitems'><!-- ko if:true --><span data-bind='text: $data'></span><!-- /ko --></div>";
         var someitems = [ ko.observable('A'), ko.observable('B') ];
