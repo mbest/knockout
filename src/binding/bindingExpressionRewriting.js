@@ -59,7 +59,8 @@ ko.bindingExpressionRewriting = (function () {
                     var tok = toks[i], c = tok.charCodeAt(0);
                     if (c === 44) { // ","
                         if (depth <= 0) {
-                            result.push(values ? {'key': key, 'value': values.join('')} : {'unknown': key});
+                            if (key)
+                                result.push({'key': key, 'value': values ? values.join('') : undefined});
                             key = values = depth = 0;
                             continue;
                         }
@@ -95,50 +96,57 @@ ko.bindingExpressionRewriting = (function () {
                 var keyValueArray = typeof objectLiteralStringOrKeyValueArray === "string"
                     ? ko.bindingExpressionRewriting.parseObjectLiteral(objectLiteralStringOrKeyValueArray)
                     : objectLiteralStringOrKeyValueArray;
-                var keyValueEntry;
-                for (var i = 0; keyValueEntry = keyValueArray[i]; i++) {
-                    if (keyValueEntry['key']) {
-                        var key = keyValueEntry['key'], val = keyValueEntry['value'],
-                            quotedKey = ensureQuoted(parentBindingKey ? parentBindingKey+'.'+key : key),
-                            binding = parentBinding || ko.getBindingHandler(key),
-                            canWrap = binding || independentBindings;
-                        if (!parentBinding && binding && (binding['flags'] & bindingFlags_twoLevel) && val.charAt(0) === "{") {
-                            // Handle two-level binding specified as "binding: {key: value}" by parsing inner
-                            // object and converting to "binding.key: value"
-                            insertPropertyAccessorsHelper(val, binding, key);
-                        } else {
-                            if (!isFunctionLiteral(val)) {
-                                if (binding && isWriteableValue(val)) {
-                                    if (eventHandlersUseObjectForThis && binding['flags'] & bindingFlags_eventHandler) {
-                                        // call function literal in an anonymous function so that it is called
-                                        // with appropriate "this" value
-                                        val = 'function(_x,_y,_z){(' + val + ')(_x,_y,_z);}';
-                                    }
-                                    else if (binding['flags'] & bindingFlags_twoWay) {
-                                        // for two-way bindings, provide a write method in case the value
-                                        // isn't a writable observable
-                                        propertyAccessorResultStrings.push(quotedKey + ":function(_z){" + val + "=_z;}");
-                                    }
-                                }
-                                if (canWrap && isPossiblyUnwrappedObservable(val)) {
-                                    // Try to prevent observables from being accessed when parsing a binding;
-                                    // Instead they will be "unwrapped" within the context of the specific binding handler
-                                    val = 'ko.bindingValueWrap(function(){return ' + val + '})';
-                                }
-                            }
-                            resultStrings.push(quotedKey + ":" + val);
-                        }
-                    } else if (keyValueEntry['unknown']) {
-                        // Check if the 'unknown' entry matches a binding handler that can used without a value
-                        // and include it with a value of 'true'
-                        var key = keyValueEntry['unknown'], binding = ko.bindingHandlers[key];
-                        if (binding && (binding['flags'] & bindingFlags_noValue))
-                            resultStrings.push(ensureQuoted(key)+ ":true");
-                        else
-                            resultStrings.push(key);
+
+                function processKeyValue(keyValueEntry) {
+                    var key = keyValueEntry['key'], val = keyValueEntry['value'],
+                        quotedKey = ensureQuoted(parentBindingKey ? parentBindingKey+'.'+key : key),
+                        binding = parentBinding || ko.getBindingHandler(key),
+                        canWrap = binding || independentBindings,
+                        flags = binding && binding['flags'];
+    
+                    if (val === undefined && flags & bindingFlags_noValue) {
+                        // If the binding can used without a value set its value to 'true'
+                        val = "true";
                     }
+                    if (!parentBinding && flags & bindingFlags_twoLevel && val.charAt(0) === "{") {
+                        // Handle two-level binding specified as "binding: {key: value}" by parsing inner
+                        // object and converting to "binding.key: value"
+                        insertPropertyAccessorsHelper(val, binding, key);
+                        return;
+                    }
+                    if (binding && binding['preprocess']) {
+                        val = binding['preprocess'](val, keyValueEntry);
+                        // if preprocess return new key, re-process this entry
+                        if (val['key']) {
+                            processKeyValue(val);
+                            return;
+                        }
+                    }
+                    if (!isFunctionLiteral(val)) {
+                        if (binding && isWriteableValue(val)) {
+                            if (eventHandlersUseObjectForThis && flags & bindingFlags_eventHandler) {
+                                // call function literal in an anonymous function so that it is called
+                                // with appropriate "this" value
+                                val = 'function(_x,_y,_z){(' + val + ')(_x,_y,_z);}';
+                            }
+                            else if (flags & bindingFlags_twoWay) {
+                                // for two-way bindings, provide a write method in case the value
+                                // isn't a writable observable
+                                propertyAccessorResultStrings.push(quotedKey + ":function(_z){" + val + "=_z;}");
+                            }
+                        }
+                        if (canWrap && isPossiblyUnwrappedObservable(val)) {
+                            // Try to prevent observables from being accessed when parsing a binding;
+                            // Instead they will be "unwrapped" within the context of the specific binding handler
+                            val = 'ko.bindingValueWrap(function(){return ' + val + '})';
+                        }
+                    }
+                    resultStrings.push(quotedKey + ":" + val);
                 }
+
+                ko.utils.arrayForEach(keyValueArray, processKeyValue);
             }
+
             insertPropertyAccessorsHelper(objectLiteralStringOrKeyValueArray);
 
             var combinedResult = resultStrings.join(",");

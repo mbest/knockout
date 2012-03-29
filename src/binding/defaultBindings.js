@@ -3,14 +3,8 @@
 var eventHandlersWithShortcuts = ['click'];
 ko.utils.arrayForEach(eventHandlersWithShortcuts, function(eventName) {
     ko.bindingHandlers[eventName] = {
-        'flags': bindingFlags_eventHandler,
-        'init': function(element, valueAccessor, allBindingsAccessor, viewModel) {
-            var newValueAccessor = function () {
-                var result = {};
-                result[eventName] = valueAccessor();
-                return result;
-            };
-            return ko.bindingHandlers['event']['init'].call(this, element, newValueAccessor, allBindingsAccessor, viewModel);
+        'preprocess': function(val) {
+            return { 'key': 'event.' + eventName, 'value': val };
         }
     }	
 });
@@ -520,7 +514,7 @@ function templateBasedBinding(makeOptionsFunction) {
 }
 
 // "with: someExpression" is equivalent to "template: { if: someExpression, data: someExpression }"
-ko.bindingHandlers['with'] = new templateBasedBinding( function(value, options) { options['if'] = value; options['data'] = value; });
+ko.bindingHandlers['with'] = templateBasedBinding( function(value, options) { options['if'] = value; options['data'] = value; });
 
 // "if: someExpression" is equivalent to "template: { if: someExpression }"
 ko.bindingHandlers['if'] = templateBasedBinding( function(value, options) { options['if'] = value; });

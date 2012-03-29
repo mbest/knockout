@@ -49,8 +49,8 @@ describe('Binding Expression Rewriting', {
     'Should be able to cope with malformed syntax (things that aren\'t key-value pairs)': function() {
         var result = ko.bindingExpressionRewriting.parseObjectLiteral("malformed1, 'mal:formed2', good:3, { malformed: 4 }, good5:5");
         value_of(result.length).should_be(5);
-        value_of(result[0].unknown).should_be("malformed1");
-        value_of(result[1].unknown).should_be("mal:formed2");
+        value_of(result[0].key).should_be("malformed1");
+        value_of(result[1].key).should_be("mal:formed2");
         value_of(result[2].key).should_be("good");
         value_of(result[2].value).should_be("3");
         value_of(result[4].key).should_be("good5");
