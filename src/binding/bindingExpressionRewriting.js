@@ -11,7 +11,7 @@ ko.bindingExpressionRewriting = (function () {
 
     function isFunctionLiteral(expression) {
         // match function literal, which must start with function end with }
-        return expression.match(/^\(*function\s*\(.*}\)*$/) !== null;
+        return expression.match(/^[\(\s]*function\s*\(.*}[\)\s]*$/) !== null;
     }
 
     function isPossiblyUnwrappedObservable(expression) {
@@ -126,6 +126,7 @@ ko.bindingExpressionRewriting = (function () {
                                 // call function literal in an anonymous function so that it is called
                                 // with appropriate "this" value
                                 val = 'function(_x,_y,_z){(' + val + ')(_x,_y,_z);}';
+                                canWrap = false;
                             }
                             else if (flags & bindingFlags_twoWay) {
                                 // for two-way bindings, provide a write method in case the value

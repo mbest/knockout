@@ -74,7 +74,7 @@ describe('Binding Expression Rewriting', {
 
     'Should convert values to property accessors': function () {
         ko.bindingHandlers.b = { flags: ko.bindingFlags.twoWay };
-        var rewritten = ko.bindingExpressionRewriting.preProcessBindings('a : 1, "b" : firstName, c : function() { return "returnValue"; }');
+        var rewritten = ko.bindingExpressionRewriting.preProcessBindings('a : 1, "b" : firstName, c : ( function() { return "returnValue"; } )');
 
         var model = { firstName: "bob", lastName: "smith" };
         with (model) {
@@ -99,6 +99,7 @@ describe('Binding Expression Rewriting', {
             value_of(parsedRewritten['b.a']).should_be("bob");
             value_of(parsedRewritten['b.b']).should_be("jones");
             value_of(parsedRewritten['b.c']).should_be("jones");
+            value_of(parsedRewritten['b.d']()).should_be("jones");
             var accessor = function(key) { return parsedRewritten[key]; };
 
             // update simple property
