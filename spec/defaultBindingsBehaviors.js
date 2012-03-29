@@ -773,6 +773,21 @@ describe('Binding: Click', {
         ko.applyBindings(model, testNode);
         ko.utils.triggerEvent(testNode.childNodes[0], "click");
         value_of(model.wasCalled).should_be(true);
+    },
+
+    'Should be able to specifiy click binding using object literal (bypass parsing)': function() {
+        var model = { 
+            wasCalled: false, 
+            doCall: function (arg1, arg2) { 
+                this.wasCalled = true;
+                value_of(arg1).should_be(model);
+                value_of(arg2.type).should_be("click");
+            } 
+        };
+        testNode.innerHTML = "<button>hey</button>";
+        ko.applyBindingsToNode(testNode.childNodes[0], {click:model.doCall}, model);
+        ko.utils.triggerEvent(testNode.childNodes[0], "click");
+        value_of(model.wasCalled).should_be(true);
     }
 });
 
