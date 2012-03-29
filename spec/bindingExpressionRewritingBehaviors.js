@@ -59,13 +59,13 @@ describe('Binding Expression Rewriting', {
     },
 
     'Should ensure all keys are wrapped in quotes': function() {
-        var rewritten = ko.bindingExpressionRewriting.insertPropertyAccessors("a: 1, 'b': 2, \"c\": 3");
+        var rewritten = ko.bindingExpressionRewriting.preProcessBindings("a: 1, 'b': 2, \"c\": 3");
         value_of(rewritten).should_be("'a':1,'b':2,'c':3");
     },
 
     'Should convert keys without values to key:true': function() {
         ko.bindingHandlers['b'] = { flags:bindingFlags_noValue };
-        var rewritten = ko.bindingExpressionRewriting.insertPropertyAccessors("a: 1, b");
+        var rewritten = ko.bindingExpressionRewriting.preProcessBindings("a: 1, b");
         var parsedRewritten = eval("({" + rewritten + "})");
         value_of(parsedRewritten.a).should_be(1);
         value_of(parsedRewritten.b).should_be(true);
@@ -74,7 +74,7 @@ describe('Binding Expression Rewriting', {
 
     'Should convert values to property accessors': function () {
         ko.bindingHandlers.b = { flags: ko.bindingFlags.twoWay };
-        var rewritten = ko.bindingExpressionRewriting.insertPropertyAccessors('a : 1, "b" : firstName, c : function() { return "returnValue"; }');
+        var rewritten = ko.bindingExpressionRewriting.preProcessBindings('a : 1, "b" : firstName, c : function() { return "returnValue"; }');
 
         var model = { firstName: "bob", lastName: "smith" };
         with (model) {
@@ -91,7 +91,7 @@ describe('Binding Expression Rewriting', {
 
     'Should convert a variety of values to property accessors': function () {
         ko.bindingHandlers.b = { flags: ko.bindingFlags.twoWay | ko.bindingFlags.twoLevel };
-        var rewritten = ko.bindingExpressionRewriting.insertPropertyAccessors('b.a: prop1, b.b: obj2.prop2, b.c: obj2["prop2"], b.d: getObj().prop2');
+        var rewritten = ko.bindingExpressionRewriting.preProcessBindings('b.a: prop1, b.b: obj2.prop2, b.c: obj2["prop2"], b.d: getObj().prop2');
 
         var model = { prop1: "bob", obj2: { prop2: "jones" }, getObj: function() { return this.obj2 } };
         with (model) {
@@ -119,7 +119,7 @@ describe('Binding Expression Rewriting', {
     },
 
     'Should be able to eval rewritten literals that contain unquoted keywords as keys': function() {
-        var rewritten = ko.bindingExpressionRewriting.insertPropertyAccessors("while: true");
+        var rewritten = ko.bindingExpressionRewriting.preProcessBindings("while: true");
         value_of(rewritten).should_be("'while':true");
         var evaluated = eval("({" + rewritten + "})");
         value_of(evaluated['while']).should_be(true);
@@ -127,7 +127,7 @@ describe('Binding Expression Rewriting', {
 
     'Should be able to eval two-level bindings mixed with one-level bindings': function() {
         ko.bindingHandlers.a = { flags: ko.bindingFlags.twoLevel | ko.bindingFlags.twoWay };
-        var rewritten = ko.bindingExpressionRewriting.insertPropertyAccessors('a.f: firstName, b: false, a: {l: lastName}');
+        var rewritten = ko.bindingExpressionRewriting.preProcessBindings('a.f: firstName, b: false, a: {l: lastName}');
 
         var model = { firstName: "bob", lastName: "smith" };
         with (model) {

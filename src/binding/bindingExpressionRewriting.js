@@ -38,65 +38,63 @@ ko.bindingExpressionRewriting = (function () {
         + '|' + oneNotSpace
         + ')', 'g');
 
-    return {
-        parseObjectLiteral: function(objectLiteralString) {
-            // A full tokeniser+lexer would add too much weight to this library, so here's a simple parser
-            // that is sufficient just to split an object literal string into a set of top-level key-value pairs
-            var str = ko.utils.stringTrim(objectLiteralString);
-            if (str.charCodeAt(0) === 123) // '{' Ignore braces surrounding the whole object literal
-                str = str.slice(1, -1);
-    
-            // Split into tokens
-            var result = [],
-                toks = str.match(bindingToken),
-                key, values, depth = 0;
+    function parseObjectLiteral(objectLiteralString) {
+        // A full tokeniser+lexer would add too much weight to this library, so here's a simple parser
+        // that is sufficient just to split an object literal string into a set of top-level key-value pairs
+        var str = ko.utils.stringTrim(objectLiteralString);
+        if (str.charCodeAt(0) === 123) // '{' Ignore braces surrounding the whole object literal
+            str = str.slice(1, -1);
 
-            if (toks) {
-                // append a comma so that the last item gets added to result
-                toks.push(',');
-    
-                for (var i = 0, n = toks.length; i < n; ++i) {
-                    var tok = toks[i], c = tok.charCodeAt(0);
-                    if (c === 44) { // ","
-                        if (depth <= 0) {
-                            if (key)
-                                result.push({'key': key, 'value': values ? values.join('') : undefined});
-                            key = values = depth = 0;
-                            continue;
-                        }
-                    } else if (c === 58) { // ":"
-                        if (!values)
-                            continue;
-                    } else if (c === 40 || c === 123 || c === 91) { // '(', '{', '['
-                        ++depth;
-                    } else if (c === 41 || c === 125 || c === 93) { // ')', '}', ']'
-                        --depth;
-                    } else if (!key) {
-                        key = (c === 34 || c === 39) // '"', "'"
-                            ? tok.slice(1, -1)
-                            : tok;
+        // Split into tokens
+        var result = [],
+            toks = str.match(bindingToken),
+            key, values, depth = 0;
+
+        if (toks) {
+            // append a comma so that the last item gets added to result
+            toks.push(',');
+
+            for (var i = 0, n = toks.length; i < n; ++i) {
+                var tok = toks[i], c = tok.charCodeAt(0);
+                if (c === 44) { // ","
+                    if (depth <= 0) {
+                        if (key)
+                            result.push({'key': key, 'value': values ? values.join('') : undefined});
+                        key = values = depth = 0;
                         continue;
                     }
-                    if (values)
-                        values.push(tok);
-                    else 
-                        values = [tok];
+                } else if (c === 58) { // ":"
+                    if (!values)
+                        continue;
+                } else if (c === 40 || c === 123 || c === 91) { // '(', '{', '['
+                    ++depth;
+                } else if (c === 41 || c === 125 || c === 93) { // ')', '}', ']'
+                    --depth;
+                } else if (!key) {
+                    key = (c === 34 || c === 39) // '"', "'"
+                        ? tok.slice(1, -1)
+                        : tok;
+                    continue;
                 }
+                if (values)
+                    values.push(tok);
+                else 
+                    values = [tok];
             }
-            return result;        
-        },
+        }
+        return result;        
+    }
 
-        insertPropertyAccessors: function (objectLiteralStringOrKeyValueArray, bindingOptions) {
+    return {
+        parseObjectLiteral: parseObjectLiteral,
+
+        preProcessBindings: function (bindingsStringOrKeyValueArray, bindingOptions) {
             bindingOptions = bindingOptions || {};
             var resultStrings = [], propertyAccessorResultStrings = [],
                 eventHandlersUseObjectForThis = bindingOptions['eventHandlersUseObjectForThis'],
                 independentBindings = bindingOptions['independentBindings'];
 
-            function insertPropertyAccessorsHelper(objectLiteralStringOrKeyValueArray, parentBinding, parentBindingKey) {
-                var keyValueArray = typeof objectLiteralStringOrKeyValueArray === "string"
-                    ? ko.bindingExpressionRewriting.parseObjectLiteral(objectLiteralStringOrKeyValueArray)
-                    : objectLiteralStringOrKeyValueArray;
-
+            function preProcessBindingsHelper(keyValueArray, parentBinding, parentBindingKey) {
                 function processKeyValue(keyValueEntry) {
                     var key = keyValueEntry['key'], val = keyValueEntry['value'],
                         quotedKey = ensureQuoted(parentBindingKey ? parentBindingKey+'.'+key : key),
@@ -111,7 +109,7 @@ ko.bindingExpressionRewriting = (function () {
                     if (!parentBinding && flags & bindingFlags_twoLevel && val.charAt(0) === "{") {
                         // Handle two-level binding specified as "binding: {key: value}" by parsing inner
                         // object and converting to "binding.key: value"
-                        insertPropertyAccessorsHelper(val, binding, key);
+                        preProcessBindingsHelper(parseObjectLiteral(val), binding, key);
                         return;
                     }
                     if (binding && binding['preprocess']) {
@@ -147,7 +145,10 @@ ko.bindingExpressionRewriting = (function () {
                 ko.utils.arrayForEach(keyValueArray, processKeyValue);
             }
 
-            insertPropertyAccessorsHelper(objectLiteralStringOrKeyValueArray);
+            var keyValueArray = typeof bindingsStringOrKeyValueArray === "string"
+                ? parseObjectLiteral(bindingsStringOrKeyValueArray)
+                : bindingsStringOrKeyValueArray;
+            preProcessBindingsHelper(keyValueArray);
 
             var combinedResult = resultStrings.join(",");
             if (propertyAccessorResultStrings.length > 0) {
