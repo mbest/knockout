@@ -97,7 +97,8 @@ ko.bindingExpressionRewriting = (function () {
             function preProcessBindingsHelper(keyValueArray, parentBinding, parentBindingKey) {
                 function processKeyValue(keyValueEntry) {
                     var key = keyValueEntry['key'], val = keyValueEntry['value'],
-                        quotedKey = ensureQuoted(parentBindingKey ? parentBindingKey+'.'+key : key),
+                        fullKey = parentBindingKey ? parentBindingKey+'.'+key : key,
+                        quotedKey = ensureQuoted(fullKey),
                         binding = parentBinding || ko.getBindingHandler(key),
                         canWrap = binding || independentBindings,
                         flags = binding && binding['flags'];
@@ -113,10 +114,13 @@ ko.bindingExpressionRewriting = (function () {
                         return;
                     }
                     if (binding && binding['preprocess']) {
-                        val = binding['preprocess'](val, keyValueEntry);
+                        val = binding['preprocess'](val, fullKey);
                         // if preprocess return new key, re-process this entry
-                        if (val['key']) {
-                            processKeyValue(val);
+                        if (typeof val != "string") {
+                            if (val['key'])
+                                processKeyValue(val);
+                            else if (val.length)
+                                ko.utils.arrayForEach(val, processKeyValue);
                             return;
                         }
                     }

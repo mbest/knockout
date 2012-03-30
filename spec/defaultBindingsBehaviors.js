@@ -1400,6 +1400,18 @@ describe('Binding: With Light', {
         someitem({childprop: ['notme']});
         container = testNode.childNodes[0];
         value_of(container).should_contain_html("text<!-- ko foreach: childprop --><span data-bind=\"text: $data\">notme</span><!-- /ko -->");
+    },
+
+    'Should be able to specify child context model name via option': function() {
+        testNode.innerHTML = "<div data-bind='withlight: someItem, withItemName:\"$me\"'><span data-bind='text: $me.myProp'></span></div>";
+        ko.applyBindings({ someItem: { myProp: 'Sub prop value' }, myProp: 'Parent prop value' }, testNode);
+        value_of(testNode.childNodes[0].childNodes[0]).should_contain_text("Sub prop value");
+    },
+
+    'Should be able to specify child context model name via parsed syntax': function() {
+        testNode.innerHTML = "<div data-bind='withlight: $me = someItem'><span data-bind='text: $me.myProp'></span></div>";
+        ko.applyBindings({ someItem: { myProp: 'Sub prop value' }, myProp: 'Parent prop value' }, testNode);
+        value_of(testNode.childNodes[0].childNodes[0]).should_contain_text("Sub prop value");
     }
 });
 

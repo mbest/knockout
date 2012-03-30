@@ -449,10 +449,18 @@ ko.bindingHandlers['attr'] = {
 
 ko.bindingHandlers['withlight'] = {
     'flags': bindingFlags_contentBind | bindingFlags_canUseVirtual,
+    'preprocess': function(val, key) {
+        var match = val.match(/^\s*([a-zA-Z_$][0-9a-zA-Z_$]*)\s*=\s*([^=][\s\S]*)$/);
+        if (!match)
+            return val;
+        return [ { 'key': key, 'value': match[2] }, { 'key': 'withItemName', 'value': '"' + match[1] + '"' } ];
+    },
     'init': function(element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
+        var withItemName = allBindingsAccessor('withItemName'), 
+            contextOptions = withItemName ? { 'modelName' : withItemName } : undefined;
         var innerContext = bindingContext['createChildContext'](function() {
             return ko.utils.unwrapObservable(valueAccessor());
-        });
+        }, contextOptions);
         ko.applyBindingsToDescendants(innerContext, element, true);
     }
 };

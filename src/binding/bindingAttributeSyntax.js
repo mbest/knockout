@@ -39,7 +39,8 @@
 
     // Accepts either a data value or a value accessor function; note that an observable qualifies as a value accessor function
     ko.bindingContext = function(dataItemOrValueAccessor, parent, options) {
-        var self = this, isFunc = typeof(dataItemOrValueAccessor) == "function";
+        var self = this, isFunc = typeof(dataItemOrValueAccessor) == "function",
+            model, altModelName = options && options['modelName'];
         self._subscribable = ko.utils.possiblyWrap(parent ?
             function() {
                 var oldSubscribable = self._subscribable;   // save previous subscribable value
@@ -53,17 +54,21 @@
                 self['$parentContext'] = parent;
                 self['$parents'] = parent['$parents'].slice(0);
                 self['$parents'].unshift(self['$parent'] = parent['$data']);
-                self['$data'] = isFunc ? dataItemOrValueAccessor() : dataItemOrValueAccessor;
+                self['$data'] = model = isFunc ? dataItemOrValueAccessor() : dataItemOrValueAccessor;
+                if (altModelName)
+                    self[altModelName] = model;
             } :
             function() {
                 self['$options'] = options || {};
                 self['$parents'] = [];
-                self['$root'] = self['$data'] = isFunc ? dataItemOrValueAccessor() : dataItemOrValueAccessor;
+                self['$root'] = self['$data'] = model = isFunc ? dataItemOrValueAccessor() : dataItemOrValueAccessor;
+                if (altModelName)
+                    self[altModelName] = model;
             }
         );
     }
-    ko.bindingContext.prototype['createChildContext'] = function (dataItemOrValueAccessor) {
-        return new ko.bindingContext(dataItemOrValueAccessor, this);
+    ko.bindingContext.prototype['createChildContext'] = function (dataItemOrValueAccessor, options) {
+        return new ko.bindingContext(dataItemOrValueAccessor, this, options);
     };
     ko.bindingContext.prototype['extend'] = function(properties) {
         var clone = ko.utils.extend(new ko.bindingContext(), this);
