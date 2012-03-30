@@ -6,9 +6,9 @@ ko.templateRewriting = (function () {
     function validateDataBindValuesForRewriting(keyValueArray) {
         var allValidators = ko.templateRewriting.bindingRewriteValidators;
         for (var i = 0; i < keyValueArray.length; i++) {
-            var key = keyValueArray[i]['key'];
+            var key = keyValueArray[i][0];
             if (allValidators.hasOwnProperty(key)) {
-                var possibleErrorMessage = allValidators[key](keyValueArray[i]['value']);
+                var possibleErrorMessage = allValidators[key](keyValueArray[i][1]);
                 if (possibleErrorMessage)
                     throw new Error(possibleErrorMessage);
             } else {

@@ -101,10 +101,12 @@ ko.utils = (function () {
             return array;
         },
 
-        extendInternal: function (target, source) {
-            for(var prop in source) {
-                if(source.hasOwnProperty(prop)) {
-                    target[prop] = source[prop];
+        extendInternal: function (target/*, source, ...*/) {
+            for (var i=1, source, prop; source = arguments[i]; i++) {
+                for (prop in source) {
+                    if(source.hasOwnProperty(prop)) {
+                        target[prop] = source[prop];
+                    }
                 }
             }
             return target;

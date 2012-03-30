@@ -59,7 +59,7 @@ ko.bindingExpressionRewriting = (function () {
                 if (c === 44) { // ","
                     if (depth <= 0) {
                         if (key)
-                            result.push({'key': key, 'value': values ? values.join('') : undefined});
+                            result.push([key, values ? values.join('') : undefined]);
                         key = values = depth = 0;
                         continue;
                     }
@@ -96,7 +96,7 @@ ko.bindingExpressionRewriting = (function () {
 
             function preProcessBindingsHelper(keyValueArray, parentBinding, parentBindingKey) {
                 function processKeyValue(keyValueEntry) {
-                    var key = keyValueEntry['key'], val = keyValueEntry['value'],
+                    var key = keyValueEntry[0], val = keyValueEntry[1],
                         fullKey = parentBindingKey ? parentBindingKey+'.'+key : key,
                         quotedKey = ensureQuoted(fullKey),
                         binding = parentBinding || ko.getBindingHandler(key),
@@ -117,10 +117,7 @@ ko.bindingExpressionRewriting = (function () {
                         val = binding['preprocess'](val, fullKey);
                         // if preprocess return new key, re-process this entry
                         if (typeof val != "string") {
-                            if (val['key'])
-                                processKeyValue(val);
-                            else if (val.length)
-                                ko.utils.arrayForEach(val, processKeyValue);
+                            ko.utils.arrayForEach(val, processKeyValue);
                             return;
                         }
                     }
@@ -166,7 +163,7 @@ ko.bindingExpressionRewriting = (function () {
 
         keyValueArrayContainsKey: function(keyValueArray, key) {
             for (var i = 0; i < keyValueArray.length; i++)
-                if (keyValueArray[i]['key'] == key)
+                if (keyValueArray[i][0] == key)
                     return true;
             return false;
         },
