@@ -3,8 +3,8 @@
 var eventHandlersWithShortcuts = ['click'];
 ko.utils.arrayForEach(eventHandlersWithShortcuts, function(eventName) {
     ko.bindingHandlers[eventName] = {
-        'preprocess': function(val) {
-            return [['event.' + eventName, val]];
+        'preprocess': function(val, key, addBinding) {
+            addBinding('event.' + eventName, val);
         },
         'flags': bindingFlags_eventHandler,
         'init': function(element, valueAccessor, allBindingsAccessor, viewModel) {
@@ -449,9 +449,11 @@ ko.bindingHandlers['attr'] = {
 
 ko.bindingHandlers['withlight'] = {
     'flags': bindingFlags_contentBind | bindingFlags_canUseVirtual,
-    'preprocess': function(val, key) {
+    'preprocess': function(val, key, addBinding) {
         var match = val.match(/^\s*([$\w]+)\s*=\s*([^=][\s\S]*)$/);
-        return match ? [ [key, match[2]], ['withItemName', '"' + match[1] + '"'] ] : val;
+        if (match)
+            addBinding('withItemName', '"' + match[1] + '"');
+        return match ? match[2] : val;
     },
     'init': function(element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
         var innerContext = bindingContext['createChildContext'](function() {

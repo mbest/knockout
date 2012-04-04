@@ -101,6 +101,7 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
         try {
             ko.dependencyDetection.begin(addDependency);
             _latestValue = readFunction.call(evaluatorFunctionTarget);
+            if (DEBUG) dependentObservable._latestValue = _latestValue;
         } finally {
             ko.dependencyDetection.end();
         }
