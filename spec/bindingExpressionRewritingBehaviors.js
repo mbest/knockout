@@ -72,6 +72,35 @@ describe('Binding Expression Rewriting', {
         delete ko.bindingHandlers['b'];
     },
 
+    'Should allow binding to modify value through "preprocess" method': function() {
+        // create binding that has a default value of false
+        ko.bindingHandlers['b'] = {
+            preprocess: function(value) {
+                return value ? value : "false";
+            }
+        };
+        var rewritten = ko.bindingExpressionRewriting.preProcessBindings("a: 1, b");
+        var parsedRewritten = eval("({" + rewritten + "})");
+        value_of(parsedRewritten.a).should_be(1);
+        value_of(parsedRewritten.b).should_be(false);
+        delete ko.bindingHandlers['b'];
+    },
+
+    'Should allow binding to add/replace bindings through "preprocess" method\'s "addBinding" callback': function() {
+        // create binding that has a default value of false
+        ko.bindingHandlers['b'] = {
+            preprocess: function(value, key, addBinding) {
+                addBinding("a"+key, value);
+            }
+        };
+        var rewritten = ko.bindingExpressionRewriting.preProcessBindings("a: 1, b: 2");
+        var parsedRewritten = eval("({" + rewritten + "})");
+        value_of(parsedRewritten.a).should_be(1);
+        value_of(parsedRewritten.b).should_be(undefined);
+        value_of(parsedRewritten.ab).should_be(2);
+        delete ko.bindingHandlers['b'];
+    },
+
     'Should convert values to property accessors': function () {
         ko.bindingHandlers.b = { flags: ko.bindingFlags.twoWay };
         var rewritten = ko.bindingExpressionRewriting.preProcessBindings('a : 1, "b" : firstName, c : ( function() { return "returnValue"; } )');
