@@ -64,17 +64,17 @@ describe('Binding Expression Rewriting', {
     },
 
     'Should convert keys without values to key:true': function() {
-        ko.bindingHandlers['b'] = { flags:bindingFlags_noValue };
+        ko.bindingHandlers.b = { flags:bindingFlags_noValue };
         var rewritten = ko.bindingExpressionRewriting.preProcessBindings("a: 1, b");
         var parsedRewritten = eval("({" + rewritten + "})");
         value_of(parsedRewritten.a).should_be(1);
         value_of(parsedRewritten.b).should_be(true);
-        delete ko.bindingHandlers['b'];
+        delete ko.bindingHandlers.b;
     },
 
     'Should allow binding to modify value through "preprocess" method': function() {
         // create binding that has a default value of false
-        ko.bindingHandlers['b'] = {
+        ko.bindingHandlers.b = {
             preprocess: function(value) {
                 return value ? value : "false";
             }
@@ -83,12 +83,11 @@ describe('Binding Expression Rewriting', {
         var parsedRewritten = eval("({" + rewritten + "})");
         value_of(parsedRewritten.a).should_be(1);
         value_of(parsedRewritten.b).should_be(false);
-        delete ko.bindingHandlers['b'];
+        delete ko.bindingHandlers.b;
     },
 
     'Should allow binding to add/replace bindings through "preprocess" method\'s "addBinding" callback': function() {
-        // create binding that has a default value of false
-        ko.bindingHandlers['b'] = {
+        ko.bindingHandlers.b = {
             preprocess: function(value, key, addBinding) {
                 addBinding("a"+key, value);
             }
@@ -98,12 +97,11 @@ describe('Binding Expression Rewriting', {
         value_of(parsedRewritten.a).should_be(1);
         value_of(parsedRewritten.b).should_be(undefined);
         value_of(parsedRewritten.ab).should_be(2);
-        delete ko.bindingHandlers['b'];
+        delete ko.bindingHandlers.b;
     },
 
     'Bindings added by "preprocess" should be at the root level': function() {
-        // create binding that has a default value of false
-        ko.bindingHandlers['b'] = {
+        ko.bindingHandlers.b = {
             flags: ko.bindingFlags.twoLevel,
             preprocess: function(value, key, addBinding) {
                 addBinding("a"+key, value);
@@ -116,7 +114,31 @@ describe('Binding Expression Rewriting', {
         value_of(parsedRewritten.b).should_be(undefined);
         value_of(parsedRewritten['b.a']).should_be(3);
         value_of(parsedRewritten['ab.a']).should_be(2);
-        delete ko.bindingHandlers['b'];
+        delete ko.bindingHandlers.b;
+    },
+
+    'Should be able to chain "preprocess" calls when one adds a binding for another': function() {
+        // preprocess adds 1 to value
+        ko.bindingHandlers.a = {
+            flags: ko.bindingFlags.twoLevel,
+            preprocess: function(value, key, addBinding) {
+                return '' + (+value + 1);
+            }
+        };
+        // preprocess converts b to a.b
+        ko.bindingHandlers.b = {
+            preprocess: function(value, key, addBinding) {
+                addBinding("a.b", value);
+            }
+        };
+        var rewritten = ko.bindingExpressionRewriting.preProcessBindings("a: 1, b: 2");
+        var parsedRewritten = eval("({" + rewritten + "})");
+        value_of(parsedRewritten.a).should_be(2);
+        value_of(parsedRewritten.b).should_be(undefined);
+        value_of(parsedRewritten['a.b']).should_be(3);
+
+        delete ko.bindingHandlers.a;
+        delete ko.bindingHandlers.b;
     },
 
     'Should convert values to property accessors': function () {
