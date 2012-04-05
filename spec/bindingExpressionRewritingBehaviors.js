@@ -101,6 +101,24 @@ describe('Binding Expression Rewriting', {
         delete ko.bindingHandlers['b'];
     },
 
+    'Bindings added by "preprocess" should be at the root level': function() {
+        // create binding that has a default value of false
+        ko.bindingHandlers['b'] = {
+            flags: ko.bindingFlags.twoLevel,
+            preprocess: function(value, key, addBinding) {
+                addBinding("a"+key, value);
+                return '' + (+value + 1);
+            }
+        };
+        var rewritten = ko.bindingExpressionRewriting.preProcessBindings("a: 1, b: {a: 2}");
+        var parsedRewritten = eval("({" + rewritten + "})");
+        value_of(parsedRewritten.a).should_be(1);
+        value_of(parsedRewritten.b).should_be(undefined);
+        value_of(parsedRewritten['b.a']).should_be(3);
+        value_of(parsedRewritten['ab.a']).should_be(2);
+        delete ko.bindingHandlers['b'];
+    },
+
     'Should convert values to property accessors': function () {
         ko.bindingHandlers.b = { flags: ko.bindingFlags.twoWay };
         var rewritten = ko.bindingExpressionRewriting.preProcessBindings('a : 1, "b" : firstName, c : ( function() { return "returnValue"; } )');
