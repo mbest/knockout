@@ -10,3 +10,12 @@ View model that's an observable:
  * Since the view model is unwrapped for each element, writing to the observable (or calling notify..) will refresh all the bindings.
 
 Questions: Does anyone use this? Maybe there's another way to accomplish refreshing all the bindings.
+
+
+Possible way to divide changes for independent bindings:
+
+1. multi-node disposal for computed observables
+2. single bindingContext (handle observable view model)
+3. new syntax for two-level bindings (either using binding flags or "preprocess")
+4. options for apply bindings
+5. independent bindings (wrap values in preprocess, unwrap in applybindings, separate computed for each binding)
