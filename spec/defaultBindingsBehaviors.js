@@ -1946,5 +1946,50 @@ describe('Binding: Foreach', {
         };
         ko.applyBindings(viewModel, testNode);
         value_of(testNode).should_contain_html('<!-- ko foreach:someitems --><div><section data-bind="text: $data">alpha</section></div><div><section data-bind="text: $data">beta</section></div><!-- /ko -->');
+    },
+
+    'Should add and bind only changed items in a nested observable array': function() {
+        var innerArray1 = ko.observableArray(),
+            outerArray = ko.observableArray([innerArray1]),
+            vm = { outerArray: outerArray },
+            initItems = [];
+        ko.bindingHandlers.test = {
+            'init': function(element, valueAccessor) {
+                var val = valueAccessor();
+                element.innerHTML = val;
+                initItems.push(val);
+            }
+        }
+        testNode.innerHTML = "<span data-bind='foreach: outerArray'><span data-bind='foreach: $data'><span data-bind='test: $data'></span></span></span>";
+        ko.applyBindings(vm, testNode);
+
+        // initially nothing is output or bound
+        value_of(testNode).should_contain_text("");
+        value_of(initItems.length).should_be(0);
+
+        // Add an item to the inner array
+        initItems = [];
+        innerArray1.push('A');
+        value_of(testNode).should_contain_text("A");
+        value_of(initItems).should_be(['A']);
+
+        // Add another item to the inner array
+        initItems = [];
+        innerArray1.push('B');
+        value_of(testNode).should_contain_text("AB");
+        value_of(initItems).should_be(['B']);
+
+        // Replace items in the inner array
+        initItems = [];
+        innerArray1(['C', 'B', 'D', 'A']);
+        value_of(testNode).should_contain_text("CBDA");
+        value_of(initItems).should_be(['C', 'D']);
+
+        // Insert a new array to the outer array
+        initItems = [];
+        var innerArray2 = ko.observableArray(['X', 'Y']);
+        outerArray.push(innerArray2)
+        value_of(testNode).should_contain_text("CBDAXY");
+        value_of(initItems).should_be(['X', 'Y']);
     }
 });

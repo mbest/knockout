@@ -34,9 +34,7 @@
     }
 
     function defaultCallbackAfterAddingNodes(value, mappedNodes, index, subscription) {
-        subscription.addDisposalNodes(mappedNodes[0]);
-        if (mappedNodes.length > 1)
-            subscription.addDisposalNodes(mappedNodes[mappedNodes.length]);
+        subscription.addDisposalNodes(mappedNodes);
     }
 
     function wrapCallbackAfterAddingNodes(originalCallback) {

@@ -56,10 +56,9 @@ ko.utils.domNodeDisposal = new (function () {
     function addDisposeCallback(nodeOrNodes, disposeCallback, disposeWhen) {
         var nodes = [];
         function addNode(node) {
-            if (node.nodeType !== 3) {
-                nodes.push(node);
+            nodes.push(node);
+            if (node.nodeType !== 3)
                 getDisposeCallbacksCollection(node, true).push(cleanNodeCallback);
-            }
         }
         function nodeIsDisposed(node) {
             ko.utils.arrayRemoveItem(nodes, node);
@@ -78,11 +77,13 @@ ko.utils.domNodeDisposal = new (function () {
                 : ko.utils.arrayForEach(nodeOrNodes, addNode);
         }
         function deleteNode(node) {
-            var callbacksCollection = getDisposeCallbacksCollection(node, false);
-            if (callbacksCollection) {
-                ko.utils.arrayRemoveItem(callbacksCollection, cleanNodeCallback);
-                if (!callbacksCollection.length)
-                    destroyCallbacksCollection(node);
+            if (node.nodeType !== 3) {
+                var callbacksCollection = getDisposeCallbacksCollection(node, false);
+                if (callbacksCollection) {
+                    ko.utils.arrayRemoveItem(callbacksCollection, cleanNodeCallback);
+                    if (!callbacksCollection.length)
+                        destroyCallbacksCollection(node);
+                }
             }
             ko.utils.arrayRemoveItem(nodes, node);
         }
@@ -95,7 +96,8 @@ ko.utils.domNodeDisposal = new (function () {
             disposeCallback();
         }
         function shouldDispose() {
-            return !ko.utils.arrayFirst(nodes, ko.utils.domNodeIsAttachedToDocument) || (disposeWhen && disposeWhen());
+            return (nodes.length && !ko.utils.arrayFirst(nodes, ko.utils.domNodeIsAttachedToDocument))
+                || (disposeWhen && disposeWhen());
         }
         function getNodes() {
             return nodes;
