@@ -1,1 +1,1 @@
-2.1.0beta+mbest/smart-binding/beta.4
+2.1.0beta+mbest/smart-binding/beta.5

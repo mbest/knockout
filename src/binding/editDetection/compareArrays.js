@@ -39,16 +39,16 @@ ko.utils.compareArrays = (function () {
             }
         }
 
-        var editScript = [], meMinusOne, added = [], deleted = [], addedOrDeleted;
+        var editScript = [], meMinusOne, added = [], deleted = [];
         for (oldIndex = oldIndexMax, newIndex = newIndexMax; oldIndex || newIndex;) {
             meMinusOne = editDistanceMatrix[oldIndex][newIndex] - 1;
             if (newIndex && meMinusOne === editDistanceMatrix[oldIndex][newIndex-1]) {
-                addedOrDeleted = added.push(editScript[editScript.length] = {
+                added.push(editScript[editScript.length] = {
                     'status': "added",
                     'value': newArray[--newIndex],
                     'to': newIndex });
             } else if (oldIndex && meMinusOne === editDistanceMatrix[oldIndex - 1][newIndex]) {
-                addedOrDeleted = deleted.push(editScript[editScript.length] = {
+                deleted.push(editScript[editScript.length] = {
                     'status': "deleted",
                     'value': oldArray[--oldIndex],
                     'from': oldIndex });
@@ -61,7 +61,7 @@ ko.utils.compareArrays = (function () {
             }
         }
 
-        if (addedOrDeleted) {
+        if (added.length && deleted.length) {
             // Go through the items that have been added and deleted and try to find matches between them.
             var a, d, addedItem, deletedItem;
             for (a = 0; addedItem = added[a]; a++) {
