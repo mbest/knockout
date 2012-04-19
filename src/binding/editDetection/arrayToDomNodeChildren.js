@@ -34,7 +34,9 @@
     }
 
     function defaultCallbackAfterAddingNodes(value, mappedNodes, index, subscription) {
-        subscription.addDisposalNodes(mappedNodes);
+        if (subscription) {
+            subscription.addDisposalNodes(fixUpVirtualElements(mappedNodes));
+        }
     }
 
     function wrapCallbackAfterAddingNodes(originalCallback) {
@@ -48,21 +50,23 @@
 
     function mapNodeAndRefreshWhenChanged(containerNode, mapping, valueToMap, callbackAfterAddingNodes, index) {
         // Map this array value inside a dependentObservable so we re-map when any dependency changes
-        var mappedNodes = [];
-        var dependentObservable = ko.dependentObservable(function() {
+        var mappedNodes;
+        var dependentObservable = ko.utils.possiblyWrap(function() {
             var newMappedNodes = mapping(valueToMap, index) || [];
-            
-            // On subsequent evaluations, just replace the previously-inserted DOM nodes
-            if (mappedNodes.length > 0) {
+            if (!mappedNodes) {
+                // On first evaluation, we'll just return the DOM nodes
+                mappedNodes = newMappedNodes;
+            } else {
+                // On subsequent evaluations, just replace the previously-inserted DOM nodes
                 dependentObservable.replaceDisposalNodes();    // must clear before calling replaceDomNodes
                 ko.utils.replaceDomNodes(fixUpVirtualElements(mappedNodes), newMappedNodes);
                 callbackAfterAddingNodes(valueToMap, newMappedNodes, index, dependentObservable);
+
+                // Replace the contents of the mappedNodes array, thereby updating the record
+                // of which nodes would be deleted if valueToMap was itself later removed
+                mappedNodes.splice(0, mappedNodes.length);
+                ko.utils.arrayPushAll(mappedNodes, newMappedNodes);
             }
-            
-            // Replace the contents of the mappedNodes array, thereby updating the record
-            // of which nodes would be deleted if valueToMap was itself later removed
-            mappedNodes.splice(0, mappedNodes.length);
-            ko.utils.arrayPushAll(mappedNodes, newMappedNodes);
         });
         return { mappedNodes : mappedNodes, dependentObservable : dependentObservable };
     }
@@ -97,11 +101,14 @@
 
                 case "deleted":
                     if (editScript[i]['moveTo'] === undefined) {
+                        var mapData = lastMappingResult[editScriptItem['from']];
+
                         // Stop tracking changes to the mapping for these nodes
-                        lastMappingResult[editScriptItem['from']].dependentObservable.dispose();
+                        if (mapData.dependentObservable)
+                            mapData.dependentObservable.dispose();
                     
                         // Queue these nodes for later removal
-                        ko.utils.arrayForEach(fixUpVirtualElements(lastMappingResult[editScriptItem['from']].domNodes), function (node) {
+                        ko.utils.arrayForEach(fixUpVirtualElements(mapData.domNodes), function (node) {
                             nodesToDelete.push({
                               _element: node,
                               _index: i,
