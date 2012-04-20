@@ -101,7 +101,7 @@
         return valueFunction;
     };
 
-    function unwrapBindingValue(value) { 
+    function unwrapBindingValue(value) {
         return (value && value.__ko_wraptest && value.__ko_wraptest === ko.bindingValueWrap) ? value() : value;
     };
 
@@ -151,7 +151,7 @@
             var evaluatedBindings = (typeof bindingsToApply == "function") ? bindingsToApply() : bindingsToApply;
             parsedBindings = evaluatedBindings || ko.bindingProvider['instance']['getBindings'](node, bindingContext);
 
-            // update extraBindings from parsedBindings (only if init already done) 
+            // update extraBindings from parsedBindings (only if init already done)
             if (independentBindings && !runInits) {
                 for (var bindingKey in extraBindings)
                     extraBindings[bindingKey] = parsedBindings[bindingKey];
@@ -202,7 +202,7 @@
         // These functions call the binding handler functions
         function initCaller(binding) {
             return function() {
-                var handlerInitFn = binding.handler['init']; 
+                var handlerInitFn = binding.handler['init'];
                 var initResult = handlerInitFn(node, binding.valueAccessor, allBindingsAccessor, viewModel, bindingContext);
                 // throw an error if binding handler is only using the old method of indicating that it controls binding descendants
                 if (initResult && !(binding.flags & bindingFlags_contentBind) && initResult['controlsDescendantBindings']) {
@@ -256,7 +256,7 @@
 
         ko.utils.possiblyWrap(function() {
             if (runInits) {
-                var bindingIndexes = {}, needs = parsedBindings && parsedBindings[needsName] || {}, 
+                var bindingIndexes = {}, needs = parsedBindings && parsedBindings[needsName] || {},
                     lastIndex = unorderedBindings, thisIndex;
 
                 // Get binding handlers, call init function if not in independent mode, and determine run order
@@ -282,7 +282,7 @@
                             bindings[binding.order = contentBindBinding] = binding;
                             dependentOrder = contentBindBinding - 1;
                         } else {
-                            dependentOrder = binding.order = 
+                            dependentOrder = binding.order =
                                 (binding.flags & bindingFlags_contentSet)
                                     ? contentSetBindings
                                 : (binding.flags & bindingFlags_contentUpdate)
@@ -338,17 +338,17 @@
             // Apply the bindings in the correct order
             applyListedBindings(bindings[unorderedBindings]);
             applyListedBindings(bindings[contentSetBindings]);
-    
+
             if (bindings[contentBindBinding])
                 callHandlers(bindings[contentBindBinding]);
             else if (!dontBindDescendants)
                 applyBindingsToDescendantsInternal(bindingContext, node, /* bindingContextsMayDifferFromDomParentElement: */ !isElement);
-    
+
             applyListedBindings(bindings[contentUpdateBindings]);
         }, node);
 
         // Don't want to call init function or bind descendents twice
-        runInits = dontBindDescendants = false;        
+        runInits = dontBindDescendants = false;
     };
 
     var storedBindingContextDomDataKey = ko.utils.domData.nextKey();

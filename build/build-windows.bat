@@ -1,4 +1,4 @@
-@echo off 
+@echo off
 
 call tools/check-trailing-space-windows.bat
 if %errorlevel% NEQ 0 goto Fail
@@ -6,16 +6,16 @@ if %errorlevel% NEQ 0 goto Fail
 set OutDebugFile=output\knockout-latest.debug.js
 set OutMinFile=output\knockout-latest.js
 set AllFiles=
-for /f "eol=] skip=1 delims=' " %%i in (fragments\source-references.js) do set Filename=%%i& call :Concatenate 
+for /f "eol=] skip=1 delims=' " %%i in (fragments\source-references.js) do set Filename=%%i& call :Concatenate
 
 goto :Combine
-:Concatenate 
-    if /i "%AllFiles%"=="" ( 
+:Concatenate
+    if /i "%AllFiles%"=="" (
         set AllFiles=..\%Filename:/=\%
-    ) else ( 
+    ) else (
         set AllFiles=%AllFiles% ..\%Filename:/=\%
-    ) 
-goto :EOF 
+    )
+goto :EOF
 
 :Combine
 type %AllFiles%                   >> %OutDebugFile%_all.temp 2>nul

@@ -17,7 +17,7 @@ ko.selectExtensions = (function () {
                     return element.value;
             }
         },
-        
+
         writeValue: function(element, value) {
             switch (ko.utils.tagNameLower(element)) {
                 case 'option':
@@ -54,7 +54,7 @@ ko.selectExtensions = (function () {
                     break;
             }
         }
-    };        
+    };
 
     return ko.exportProperties(selectExtensions,
         'readValue', selectExtensions.readValue,

@@ -78,11 +78,11 @@ ko.bindingExpressionRewriting = (function () {
                 }
                 if (values)
                     values.push(tok);
-                else 
+                else
                     values = [tok];
             }
         }
-        return result;        
+        return result;
     }
 
     return {
@@ -99,7 +99,7 @@ ko.bindingExpressionRewriting = (function () {
                     binding = parentBinding || ko.getBindingHandler(key),
                     canWrap = binding || independentBindings,
                     flags = binding && binding['flags'];
-                
+
                 if (val === undefined && flags & bindingFlags_noValue) {
                     // If the binding can used without a value set its value to 'true'
                     val = "true";

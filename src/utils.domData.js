@@ -38,7 +38,7 @@ ko.utils.domData = new (function () {
             node[dataStoreKeyExpandoPropertyName] = null;
         }
     }
-    
+
     function nextKey() {
         return uniqueId++;
     }

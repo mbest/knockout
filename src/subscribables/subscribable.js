@@ -14,7 +14,7 @@ ko.subscribable = function () {
     this._subscriptions = {};
 
     ko.utils.extendInternal(this, ko.subscribable['fn']);
-    ko.exportProperties(this, 
+    ko.exportProperties(this,
         'subscribe', this.subscribe,
         'extend', this.extend,
         'getSubscriptionsCount', this.getSubscriptionsCount
@@ -58,7 +58,7 @@ ko.subscribable['fn'] = {
         }
         return total;
     },
-    
+
     extend: applyExtenders
 };
 

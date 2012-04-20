@@ -38,7 +38,7 @@
                 return bindingFunction(scopes);
             } catch (ex) {
                 throw new Error("Unable to parse bindings.\nMessage: " + ex + ";\nBindings value: " + bindingsString);
-            }           
+            }
         }
     });
 
@@ -46,14 +46,14 @@
 
     function createBindingsStringEvaluatorViaCache(bindingsString, bindingOptions, scopesCount, cache) {
         var cacheKey = scopesCount + '_' + bindingsString;
-        return cache[cacheKey] 
+        return cache[cacheKey]
             || (cache[cacheKey] = createBindingsStringEvaluator(bindingsString, bindingOptions, scopesCount));
     }
 
     function createBindingsStringEvaluator(bindingsString, bindingOptions, scopesCount) {
         var rewrittenBindings = " { " + ko.bindingExpressionRewriting.preProcessBindings(bindingsString, bindingOptions) + " } ";
         return ko.utils.buildEvalWithinScopeFunction(rewrittenBindings, scopesCount);
-    }    
+    }
 })();
 
 ko.exportSymbol('bindingProvider', ko.bindingProvider);

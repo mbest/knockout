@@ -58,7 +58,7 @@ describe('Compare Arrays', {
             { status: "deleted", value: "E", from: 4, moveTo: 2 }
         ]);
     },
-    
+
     'Should recognize replaced array': function () {
         var oldArray = ["A", "B", "C", "D", "E"];
         var newArray = ["F", "G", "H", "I", "J"];

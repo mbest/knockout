@@ -1,7 +1,7 @@
 ko.extenders = {
     'throttle': function(target, timeout) {
         // Throttling means two things:
-    
+
         if (ko.isWriteableObservable(target)) {
             // (1) For writable targets (observables, or writable dependent observables), we throttle *writes*
             //     so the target cannot change value synchronously or faster than a certain rate
@@ -24,7 +24,7 @@ ko.extenders = {
     },
 
     'notify': function(target, notifyWhen) {
-        target["equalityComparer"] = notifyWhen == "always" 
+        target["equalityComparer"] = notifyWhen == "always"
             ? function() { return false } // Treat all values as not equal
             : ko.observable["fn"]["equalityComparer"];
         return target;

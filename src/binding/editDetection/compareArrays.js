@@ -14,14 +14,14 @@ ko.utils.compareArrays = (function () {
             maxDistance = oldIndexMax + newIndexMax + 1,
             thisRow, lastRow,
             newIndexMaxForRow, newIndexMinForRow;
-    
+
         for (oldIndex = 0; oldIndex <= oldIndexMax; oldIndex++)
             editDistanceMatrix.push([]);
-    
+
         // Left row - transform old array into empty array via deletions
         for (oldIndex = 0, newIndexMaxForRow = myMin(oldIndexMax, maxEditDistance); oldIndex <= newIndexMaxForRow; oldIndex++)
             editDistanceMatrix[oldIndex][0] = oldIndex + 1;
-    
+
         // Fill out the body of the array
         for (oldIndex = 0; lastRow = thisRow, thisRow = editDistanceMatrix[oldIndex]; oldIndex++) {
             newIndexMaxForRow = myMin(newIndexMax, oldIndex + maxEditDistance);
@@ -78,7 +78,7 @@ ko.utils.compareArrays = (function () {
         return editScript.reverse();
     }
 
-    return compareArrays; 
+    return compareArrays;
 })();
 
 ko.exportSymbol('utils.compareArrays', ko.utils.compareArrays);

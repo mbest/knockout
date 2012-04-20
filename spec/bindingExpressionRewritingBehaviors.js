@@ -31,7 +31,7 @@ describe('Binding Expression Rewriting', {
     },
 
     'Should be able to parse object literals containing child objects, arrays, function literals, and newlines': function() {
-        // The parsing may or may not keep unnecessary spaces. So to avoid confusion, avoid unnecessary spaces. 
+        // The parsing may or may not keep unnecessary spaces. So to avoid confusion, avoid unnecessary spaces.
         var result = ko.bindingExpressionRewriting.parseObjectLiteral(
             "myObject:{someChild:{},someChildArray:[1,2,3],\"quotedChildProp\":'string value'},\n"
           + "someFn:function(a,b,c){var regex=/}/;var str='/})({';return{};},"

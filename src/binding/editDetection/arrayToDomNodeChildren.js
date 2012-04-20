@@ -26,7 +26,7 @@
                 newContiguousSet.push(current);
             }
 
-            // ... then mutate the input array to match this. 
+            // ... then mutate the input array to match this.
             // (The following line replaces the contents of contiguousNodeArray with newContiguousSet)
             Array.prototype.splice.apply(contiguousNodeArray, [0, contiguousNodeArray.length].concat(newContiguousSet));
         }
@@ -40,7 +40,7 @@
     }
 
     function wrapCallbackAfterAddingNodes(originalCallback) {
-        return originalCallback 
+        return originalCallback
             ? function(value, mappedNodes, index, subscription) {
                 originalCallback(value, mappedNodes, index);
                 defaultCallbackAfterAddingNodes(value, mappedNodes, index, subscription);
@@ -70,7 +70,7 @@
         });
         return { mappedNodes : mappedNodes, dependentObservable : dependentObservable };
     }
-    
+
     var lastMappingResultDomDataKey = ko.utils.domData.nextKey();
 
     ko.utils.setDomNodeChildrenFromArrayMapping = function (domNode, array, mapping, options, callbackAfterAddingNodes) {
@@ -119,7 +119,7 @@
                     }
                     break;
 
-                case "added": 
+                case "added":
                     var mappedNodes, movingNodes, valueToMap;
                     if (editScript[i]['moveFrom'] !== undefined) {
                         var dataToRetain = lastMappingResult[editScript[i]['moveFrom']];
@@ -132,7 +132,7 @@
                         var mapData = mapNodeAndRefreshWhenChanged(domNode, mapping, valueToMap = editScriptItem['value'], callbackAfterAddingNodes, indexObservable);
                         mappedNodes = mapData.mappedNodes;
                         movingNodes = false;
-                    
+
                         // On the first evaluation, insert the nodes at the current insertion point
                         newMappingResultIndex = newMappingResult.push({
                             arrayEntry: editScript[i].value,
@@ -164,7 +164,7 @@
                     break;
             }
         }
-        
+
         ko.utils.arrayForEach(nodesToDelete, function (node) { ko.cleanNode(node._element) });
 
         var invokedBeforeRemoveCallback = false;
