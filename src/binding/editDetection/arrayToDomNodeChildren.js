@@ -106,7 +106,7 @@
                         // Stop tracking changes to the mapping for these nodes
                         if (mapData.dependentObservable)
                             mapData.dependentObservable.dispose();
-                    
+
                         // Queue these nodes for later removal
                         ko.utils.arrayForEach(fixUpVirtualElements(mapData.domNodes), function (node) {
                             nodesToDelete.push({
@@ -181,8 +181,10 @@
         }
         if (!invokedBeforeRemoveCallback && nodesToDelete.length) {
             var commonParent = nodesToDelete[0]._element.parentNode;
-            for (var i = 0; i < nodesToDelete.length; i++)
-                commonParent.removeChild(nodesToDelete[i]._element);
+            if (commonParent) {
+                for (var i = 0; i < nodesToDelete.length; i++)
+                    commonParent.removeChild(nodesToDelete[i]._element);
+            }
         }
 
         // Store a copy of the array items we just considered so we can difference it next time

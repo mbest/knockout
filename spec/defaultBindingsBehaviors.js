@@ -1640,6 +1640,26 @@ describe('Binding: Foreach', {
         value_of(testNode.childNodes[0]).should_contain_html('<span data-bind="text: childprop">first child</span><span data-bind="text: childprop">second child</span>');
     },
     
+    'Should clean away any data values attached to the original template nodes before use': function() {
+        // Represents issue https://github.com/SteveSanderson/knockout/pull/420
+        testNode.innerHTML = "<div data-bind='foreach: [1, 2]'><span></span></div>";
+
+        // Apply some DOM Data to the SPAN
+        var span = testNode.childNodes[0].childNodes[0];
+        value_of(span.tagName).should_be("SPAN");
+        ko.utils.domData.set(span, "mydata", 123);
+
+        // See that it vanishes because the SPAN is extracted as a template
+        value_of(ko.utils.domData.get(span, "mydata")).should_be(123);
+        ko.applyBindings(null, testNode);
+        value_of(ko.utils.domData.get(span, "mydata")).should_be(undefined);
+
+        // Also be sure the DOM Data doesn't appear in the output
+        value_of(testNode.childNodes[0]).should_contain_html('<span></span><span></span>');
+        value_of(ko.utils.domData.get(testNode.childNodes[0].childNodes[0], "mydata")).should_be(undefined);
+        value_of(ko.utils.domData.get(testNode.childNodes[0].childNodes[1], "mydata")).should_be(undefined);
+    },
+
     'Should be able to use $data to reference each array item being bound': function() {		
         testNode.innerHTML = "<div data-bind='foreach: someItems'><span data-bind='text: $data'></span></div>";
         var someItems = ['alpha', 'beta'];
@@ -1940,12 +1960,12 @@ describe('Binding: Foreach', {
 
     'Should be able to output HTML5 elements within container-less templates (same as above)': function() {
         // Represents https://github.com/SteveSanderson/knockout/issues/194
-        ko.utils.setHtml(testNode, "<!-- ko foreach:someitems --><div><section data-bind='text: $data'></section></div><!-- /ko -->");
+        ko.utils.setHtml(testNode, "xxx<!-- ko foreach:someitems --><div><section data-bind='text: $data'></section></div><!-- /ko -->");
         var viewModel = {
             someitems: [ 'Alpha', 'Beta' ]
         };
         ko.applyBindings(viewModel, testNode);
-        value_of(testNode).should_contain_html('<!-- ko foreach:someitems --><div><section data-bind="text: $data">alpha</section></div><div><section data-bind="text: $data">beta</section></div><!-- /ko -->');
+        value_of(testNode).should_contain_html('xxx<!-- ko foreach:someitems --><div><section data-bind="text: $data">alpha</section></div><div><section data-bind="text: $data">beta</section></div><!-- /ko -->');
     },
 
     'Should add and bind only changed items in a nested observable array': function() {

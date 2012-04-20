@@ -128,14 +128,16 @@ ko.utils = (function () {
             }
         },
 
-        moveNodesToContainerElement: function(nodes) {
+        moveCleanedNodesToContainerElement: function(nodes) {
             // Ensure it's a real array, as we're about to reparent the nodes and
             // we don't want the underlying collection to change while we're doing that.
             var nodesArray = utils.makeArray(nodes);
 
             var container = document.createElement('div');
-            for (var i = 0, j = nodesArray.length; i < j; i++)
+            for (var i = 0, j = nodesArray.length; i < j; i++) {
+                ko.cleanNode(nodesArray[i]);
                 container.appendChild(nodesArray[i]);
+            }
             return container;
         },
 
@@ -213,14 +215,14 @@ ko.utils = (function () {
         },
 
         domNodeIsAttachedToDocument: function (node) {
-            return utils.domNodeIsContainedBy(node, document);
+            return utils.domNodeIsContainedBy(node, node.ownerDocument);
         },
 
         tagNameLower: function(element) {
             // For HTML elements, tagName will always be upper case; for XHTML elements, it'll be lower case.
             // Possible future optimization: If we know it's an element from an XHTML document (not HTML),
             // we don't need to do the .toLowerCase() as it will always be lower case anyway.
-            return element.tagName.toLowerCase();
+            return element && element.tagName && element.tagName.toLowerCase();
         },
 
         registerEventHandler: function (element, eventType, handler) {

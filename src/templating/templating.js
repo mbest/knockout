@@ -38,9 +38,11 @@
 
     function executeTemplate(targetNodeOrNodeArray, renderMode, template, bindingContext, options) {
         options = options || {};
+        var firstTargetNode = targetNodeOrNodeArray && getFirstNodeFromPossibleArray(targetNodeOrNodeArray);
+        var templateDocument = firstTargetNode && firstTargetNode.ownerDocument;
         var templateEngineToUse = (options['templateEngine'] || _templateEngine);
-        ko.templateRewriting.ensureTemplateIsRewritten(template, templateEngineToUse);
-        var renderedNodesArray = templateEngineToUse['renderTemplate'](template, bindingContext, options);
+        ko.templateRewriting.ensureTemplateIsRewritten(template, templateEngineToUse, templateDocument);
+        var renderedNodesArray = templateEngineToUse['renderTemplate'](template, bindingContext, options, templateDocument);
 
         // Loosely check result is an array of DOM nodes
         if ((typeof renderedNodesArray.length != "number") || (renderedNodesArray.length > 0 && typeof renderedNodesArray[0].nodeType != "number"))
@@ -159,7 +161,7 @@
                 var templateSource = new ko.templateSources.anonymousTemplate(element);
                 if (!templateSource['nodes']()) {
                     var templateNodes = ko.virtualElements.childNodes(element),
-                        container = ko.utils.moveNodesToContainerElement(templateNodes); // This also removes the nodes from their current parent
+                        container = ko.utils.moveCleanedNodesToContainerElement(templateNodes); // This also removes the nodes from their current parent
                     templateSource['nodes'](container);
                 }
             }
