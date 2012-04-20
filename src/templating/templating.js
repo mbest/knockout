@@ -36,6 +36,12 @@
         }
     }
 
+    function getFirstNodeFromPossibleArray(nodeOrNodeArray) {
+        return nodeOrNodeArray.nodeType ? nodeOrNodeArray
+                                        : nodeOrNodeArray.length > 0 ? nodeOrNodeArray[0]
+                                        : null;
+    }
+
     function executeTemplate(targetNodeOrNodeArray, renderMode, template, bindingContext, options) {
         options = options || {};
         var firstTargetNode = targetNodeOrNodeArray && getFirstNodeFromPossibleArray(targetNodeOrNodeArray);
