@@ -24,11 +24,10 @@ ko.utils.compareArrays = (function () {
             thisRow, lastRow,
             bigIndexMaxForRow, bigIndexMinForRow;
 
-        for (smlIndex = 0; smlIndex <= smlIndexMax; smlIndex++)
-            editDistanceMatrix.push([]);
-
         // Fill out the body of the array
-        for (smlIndex = 0; lastRow = thisRow, thisRow = editDistanceMatrix[smlIndex]; smlIndex++) {
+        for (smlIndex = 0; smlIndex <= smlIndexMax; smlIndex++) {
+            lastRow = thisRow;
+            editDistanceMatrix.push(thisRow = []);
             bigIndexMinForRow = Math.floor(smlIndex * distanceMultiplier);
             bigIndexMaxForRow = myMin(bigIndexMax, bigIndexMinForRow + maxEditDistance);
             for (bigIndex = bigIndexMinForRow; bigIndex <= bigIndexMaxForRow; bigIndex++) {
