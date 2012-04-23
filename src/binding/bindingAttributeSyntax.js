@@ -52,7 +52,9 @@
                 // set our properties
                 self._subscribable = subscribable;
                 self['$parentContext'] = parent;
-                self['$parents'] = [].concat(self['$parent'] = parent['$data'], parent['$parents']);
+                self['$parents'] = parent['$parents'].slice(0);
+                self['$parents'].unshift(self['$parent'] = parent['$data']);
+
                 self['$options'] = ko.utils.extendInternal({}, parent['$options'], options);
             } else {
                 self['$parents'] = [];
