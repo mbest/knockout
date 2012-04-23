@@ -1,6 +1,6 @@
 
 ko.utils.compareArrays = (function () {
-    var statusAdded = 'added', statusDeleted = 'deleted';
+    var statusNotInOld = 'added', statusNotInNew = 'deleted';
 
     // Simple calculation based on Levenshtein distance.
     function compareArrays(oldArray, newArray) {
@@ -8,29 +8,25 @@ ko.utils.compareArrays = (function () {
         newArray = newArray || [];
 
         if (oldArray.length < newArray.length)
-            return compareSmallArrayToBigArray(oldArray, newArray, statusAdded, statusDeleted);
+            return compareSmallArrayToBigArray(oldArray, newArray, statusNotInOld, statusNotInNew);
         else
-            return compareSmallArrayToBigArray(newArray, oldArray, statusDeleted, statusAdded);
+            return compareSmallArrayToBigArray(newArray, oldArray, statusNotInNew, statusNotInOld);
     }
 
     function compareSmallArrayToBigArray(smlArray, bigArray, statusNotInSml, statusNotInBig) {
-        var myMin = Math.min,
-            editDistanceMatrix = [],
+        var editDistanceMatrix = [],
             smlIndex, smlIndexMax = smlArray.length,
             bigIndex, bigIndexMax = bigArray.length,
-            maxEditDistance = (bigIndexMax - smlIndexMax) || 1,
-            distanceMultiplier = smlIndexMax && (bigIndexMax - maxEditDistance) / smlIndexMax,
-            maxDistance = smlIndexMax + bigIndexMax + 1,
             thisRow, lastRow,
-            bigIndexMaxForRow, bigIndexMinForRow;
+            compareRange = bigIndexMax - smlIndexMax + 1,
+            maxDistance = smlIndexMax + bigIndexMax + 1,
+            bigIndexMaxForRow;
 
         // Fill out the body of the array
         for (smlIndex = 0; smlIndex <= smlIndexMax; smlIndex++) {
-            lastRow = thisRow;
             editDistanceMatrix.push(thisRow = []);
-            bigIndexMinForRow = Math.floor(smlIndex * distanceMultiplier);
-            bigIndexMaxForRow = myMin(bigIndexMax, bigIndexMinForRow + maxEditDistance);
-            for (bigIndex = bigIndexMinForRow; bigIndex <= bigIndexMaxForRow; bigIndex++) {
+            bigIndexMaxForRow = smlIndex + compareRange;
+            for (bigIndex = smlIndex - 1; bigIndex <= bigIndexMaxForRow; bigIndex++) {
                 if (!smlIndex)  // Top row - transform empty array into new array via additions
                     thisRow[bigIndex] = bigIndex + 1;
                 else if (smlArray[smlIndex - 1] === bigArray[bigIndex - 1] && lastRow[bigIndex - 1])
@@ -38,9 +34,10 @@ ko.utils.compareArrays = (function () {
                 else {
                     var northDistance = lastRow[bigIndex] || maxDistance;       // not in big (deletion)
                     var westDistance = thisRow[bigIndex - 1] || maxDistance;    // not in small (addition)
-                    thisRow[bigIndex] = myMin(northDistance, westDistance) + 1;
+                    thisRow[bigIndex] = Math.min(northDistance, westDistance) + 1;
                 }
             }
+            lastRow = thisRow;
         }
 
         var editScript = [], meMinusOne, notInSml = [], notInBig = [];
