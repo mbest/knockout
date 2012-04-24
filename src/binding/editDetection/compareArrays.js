@@ -14,30 +14,34 @@ ko.utils.compareArrays = (function () {
     }
 
     function compareSmallArrayToBigArray(smlArray, bigArray, statusNotInSml, statusNotInBig) {
-        var editDistanceMatrix = [],
+        var myMin = Math.min,
+            myMax = Math.max,
+            editDistanceMatrix = [],
             smlIndex, smlIndexMax = smlArray.length,
             bigIndex, bigIndexMax = bigArray.length,
-            thisRow, lastRow,
-            compareRange = bigIndexMax - smlIndexMax + 1,
+            compareRange = (bigIndexMax - smlIndexMax) || 1,
             maxDistance = smlIndexMax + bigIndexMax + 1,
-            bigIndexMaxForRow;
+            thisRow, lastRow,
+            bigIndexMaxForRow, bigIndexMinForRow;
 
-        // Fill out the body of the array
         for (smlIndex = 0; smlIndex <= smlIndexMax; smlIndex++) {
+            lastRow = thisRow;
             editDistanceMatrix.push(thisRow = []);
-            bigIndexMaxForRow = smlIndex + compareRange;
-            for (bigIndex = smlIndex - 1; bigIndex <= bigIndexMaxForRow; bigIndex++) {
-                if (!smlIndex)  // Top row - transform empty array into new array via additions
+            bigIndexMaxForRow = myMin(bigIndexMax, smlIndex + compareRange);
+            bigIndexMinForRow = myMax(0, smlIndex - 1);
+            for (bigIndex = bigIndexMinForRow; bigIndex <= bigIndexMaxForRow; bigIndex++) {
+                if (!bigIndex)
+                    thisRow[bigIndex] = smlIndex + 1;
+                else if (!smlIndex)  // Top row - transform empty array into new array via additions
                     thisRow[bigIndex] = bigIndex + 1;
-                else if (smlArray[smlIndex - 1] === bigArray[bigIndex - 1] && lastRow[bigIndex - 1])
+                else if (smlArray[smlIndex - 1] === bigArray[bigIndex - 1])
                     thisRow[bigIndex] = lastRow[bigIndex - 1];                  // copy value (no edit)
                 else {
                     var northDistance = lastRow[bigIndex] || maxDistance;       // not in big (deletion)
                     var westDistance = thisRow[bigIndex - 1] || maxDistance;    // not in small (addition)
-                    thisRow[bigIndex] = Math.min(northDistance, westDistance) + 1;
+                    thisRow[bigIndex] = myMin(northDistance, westDistance) + 1;
                 }
             }
-            lastRow = thisRow;
         }
 
         var editScript = [], meMinusOne, notInSml = [], notInBig = [];
