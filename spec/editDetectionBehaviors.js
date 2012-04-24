@@ -23,11 +23,11 @@ describe('Compare Arrays', {
         var newArray = ["A", "A2", "A3", "B", "B2"];
         var compareResult = ko.utils.compareArrays(oldArray, newArray);
         value_of(compareResult).should_be([
-            { status: "retained", value: "A", from: 0, to: 0 },
-            { status: "added", value: "A2", to: 1 },
-            { status: "added", value: "A3", to: 2 },
-            { status: "retained", value: "B", from: 1, to: 3 },
-            { status: "added", value: "B2", to: 4 }
+            { status: "retained", value: "A" },
+            { status: "added", value: "A2", idx: 1 },
+            { status: "added", value: "A3", idx: 2 },
+            { status: "retained", value: "B" },
+            { status: "added", value: "B2", idx: 4 }
         ]);
     },
 
@@ -36,11 +36,11 @@ describe('Compare Arrays', {
         var newArray = ["B", "C", "E"];
         var compareResult = ko.utils.compareArrays(oldArray, newArray);
         value_of(compareResult).should_be([
-            { status: "deleted", value: "A", from: 0 },
-            { status: "retained", value: "B", from: 1, to: 0 },
-            { status: "retained", value: "C", from: 2, to: 1 },
-            { status: "deleted", value: "D", from: 3 },
-            { status: "retained", value: "E", from: 4, to: 2 }
+            { status: "deleted", value: "A", idx: 0 },
+            { status: "retained", value: "B" },
+            { status: "retained", value: "C" },
+            { status: "deleted", value: "D", idx: 3 },
+            { status: "retained", value: "E" }
         ]);
     },
 
@@ -49,13 +49,13 @@ describe('Compare Arrays', {
         var newArray = [123, "A", "E", "C", "D"];
         var compareResult = ko.utils.compareArrays(oldArray, newArray);
         value_of(compareResult).should_be([
-            { status: "added", value: 123, to: 0 },
-            { status: "retained", value: "A", from: 0, to: 1 },
-            { status: "deleted", value: "B", from: 1 },
-            { status: "added", value: "E", to: 2, moveFrom: 4 },
-            { status: "retained", value: "C", from: 2, to: 3 },
-            { status: "retained", value: "D", from: 3, to: 4 },
-            { status: "deleted", value: "E", from: 4, moveTo: 2 }
+            { status: "added", value: 123, idx: 0 },
+            { status: "retained", value: "A" },
+            { status: "deleted", value: "B", idx: 1 },
+            { status: "added", value: "E", idx: 2, moved: 4 },
+            { status: "retained", value: "C" },
+            { status: "retained", value: "D" },
+            { status: "deleted", value: "E", idx: 4, moved: 2 }
         ]);
     },
 
@@ -66,16 +66,16 @@ describe('Compare Arrays', {
         // the order of added and deleted doesn't really matter
         compareResult.sort(function(a, b) { return a.status.localeCompare(b.status) });
         value_of(compareResult).should_be([
-            { status: "added", value: "F", to: 0},
-            { status: "added", value: "G", to: 1},
-            { status: "added", value: "H", to: 2},
-            { status: "added", value: "I", to: 3},
-            { status: "added", value: "J", to: 4},
-            { status: "deleted", value: "A", from: 0},
-            { status: "deleted", value: "B", from: 1},
-            { status: "deleted", value: "C", from: 2},
-            { status: "deleted", value: "D", from: 3},
-            { status: "deleted", value: "E", from: 4}
+            { status: "added", value: "F", idx: 0},
+            { status: "added", value: "G", idx: 1},
+            { status: "added", value: "H", idx: 2},
+            { status: "added", value: "I", idx: 3},
+            { status: "added", value: "J", idx: 4},
+            { status: "deleted", value: "A", idx: 0},
+            { status: "deleted", value: "B", idx: 1},
+            { status: "deleted", value: "C", idx: 2},
+            { status: "deleted", value: "D", idx: 3},
+            { status: "deleted", value: "E", idx: 4}
         ]);
     }
 });

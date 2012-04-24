@@ -1,75 +1,79 @@
 
 ko.utils.compareArrays = (function () {
+    var statusNotInOld = 'added', statusNotInNew = 'deleted';
+
     // Simple calculation based on Levenshtein distance.
     function compareArrays(oldArray, newArray) {
         oldArray = oldArray || [];
         newArray = newArray || [];
 
+        if (oldArray.length <= newArray.length)
+            return compareSmallArrayToBigArray(oldArray, newArray, statusNotInOld, statusNotInNew);
+        else
+            return compareSmallArrayToBigArray(newArray, oldArray, statusNotInNew, statusNotInOld);
+    }
+
+    function compareSmallArrayToBigArray(smlArray, bigArray, statusNotInSml, statusNotInBig) {
         var myMin = Math.min,
             myMax = Math.max,
             editDistanceMatrix = [],
-            oldIndex, oldIndexMax = oldArray.length,
-            newIndex, newIndexMax = newArray.length,
-            maxEditDistance = Math.abs(newIndexMax - oldIndexMax) || 1,
-            maxDistance = oldIndexMax + newIndexMax + 1,
+            smlIndex, smlIndexMax = smlArray.length,
+            bigIndex, bigIndexMax = bigArray.length,
+            compareRange = (bigIndexMax - smlIndexMax) || 1,
+            maxDistance = smlIndexMax + bigIndexMax + 1,
             thisRow, lastRow,
-            newIndexMaxForRow, newIndexMinForRow;
+            bigIndexMaxForRow, bigIndexMinForRow;
 
-        for (oldIndex = 0; oldIndex <= oldIndexMax; oldIndex++)
-            editDistanceMatrix.push([]);
-
-        // Left row - transform old array into empty array via deletions
-        for (oldIndex = 0, newIndexMaxForRow = myMin(oldIndexMax, maxEditDistance); oldIndex <= newIndexMaxForRow; oldIndex++)
-            editDistanceMatrix[oldIndex][0] = oldIndex + 1;
-
-        // Fill out the body of the array
-        for (oldIndex = 0; lastRow = thisRow, thisRow = editDistanceMatrix[oldIndex]; oldIndex++) {
-            newIndexMaxForRow = myMin(newIndexMax, oldIndex + maxEditDistance);
-            newIndexMinForRow = myMax(1, oldIndex - maxEditDistance);
-            for (newIndex = newIndexMinForRow; newIndex <= newIndexMaxForRow; newIndex++) {
-                if (!oldIndex)  // Top row - transform empty array into new array via additions
-                    thisRow[newIndex] = newIndex + 1;
-                else if (oldArray[oldIndex - 1] === newArray[newIndex - 1])
-                    thisRow[newIndex] = lastRow[newIndex - 1];                  // copy value (no edit)
+        for (smlIndex = 0; smlIndex <= smlIndexMax; smlIndex++) {
+            lastRow = thisRow;
+            editDistanceMatrix.push(thisRow = []);
+            bigIndexMaxForRow = myMin(bigIndexMax, smlIndex + compareRange);
+            bigIndexMinForRow = myMax(0, smlIndex - 1);
+            for (bigIndex = bigIndexMinForRow; bigIndex <= bigIndexMaxForRow; bigIndex++) {
+                if (!bigIndex)
+                    thisRow[bigIndex] = smlIndex + 1;
+                else if (!smlIndex)  // Top row - transform empty array into new array via additions
+                    thisRow[bigIndex] = bigIndex + 1;
+                else if (smlArray[smlIndex - 1] === bigArray[bigIndex - 1])
+                    thisRow[bigIndex] = lastRow[bigIndex - 1];                  // copy value (no edit)
                 else {
-                    var northDistance = lastRow[newIndex] || maxDistance;       // deletion
-                    var westDistance = thisRow[newIndex - 1] || maxDistance;    // insertion
-                    thisRow[newIndex] = myMin(northDistance, westDistance) + 1;
+                    var northDistance = lastRow[bigIndex] || maxDistance;       // not in big (deletion)
+                    var westDistance = thisRow[bigIndex - 1] || maxDistance;    // not in small (addition)
+                    thisRow[bigIndex] = myMin(northDistance, westDistance) + 1;
                 }
             }
         }
 
-        var editScript = [], meMinusOne, added = [], deleted = [];
-        for (oldIndex = oldIndexMax, newIndex = newIndexMax; oldIndex || newIndex;) {
-            meMinusOne = editDistanceMatrix[oldIndex][newIndex] - 1;
-            if (newIndex && meMinusOne === editDistanceMatrix[oldIndex][newIndex-1]) {
-                added.push(editScript[editScript.length] = {
-                    'status': "added",
-                    'value': newArray[--newIndex],
-                    'to': newIndex });
-            } else if (oldIndex && meMinusOne === editDistanceMatrix[oldIndex - 1][newIndex]) {
-                deleted.push(editScript[editScript.length] = {
-                    'status': "deleted",
-                    'value': oldArray[--oldIndex],
-                    'from': oldIndex });
+        var editScript = [], meMinusOne, notInSml = [], notInBig = [];
+        for (smlIndex = smlIndexMax, bigIndex = bigIndexMax; smlIndex || bigIndex;) {
+            meMinusOne = editDistanceMatrix[smlIndex][bigIndex] - 1;
+            if (bigIndex && meMinusOne === editDistanceMatrix[smlIndex][bigIndex-1]) {
+                notInSml.push(editScript[editScript.length] = {     // added
+                    'status': statusNotInSml,
+                    'value': bigArray[--bigIndex],
+                    'idx': bigIndex });
+            } else if (smlIndex && meMinusOne === editDistanceMatrix[smlIndex - 1][bigIndex]) {
+                notInBig.push(editScript[editScript.length] = {     // deleted
+                    'status': statusNotInBig,
+                    'value': smlArray[--smlIndex],
+                    'idx': smlIndex });
             } else {
                 editScript.push({
                     'status': "retained",
-                    'value': newArray[--newIndex],
-                    'from': --oldIndex,
-                    'to': newIndex });
+                    'value': bigArray[--bigIndex] });
+                --smlIndex;
             }
         }
 
-        if (added.length && deleted.length) {
+        if (notInSml.length && notInBig.length) {
             // Go through the items that have been added and deleted and try to find matches between them.
-            var a, d, addedItem, deletedItem;
-            for (a = 0; addedItem = added[a]; a++) {
-                for (d = 0; deletedItem = deleted[d]; d++) {
-                    if (addedItem['value'] === deletedItem['value']) {
-                        addedItem['moveFrom'] = deletedItem['from'];
-                        deletedItem['moveTo'] = addedItem['to'];
-                        deleted.splice(d,1);        // This item is marked as moved; so remove it from deleted list
+            var a, d, notInSmlItem, notInBigItem;
+            for (a = 0; notInSmlItem = notInSml[a]; a++) {
+                for (d = 0; notInBigItem = notInBig[d]; d++) {
+                    if (notInSmlItem['value'] === notInBigItem['value']) {
+                        notInSmlItem['moved'] = notInBigItem['idx'];
+                        notInBigItem['moved'] = notInSmlItem['idx'];
+                        notInBig.splice(d,1);        // This item is marked as moved; so remove it from notInBig list
                         break;
                     }
                 }
