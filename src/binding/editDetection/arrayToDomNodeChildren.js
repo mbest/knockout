@@ -11,12 +11,15 @@
     // You can use this, for example, to activate bindings on those nodes.
 
     function fixUpVirtualElements(contiguousNodeArray) {
+        // Remove any initial nodes that aren't in the document
+        while (contiguousNodeArray.length && !ko.utils.domNodeIsAttachedToDocument(contiguousNodeArray[0]))
+            contiguousNodeArray.splice(0, 1);
+
         // Ensures that contiguousNodeArray really *is* an array of contiguous siblings, even if some of the interior
         // ones have changed since your array was first built (e.g., because your array contains virtual elements, and
         // their virtual children changed when binding was applied to them).
         // This is needed so that we can reliably remove or update the nodes corresponding to a given array item
-
-        if (contiguousNodeArray.length > 2) {
+        if (contiguousNodeArray.length > 1) {
             // Build up the actual new contiguous node set
             var current = contiguousNodeArray[0], last = contiguousNodeArray[contiguousNodeArray.length - 1], newContiguousSet = [current];
             while (current !== last) {
