@@ -237,5 +237,25 @@ describe('Dependent Observable', {
                 // isn't prevented
                 observable(observable() + 1);
             });
+    },
+
+    'ko.utils.possiblyWrap should return computed object if there are dependencies': function() {
+        var observable = ko.observable(1),
+            depedentObservable = ko.utils.possiblyWrap(function () { return observable() + 1; });
+        value_of(ko.isComputed(depedentObservable)).should_be(true);
+        value_of(depedentObservable()).should_be(2);
+
+        observable(50);
+        value_of(depedentObservable()).should_be(51);
+    },
+
+    'ko.utils.possiblyWrap should return value if there are no dependencies': function() {
+        var nonObservable = 1,
+            depedentObservable = ko.utils.possiblyWrap(function () { return nonObservable + 1; });
+        value_of(ko.isComputed(depedentObservable)).should_be(false);
+        value_of(depedentObservable).should_be(2);
+
+        nonObservable = 50;
+        value_of(depedentObservable).should_be(2);
      }
 })

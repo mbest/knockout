@@ -279,6 +279,11 @@ ko.utils = new (function () {
             return ko.isObservable(value) ? value() : value;
         },
 
+        possiblyWrap: function(readFunction, nodeOrNodes) {
+            return ko.dependentObservable(readFunction, null,
+                { returnValueIfNoDependencies: true, disposalNodes: nodeOrNodes });
+        },
+
         toggleDomNodeCssClass: function (node, className, shouldHaveClass) {
             var currentClassNames = (node.className || "").split(/\s+/);
             var hasClass = ko.utils.arrayIndexOf(currentClassNames, className) >= 0;
@@ -424,6 +429,7 @@ ko.exportSymbol('utils.arrayRemoveItem', ko.utils.arrayRemoveItem);
 ko.exportSymbol('utils.extend', ko.utils.extend);
 ko.exportSymbol('utils.fieldsIncludedWithJsonPost', ko.utils.fieldsIncludedWithJsonPost);
 ko.exportSymbol('utils.getFormFields', ko.utils.getFormFields);
+ko.exportSymbol('utils.possiblyWrap', ko.utils.possiblyWrap);
 ko.exportSymbol('utils.postJson', ko.utils.postJson);
 ko.exportSymbol('utils.parseJson', ko.utils.parseJson);
 ko.exportSymbol('utils.registerEventHandler', ko.utils.registerEventHandler);
