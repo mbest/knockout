@@ -239,6 +239,16 @@ describe('Dependent Observable', {
             });
     },
 
+    'ko.utils.possiblyWrap should return value if there are no dependencies': function() {
+        var nonObservable = 1,
+            depedentObservable = ko.utils.possiblyWrap(function () { return nonObservable + 1; });
+        value_of(ko.isComputed(depedentObservable)).should_be(false);
+        value_of(depedentObservable).should_be(2);
+
+        nonObservable = 50;
+        value_of(depedentObservable).should_be(2);
+    },
+
     'ko.utils.possiblyWrap should return computed object if there are dependencies': function() {
         var observable = ko.observable(1),
             depedentObservable = ko.utils.possiblyWrap(function () { return observable() + 1; });
@@ -249,13 +259,21 @@ describe('Dependent Observable', {
         value_of(depedentObservable()).should_be(51);
     },
 
-    'ko.utils.possiblyWrap should return value if there are no dependencies': function() {
-        var nonObservable = 1,
-            depedentObservable = ko.utils.possiblyWrap(function () { return nonObservable + 1; });
-        value_of(ko.isComputed(depedentObservable)).should_be(false);
-        value_of(depedentObservable).should_be(2);
+    'ko.utils.possiblyWrap should support dispose-when-node-is-removed': function() {
+        var testNode = document.createElement("div");
+        document.body.appendChild(testNode);
 
-        nonObservable = 50;
-        value_of(depedentObservable).should_be(2);
-     }
+        var observable = ko.observable(1),
+            depedentObservable = ko.utils.possiblyWrap(function () { return observable() + 1; }, testNode);
+        value_of(depedentObservable()).should_be(2);
+
+        // update before node is removed works
+        observable(50);
+        value_of(depedentObservable()).should_be(51);
+
+        // after node is removed, value isn't updated
+        ko.removeNode(testNode);
+        observable(80);
+        value_of(depedentObservable()).should_be(51);
+    }
 })
