@@ -2,10 +2,7 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
     var _latestValue,
         _needsEvaluation = true,
         _isBeingEvaluated = false,
-        readFunction = evaluatorFunctionOrOptions,
-        writeFunction = options["write"],
-        _subscriptionsToDependencies = [],
-        evaluationTimeoutInstance = null;
+        readFunction = evaluatorFunctionOrOptions;
 
     if (readFunction && typeof readFunction == "object") {
         // Single-parameter syntax - everything is on this "options" param
@@ -17,12 +14,15 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
         if (!readFunction)
             readFunction = options["read"];
     }
-    // By here, "options" is always non-null
     if (typeof readFunction != "function")
         throw new Error("Pass a function that returns the value of the ko.computed");
 
+    // By here, "options" is always non-null
     if (!evaluatorFunctionTarget)
         evaluatorFunctionTarget = options["owner"];
+
+    var writeFunction = options["write"],
+        _subscriptionsToDependencies = [];
 
     function disposeAllSubscriptionsToDependencies() {
         ko.utils.arrayForEach(_subscriptionsToDependencies, function (subscription) {
@@ -33,6 +33,7 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
     }
 
 
+    var evaluationTimeoutInstance = null;
     function evaluatePossiblyAsync() {
         _needsEvaluation = true;
         var throttleEvaluationTimeout = dependentObservable['throttleEvaluation'];
