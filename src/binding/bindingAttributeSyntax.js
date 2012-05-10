@@ -83,7 +83,7 @@
         }
 
         var bindingHandlerThatControlsDescendantBindings;
-        ko.dependentObservable(
+        ko.utils.possiblyWrap(
             function () {
                 // Ensure we have a nonnull binding context to work with
                 var bindingContextInstance = viewModelOrBindingContext && (viewModelOrBindingContext instanceof ko.bindingContext)
@@ -137,8 +137,7 @@
                     }
                 }
             },
-            null,
-            { 'disposeWhenNodeIsRemoved' : node }
+            node
         );
 
         return {
