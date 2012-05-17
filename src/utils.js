@@ -279,11 +279,11 @@ ko.utils = new (function () {
             return ko.isObservable(value) ? value() : value;
         },
 
-        possiblyWrap: function(readFunction, disposeWhenNodeIsRemoved, disposeWhen) {
+        possiblyWrap: function(readFunction, disposalNodeOrNodes, disposeWhen) {
             return ko.dependentObservable(readFunction, null,
                 { returnValueIfNoDependencies: true,
-                    'disposeWhenNodeIsRemoved': disposeWhenNodeIsRemoved,
-                    'disposeWhen': disposeWhen });
+                    disposalNodes: disposalNodeOrNodes,
+                    disposeWhen: disposeWhen });
         },
 
         toggleDomNodeCssClass: function (node, className, shouldHaveClass) {
