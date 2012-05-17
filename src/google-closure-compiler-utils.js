@@ -13,3 +13,9 @@ ko.exportSymbol = function(koPath, object) {
 ko.exportProperty = function(owner, publicName, object) {
   owner[publicName] = object;
 };
+ko.exportProperties = function(owner /*, name, object, name, object ...*/) {
+    for (var i=1, a=arguments, n=a.length-1; i < n; i += 2) {
+        owner[a[i]] = a[i+1];
+    }
+    return owner;
+};

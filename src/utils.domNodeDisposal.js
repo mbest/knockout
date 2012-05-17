@@ -49,49 +49,120 @@ ko.utils.domNodeDisposal = new (function () {
         }
     }
 
-    return {
-        addDisposeCallback : function(node, callback) {
-            if (typeof callback != "function")
-                throw new Error("Callback must be a function");
-            getDisposeCallbacksCollection(node, true).push(callback);
-        },
-
-        removeDisposeCallback : function(node, callback) {
-            var callbacksCollection = getDisposeCallbacksCollection(node, false);
-            if (callbacksCollection) {
-                ko.utils.arrayRemoveItem(callbacksCollection, callback);
-                if (callbacksCollection.length == 0)
-                    destroyCallbacksCollection(node);
-            }
-        },
-
-        cleanNode : function(node) {
-            // First clean this node, where applicable
-            if (cleanableNodeTypes[node.nodeType]) {
-                cleanSingleNode(node);
-
-                // ... then its descendants, where applicable
-                if (cleanableNodeTypesWithDescendants[node.nodeType]) {
-                    // Clone the descendants list in case it changes during iteration
-                    var descendants = [];
-                    ko.utils.arrayPushAll(descendants, node.getElementsByTagName("*"));
-                    for (var i = 0, j = descendants.length; i < j; i++)
-                        cleanSingleNode(descendants[i]);
+    function addDisposeCallback(nodeOrNodes, disposeCallback, disposeWhen) {
+        var nodes = [];
+        function addNode(node) {
+            nodes.push(node);
+            if (node.nodeType !== 3)
+                getDisposeCallbacksCollection(node, true).push(cleanNodeCallback);
+        }
+        function nodeIsDisposed(node) {
+            ko.utils.arrayRemoveItem(nodes, node);
+            if (!nodes.length)
+                disposeCallback();
+        }
+        function cleanNodeCallback(node, deleteNodeIfMatchingDispose) {
+            if (!deleteNodeIfMatchingDispose)
+                nodeIsDisposed(node);
+            else if (deleteNodeIfMatchingDispose === disposeCallback)
+                deleteNode(node);
+        }
+        function addNodeOrNodes(nodeOrNodes) {
+            nodeOrNodes.nodeType
+                ? addNode(nodeOrNodes)
+                : ko.utils.arrayForEach(nodeOrNodes, addNode);
+        }
+        function deleteNode(node) {
+            if (node.nodeType !== 3) {
+                var callbacksCollection = getDisposeCallbacksCollection(node, false);
+                if (callbacksCollection) {
+                    ko.utils.arrayRemoveItem(callbacksCollection, cleanNodeCallback);
+                    if (!callbacksCollection.length)
+                        destroyCallbacksCollection(node);
                 }
             }
-        },
+            ko.utils.arrayRemoveItem(nodes, node);
+        }
+        function deleteAll() {
+            while (nodes.length)
+                deleteNode(nodes[0]);
+        }
+        function dispose() {
+            deleteAll();
+            disposeCallback();
+        }
+        function shouldDispose() {
+            return (nodes.length && !ko.utils.arrayFirst(nodes, ko.utils.domNodeIsAttachedToDocument))
+                || (disposeWhen && disposeWhen());
+        }
+        function getNodes() {
+            return nodes;
+        }
+        function getNodesCount() {
+            return nodes.length;
+        }
 
-        removeNode : function(node) {
-            ko.cleanNode(node);
-            if (node.parentNode)
-                node.parentNode.removeChild(node);
+        if (typeof disposeCallback != "function")
+            throw new Error("Callback must be a function");
+        if (nodeOrNodes)
+            addNodeOrNodes(nodeOrNodes);
+
+        return {
+            addNodeOrNodes: addNodeOrNodes,
+            deleteNode: deleteNode,
+            deleteAll: deleteAll,
+            dispose: dispose,
+            shouldDispose: shouldDispose,
+            getNodes: getNodes,
+            getNodesCount: getNodesCount
+        };
+    }
+
+    function removeDisposeCallback(node, disposeCallback) {
+        var callbacksCollection = getDisposeCallbacksCollection(node, false);
+        if (callbacksCollection)
+            var collectionCopy = ko.utils.makeArray(callbacksCollection);   // make copy of array since it will modified below
+            ko.utils.arrayForEach(collectionCopy, function(cleanNodeCallback) {
+                cleanNodeCallback(node, disposeCallback);
+            });
+    }
+
+    function cleanNode(node) {
+        // First clean this node, where applicable
+        if (cleanableNodeTypes[node.nodeType]) {
+            cleanSingleNode(node);
+
+            // ... then its descendants, where applicable
+            if (cleanableNodeTypesWithDescendants[node.nodeType]) {
+                // Clone the descendants list in case it changes during iteration
+                var descendants = [];
+                ko.utils.arrayPushAll(descendants, node.getElementsByTagName("*"));
+                for (var i = 0, j = descendants.length; i < j; i++)
+                    cleanSingleNode(descendants[i]);
+            }
         }
     }
+
+    function cleanAndRemoveNode(node) {
+        cleanNode(node);
+        if (node.parentNode)
+            node.parentNode.removeChild(node);
+    }
+
+    ko.cleanNode = cleanNode;
+    ko.removeNode = ko.cleanAndRemoveNode = cleanAndRemoveNode;
+
+    var domNodeDisposal = {
+        addDisposeCallback : addDisposeCallback,
+        removeDisposeCallback : removeDisposeCallback
+    };
+
+    return ko.exportProperties(domNodeDisposal,
+        'addDisposeCallback', domNodeDisposal.addDisposeCallback,
+        'removeDisposeCallback', domNodeDisposal.removeDisposeCallback
+    );
 })();
-ko.cleanNode = ko.utils.domNodeDisposal.cleanNode; // Shorthand name for convenience
-ko.removeNode = ko.utils.domNodeDisposal.removeNode; // Shorthand name for convenience
 ko.exportSymbol('cleanNode', ko.cleanNode);
-ko.exportSymbol('removeNode', ko.removeNode);
+ko.exportSymbol('cleanAndRemoveNode', ko.cleanAndRemoveNode);
+ko.exportSymbol('removeNode', ko.cleanAndRemoveNode);       // exported for compatibility
 ko.exportSymbol('utils.domNodeDisposal', ko.utils.domNodeDisposal);
-ko.exportSymbol('utils.domNodeDisposal.addDisposeCallback', ko.utils.domNodeDisposal.addDisposeCallback);
-ko.exportSymbol('utils.domNodeDisposal.removeDisposeCallback', ko.utils.domNodeDisposal.removeDisposeCallback);
