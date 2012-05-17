@@ -85,12 +85,7 @@
         renderMode = renderMode || "replaceChildren";
 
         if (targetNodeOrNodeArray) {
-            var firstTargetNode = getFirstNodeFromPossibleArray(targetNodeOrNodeArray);
-
-            var whenToDispose = function () { return (!firstTargetNode) || !ko.utils.domNodeIsAttachedToDocument(firstTargetNode); }; // Passive disposal (on next evaluation)
-            var activelyDisposeWhenNodeIsRemoved = (firstTargetNode && renderMode == "replaceNode") ? firstTargetNode.parentNode : firstTargetNode;
-
-            return ko.utils.possiblyWrap( // So the DOM is automatically updated when any dependency changes
+            var subscription = ko.utils.possiblyWrap( // So the DOM is automatically updated when any dependency changes
                 function () {
                     // Ensure we've got a proper binding context to work with
                     var bindingContext = (dataOrBindingContext && (dataOrBindingContext instanceof ko.bindingContext))
@@ -103,12 +98,15 @@
                     var renderedNodesArray = executeTemplate(targetNodeOrNodeArray, renderMode, templateName, bindingContext, options);
                     if (renderMode == "replaceNode") {
                         targetNodeOrNodeArray = renderedNodesArray;
-                        firstTargetNode = getFirstNodeFromPossibleArray(targetNodeOrNodeArray);
+                        if (subscription)
+                            subscription.replaceDisposalNodes(targetNodeOrNodeArray);
                     }
-                },
-                activelyDisposeWhenNodeIsRemoved,
-                whenToDispose
+                }
             );
+            // Since targetNodeOrNodeArray can change during initial rendering, we must set the disposal nodes afterwards
+            if (subscription)
+                subscription.addDisposalNodes(targetNodeOrNodeArray);
+            return subscription;
         } else {
             // We don't yet have a DOM node to evaluate, so use a memo and render the template later when there is a DOM node
             return ko.memoization.memoize(function (domNode) {

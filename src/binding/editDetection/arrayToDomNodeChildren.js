@@ -30,27 +30,44 @@
             // (The following line replaces the contents of contiguousNodeArray with newContiguousSet)
             Array.prototype.splice.apply(contiguousNodeArray, [0, contiguousNodeArray.length].concat(newContiguousSet));
         }
+        return contiguousNodeArray;
+    }
+
+    function defaultCallbackAfterAddingNodes(value, mappedNodes, index, subscription) {
+        if (subscription) {
+            subscription.addDisposalNodes(fixUpVirtualElements(mappedNodes));
+        }
+    }
+
+    function wrapCallbackAfterAddingNodes(originalCallback) {
+        return originalCallback
+            ? function(value, mappedNodes, index, subscription) {
+                originalCallback(value, mappedNodes, index);
+                defaultCallbackAfterAddingNodes(value, mappedNodes, index, subscription);
+            }
+            : defaultCallbackAfterAddingNodes;
     }
 
     function mapNodeAndRefreshWhenChanged(containerNode, mapping, valueToMap, callbackAfterAddingNodes, index) {
         // Map this array value inside a dependentObservable so we re-map when any dependency changes
-        var mappedNodes = [];
+        var mappedNodes;
         var dependentObservable = ko.utils.possiblyWrap(function() {
             var newMappedNodes = mapping(valueToMap, index) || [];
+            if (!mappedNodes) {
+                // On first evaluation, we'll just return the DOM nodes
+                mappedNodes = newMappedNodes;
+            } else {
+                // On subsequent evaluations, just replace the previously-inserted DOM nodes
+                dependentObservable.replaceDisposalNodes();    // must clear before calling replaceDomNodes
+                ko.utils.replaceDomNodes(fixUpVirtualElements(mappedNodes), newMappedNodes);
+                callbackAfterAddingNodes(valueToMap, newMappedNodes, index, dependentObservable);
 
-            // On subsequent evaluations, just replace the previously-inserted DOM nodes
-            if (mappedNodes.length > 0) {
-                fixUpVirtualElements(mappedNodes);
-                ko.utils.replaceDomNodes(mappedNodes, newMappedNodes);
-                if (callbackAfterAddingNodes)
-                    callbackAfterAddingNodes(valueToMap, newMappedNodes);
+                // Replace the contents of the mappedNodes array, thereby updating the record
+                // of which nodes would be deleted if valueToMap was itself later removed
+                mappedNodes.splice(0, mappedNodes.length);
+                ko.utils.arrayPushAll(mappedNodes, newMappedNodes);
             }
-
-            // Replace the contents of the mappedNodes array, thereby updating the record
-            // of which nodes would be deleted if valueToMap was itself later removed
-            mappedNodes.splice(0, mappedNodes.length);
-            ko.utils.arrayPushAll(mappedNodes, newMappedNodes);
-        }, containerNode, function() { return (mappedNodes.length == 0) || !ko.utils.domNodeIsAttachedToDocument(mappedNodes[0]) } );
+        });
         return { mappedNodes : mappedNodes, dependentObservable : dependentObservable };
     }
 
@@ -60,6 +77,7 @@
         // Compare the provided array against the previous one
         array = array || [];
         options = options || {};
+        callbackAfterAddingNodes = wrapCallbackAfterAddingNodes(callbackAfterAddingNodes);
         var isFirstExecution = ko.utils.domData.get(domNode, lastMappingResultDomDataKey) === undefined;
         var lastMappingResult = ko.utils.domData.get(domNode, lastMappingResultDomDataKey) || [];
         var lastArray = ko.utils.arrayMap(lastMappingResult, function (x) { return x.arrayEntry; });
@@ -92,8 +110,7 @@
                         mapData.dependentObservable.dispose();
 
                     // Queue these nodes for later removal
-                    fixUpVirtualElements(mapData.domNodes);
-                    ko.utils.arrayForEach(mapData.domNodes, function (node) {
+                    ko.utils.arrayForEach(fixUpVirtualElements(mapData.domNodes), function (node) {
                         nodesToDelete.push({
                           element: node,
                           index: i,
@@ -133,8 +150,7 @@
                         }
                         insertAfterNode = node;
                     }
-                    if (callbackAfterAddingNodes)
-                        callbackAfterAddingNodes(valueToMap, mappedNodes, indexObservable);
+                    callbackAfterAddingNodes(valueToMap, mappedNodes, indexObservable, mapData.dependentObservable);
                     break;
             }
         }
