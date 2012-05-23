@@ -215,7 +215,7 @@ describe('Binding attribute syntax', {
             init: function(element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
                 ko.applyBindingsToDescendants(
                     bindingContext.createChildContext(function() { return ko.utils.unwrapObservable(valueAccessor()) }),
-                    element, true);
+                    element);
             }
         };
 

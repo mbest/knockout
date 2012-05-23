@@ -133,6 +133,12 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
         return _latestValue;
     }
 
+    dependentObservable.peek = function () {
+        if (_needsEvaluation)
+            evaluateImmediate();
+        return _latestValue;
+    }
+
     var disposer, disposalNodes = [];
     function addDisposalNodes(nodeOrNodes) {
         if (nodeOrNodes) {
@@ -178,6 +184,7 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
     ko.utils.extendInternal(dependentObservable, ko.dependentObservable['fn']);
 
     return ko.exportProperties(dependentObservable,
+        'peek', dependentObservable.peek,
         'dispose', dependentObservable.dispose,
         'getDependenciesCount', dependentObservable.getDependenciesCount,
         'addDisposalNodes', dependentObservable.addDisposalNodes,

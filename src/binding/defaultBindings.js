@@ -459,7 +459,7 @@ ko.bindingHandlers['withlight'] = {
         var innerContext = bindingContext['createChildContext'](function() {
                 return ko.utils.unwrapObservable(valueAccessor());
             }, allBindingsAccessor('withItemName') );
-        ko.applyBindingsToDescendants(innerContext, element, true);
+        ko.applyBindingsToDescendants(innerContext, element);
     }
 };
 
@@ -482,32 +482,43 @@ ko.bindingHandlers['hasfocus'] = {
     }
 };
 
-/*var withDomDataKey = ko.utils.domData.nextKey();
-ko.bindingHandlers['withbroken'] = {
+var withDomDataKey = ko.utils.domData.nextKey();
+ko.bindingHandlers['with'] = {
     'flags': bindingFlags_contentBind | bindingFlags_canUseVirtual,
+    'init': function(element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
+        var dataValue = ko.utils.unwrapObservable(valueAccessor()),
+            nodesArray = ko.virtualElements.childNodes(element),
+            savedDataValue = ko.observable(dataValue);
+
+        if (dataValue) {
+            // When the data value is initially true, save a copy of the nodes (and bind to the originals)
+            nodesArray = ko.utils.cloneNodes(nodesArray);
+            ko.applyBindingsToDescendants(bindingContext['createChildContext'](savedDataValue), element);
+        }
+
+        ko.domDataSet(element, withDomDataKey, {
+            savedNodes: ko.utils.moveCleanedNodesToContainerElement(nodesArray),
+            savedDataValue: savedDataValue});
+    },
     'update': function(element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
-        var withData = ko.domDataGet(element, withDomDataKey) || {},
-            isBound = withData.isBound, container = withData.container,
+        var withData = ko.domDataGet(element, withDomDataKey),
+            savedDataValue = withData.savedDataValue,
             dataValue = ko.utils.unwrapObservable(valueAccessor());
 
-        if (!isBound && dataValue) {
-            if (container)
-                ko.virtualElements.setDomNodeChildren(element, ko.utils.makeArray(container.childNodes));
-            var innerContext = bindingContext['createChildContext'](function() {
-                return ko.utils.unwrapObservable(valueAccessor());
-            });
-            ko.applyBindingsToDescendants(innerContext, element, true);
-            ko.domDataSet(element, withDomDataKey, {isBound: true});
-        }
-        else if (!dataValue && !container) {
-            var nodeArray = ko.virtualElements.childNodes(element);
-            if (isBound)
-                ko.utils.arrayForEach(nodeArray, ko.disposeNode);
-            container = ko.utils.moveNodesToContainerElement(nodeArray);
-            ko.domDataSet(element, withDomDataKey, {container: container});
+        if (savedDataValue.peek()) {
+            if (!dataValue) // When the data value becomes false, remove the nodes from the document
+                ko.virtualElements.emptyNode(element);
+            // If the data value simply changes, updating the observable will update all bindings
+            savedDataValue(dataValue);
+        } else if (dataValue) {
+            // When the data value becomes non-false, copy the nodes into the document
+            nodesArray = ko.utils.cloneNodes(withData.savedNodes.childNodes);
+            ko.virtualElements.setDomNodeChildren(element, nodesArray);
+            savedDataValue(dataValue);
+            ko.applyBindingsToDescendants(bindingContext['createChildContext'](savedDataValue), element);
         }
     }
-};*/
+};
 
 function templateBasedBinding(makeOptionsFunction) {
     function makeTemplateValueAccessor(valueAccessor) {
@@ -529,7 +540,7 @@ function templateBasedBinding(makeOptionsFunction) {
 }
 
 // "with: someExpression" is equivalent to "template: { if: someExpression, data: someExpression }"
-ko.bindingHandlers['with'] = templateBasedBinding( function(value, options) { options['if'] = value; options['data'] = value; });
+//ko.bindingHandlers['with'] = templateBasedBinding( function(value, options) { options['if'] = value; options['data'] = value; });
 
 // "if: someExpression" is equivalent to "template: { if: someExpression }"
 ko.bindingHandlers['if'] = templateBasedBinding( function(value, options) { options['if'] = value; });
