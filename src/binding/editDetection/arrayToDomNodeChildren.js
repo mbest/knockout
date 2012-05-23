@@ -105,7 +105,7 @@
                     break;
 
                 case "deleted":
-                    if (editScript[i]['moved'] === undefined) {
+                    if (editScriptItem['moved'] === undefined) {
                         var mapData = lastMappingResult[lastMappingResultIndex];
 
                         // Stop tracking changes to the mapping for these nodes
@@ -127,8 +127,8 @@
 
                 case "added":
                     var mappedNodes, movingNodes, valueToMap;
-                    if (editScript[i]['moved'] !== undefined) {
-                        var dataToRetain = lastMappingResult[editScript[i]['moved']];
+                    if (editScriptItem['moved'] !== undefined) {
+                        var dataToRetain = lastMappingResult[editScriptItem['moved']];
                         dataToRetain.indexObservable(newMappingResultIndex++);
                         mappedNodes = fixUpVirtualElements(dataToRetain.domNodes);
                         movingNodes = true;
@@ -141,7 +141,7 @@
 
                         // On the first evaluation, insert the nodes at the current insertion point
                         newMappingResult.push({
-                            arrayEntry: editScript[i].value,
+                            arrayEntry: valueToMap,
                             domNodes: mappedNodes,
                             dependentObservable: mapData.dependentObservable,
                             indexObservable: indexObservable
