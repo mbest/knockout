@@ -125,7 +125,8 @@ ko.utils.domNodeDisposal = new (function () {
     function removeDisposeCallback(node, disposeCallback) {
         var callbacksCollection = getDisposeCallbacksCollection(node, false);
         if (callbacksCollection)
-            ko.utils.arrayForEach(callbacksCollection, function(cleanNodeCallback) {
+            var collectionCopy = ko.utils.makeArray(callbacksCollection);   // make copy of array since it will be modified below
+            ko.utils.arrayForEach(collectionCopy, function(cleanNodeCallback) {
                 cleanNodeCallback(node, disposeCallback);
             });
     }

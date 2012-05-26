@@ -133,6 +133,14 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
         return _latestValue;
     }
 
+    // Evaluate, unless deferEvaluation is true, unless returnValueIfNoDependencies is true
+    if (options['deferEvaluation'] !== true || options.returnValueIfNoDependencies)
+        evaluateInitial();
+
+    // just return the value if returnValueIfNoDependencies is true and there are no dependencies
+    if (options.returnValueIfNoDependencies && !_subscriptionsToDependencies.length)
+        return _latestValue;
+
     dependentObservable.peek = function () {
         if (_needsEvaluation)
             evaluateImmediate();
@@ -156,14 +164,6 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
             disposer.deleteAll();
         return addDisposalNodes(nodeOrNodes);
     }
-
-    // Evaluate, unless deferEvaluation is true, unless returnValueIfNoDependencies is true
-    if (options['deferEvaluation'] !== true || options.returnValueIfNoDependencies)
-        evaluateInitial();
-
-    // just return the value if returnValueIfNoDependencies is true and there are no dependencies
-    if (options.returnValueIfNoDependencies && !_subscriptionsToDependencies.length)
-        return _latestValue;
 
     ko.utils.extendInternal(dependentObservable, {
         hasWriteFunction:       typeof writeFunction === "function",

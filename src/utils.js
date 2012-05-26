@@ -294,9 +294,11 @@ ko.utils = (function () {
             return ko.isObservable(value) ? value() : value;
         },
 
-        possiblyWrap: function(readFunction, nodeOrNodes) {
+        possiblyWrap: function(readFunction, disposalNodeOrNodes, disposeWhen) {
             return ko.dependentObservable(readFunction, null,
-                { returnValueIfNoDependencies: true, disposalNodes: nodeOrNodes });
+                { returnValueIfNoDependencies: true,
+                    disposalNodes: disposalNodeOrNodes,
+                    disposeWhen: disposeWhen });
         },
 
         toggleDomNodeCssClass: function (node, className, shouldHaveClass) {
@@ -428,6 +430,7 @@ ko.utils = (function () {
         'extend', utils.extendInternal,
         'fieldsIncludedWithJsonPost', utils.fieldsIncludedWithJsonPost,
         'getFormFields', utils.getFormFields,
+        'possiblyWrap', utils.possiblyWrap,
         'postJson', utils.postJson,
         'parseJson', utils.parseJson,
         'registerEventHandler', utils.registerEventHandler,

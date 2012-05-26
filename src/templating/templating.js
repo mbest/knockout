@@ -85,7 +85,7 @@
         renderMode = renderMode || "replaceChildren";
 
         if (targetNodeOrNodeArray) {
-            var subscription = ko.dependentObservable( // So the DOM is automatically updated when any dependency changes
+            var subscription = ko.utils.possiblyWrap( // So the DOM is automatically updated when any dependency changes
                 function () {
                     // Ensure we've got a proper binding context to work with
                     var bindingContext = (dataOrBindingContext && (dataOrBindingContext instanceof ko.bindingContext))
@@ -102,7 +102,10 @@
                             subscription.replaceDisposalNodes(targetNodeOrNodeArray);
                     }
                 }
-            ).addDisposalNodes(targetNodeOrNodeArray);
+            );
+            // Since targetNodeOrNodeArray can change during initial rendering, we must set the disposal nodes afterwards
+            if (subscription)
+                subscription.addDisposalNodes(targetNodeOrNodeArray);
             return subscription;
         } else {
             // We don't yet have a DOM node to evaluate, so use a memo and render the template later when there is a DOM node
@@ -133,7 +136,7 @@
                 options['afterRender'](addedNodesArray, arrayValue);
         };
 
-        return ko.dependentObservable(function () {
+        return ko.utils.possiblyWrap(function () {
             var unwrappedArray = ko.utils.unwrapObservable(arrayOrObservableArray) || [];
             if (typeof unwrappedArray.length == "undefined") // Coerce single value into array
                 unwrappedArray = [unwrappedArray];
@@ -145,7 +148,7 @@
 
             ko.utils.setDomNodeChildrenFromArrayMapping(targetNode, filteredArray, executeTemplateForArrayItem, options, activateBindingsCallback);
 
-        }).addDisposalNodes(targetNode);
+        }, targetNode);
     };
 
     var templateSubscriptionDomDataKey = ko.utils.domData.nextKey();
