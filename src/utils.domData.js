@@ -9,6 +9,11 @@ ko.utils.domData = new (function () {
         return allDataForNode === undefined ? undefined : allDataForNode[key];
     }
 
+    function getOrSetData(node, key, valueIfNotSet) {
+        var allDataForNode = getAll(node, true);
+        return allDataForNode[key] ? allDataForNode[key] : (allDataForNode[key] = valueIfNotSet);
+    }
+
     function setData(node, key, value) {
         if (value === undefined) {
             // Make sure we don't actually create a new domData key if we are actually deleting a value
@@ -45,6 +50,7 @@ ko.utils.domData = new (function () {
 
     // add shortcuts
     ko.domDataGet = getData;
+    ko.domDataGetOrSet = getOrSetData;
     ko.domDataSet = setData;
 
     return {
