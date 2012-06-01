@@ -56,10 +56,28 @@ describe('DOM Observable', {
         value_of(myobservable()).should_be(true);
     },
 
+    'Should be able to change watched events for a dom observable': function () {
+        testNode.innerHTML = "<input type='checkbox' />";
+        var checkBox = testNode.childNodes[0],
+            myobservable = ko.domObservable(checkBox, 'checked'),
+            latestNotifiedValue = ko.observable(myobservable()),
+            subscription = myobservable.subscribe(latestNotifiedValue);
+
+        // initially it doesn't listen for changes; so the value stays the same
+        ko.utils.triggerEvent(testNode.childNodes[0], "click");
+        value_of(latestNotifiedValue()).should_be(false);
+
+        // now modify it to listen for the click event
+        myobservable(false);
+        ko.domObservable(checkBox, 'checked', 'click');
+        ko.utils.triggerEvent(testNode.childNodes[0], "click");
+        value_of(latestNotifiedValue()).should_be(true);
+    },
+
     'Should catch the text input\'s onchange and update value observable': function () {
         testNode.innerHTML = "<input />";
         var textBox = testNode.childNodes[0];
-        var myobservable = ko.domObservable(textBox, 'value', 'change');
+        var myobservable = ko.domObservable(textBox, 'value', ['change']);
 
         textBox.value = "some user-entered value";
         ko.utils.triggerEvent(textBox, "change");

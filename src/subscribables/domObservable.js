@@ -9,41 +9,45 @@ ko.domObservable = function(element, propertyName, eventsToWatch) {
     var cache = ko.domDataGetOrSet(element, domObservableDomDataKey, {});
 
     // Return cached value if set
-    if (cache[propertyName])
-        return cache[propertyName];
-
-    var observable = ko.observable(element[propertyName]);
-
-    // This subscription updates the element whenever the observable is updated;
-    // the ignoreUpdate flag allows us to update the observable without updating the element
-    var ignoreUpdate = false;
-    var subscription = observable.subscribe(function(newValue) {
-        if (!ignoreUpdate) {
-            if (disposer.shouldDispose())
-                disposer.dispose();
-            else
-                element[propertyName] = (newValue === undefined) ? null : newValue;
-        }
-    });
-
-    // Set up event handlers to trigger updating the observable from the element
-    if (eventsToWatch) {
-        eventsToWatch = [].concat(eventsToWatch);   // make sure it's an array
-        ko.utils.arrayForEach(eventsToWatch, function (eventType) {
-            ko.utils.registerEventHandler(element, eventType, function(event) {
-                try {
-                    ignoreUpdate = true;
-                    observable(element[propertyName]);
-                } finally {
-                    ignoreUpdate = false;
-                }
-            });
-        });
+    if (cache[propertyName]) {
+        var cachedObservable = cache[propertyName];
+        cachedObservable.addEvents(eventsToWatch);    // update observable with any new events
+        return cachedObservable;
     }
 
-    // Set up a dispose handler that disposes all subscriptions to the observable
-    // if the element is removed from the document
-    var disposer = ko.utils.domNodeDisposal.addDisposeCallback(element, function () {
+    function observable(newValue) {
+        if (arguments.length > 0) {
+            // Ignore writes if the value hasn't changed
+            if ((!observable['equalityComparer']) || !observable['equalityComparer'](element[propertyName], newValue)) {
+                // set property and notify of change; if new value is *undefined*, make it *null* instead
+                observable["notifySubscribers"](element[propertyName] = (newValue === undefined ? null : newValue));
+            }
+        }
+        else {
+            ko.dependencyDetection.registerDependency(observable);
+            return element[propertyName];
+        }
+    }
+
+    var watchedEvents = {};
+    function addEvent(eventType) {
+        if (!watchedEvents[eventType]) {
+            ko.utils.registerEventHandler(element, eventType, function(event) {
+                observable["notifySubscribers"](element[propertyName]);
+            });
+            watchedEvents[eventType] = true;
+        }
+    }
+    function addEvents(eventsToWatch) {
+        if (eventsToWatch && eventsToWatch.length) {
+            if (typeof eventsToWatch == "string")
+                addEvent(eventsToWatch);
+            else
+                ko.utils.arrayForEach(eventsToWatch, addEvent);
+        }
+    };
+
+    function dispose() {
         delete cache[propertyName];
         var subscriptions = observable._subscriptions;
         for (var eventName in subscriptions) {
@@ -53,7 +57,21 @@ ko.domObservable = function(element, propertyName, eventsToWatch) {
                         subscription.dispose();
                 });
         }
-    });
+    };
+
+    ko.subscribable.call(observable);   // make it subscribable
+    ko.utils.extendInternal(observable, ko.observable['fn']);   // make it just like an observable
+
+    // Set up event handlers to trigger updating the observable from the element
+    addEvents(eventsToWatch);
+
+    // Set up a dispose handler that disposes all subscriptions to the observable
+    // if the element is removed from the document
+    var disposer = ko.utils.domNodeDisposal.addDisposeCallback(element, dispose);
+
+    observable.peek = function() { return element[propertyName] };
+    observable.dispose = disposer.dispose;
+    observable.addEvents = addEvents;
 
     return (cache[propertyName] = observable);
 }
