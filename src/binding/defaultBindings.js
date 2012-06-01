@@ -367,51 +367,55 @@ ko.bindingHandlers['uniqueName'].currentIndex = 0;
 ko.bindingHandlers['checked'] = {
     'flags': bindingFlags_twoWay,
     'init': function (element, valueAccessor, allBindingsAccessor) {
-        var updateHandler = function() {
-            var valueToWrite;
-            if (element.type == "checkbox") {
-                valueToWrite = element.checked;
-            } else if ((element.type == "radio") && (element.checked)) {
-                valueToWrite = element.value;
-            } else {
-                return; // "checked" binding only responds to checkboxes and selected radio buttons
-            }
-
-            var modelValue = valueAccessor();
-            if ((element.type == "checkbox") && (ko.utils.unwrapObservable(modelValue) instanceof Array)) {
-                // For checkboxes bound to an array, we add/remove the checkbox value to that array
-                // This works for both observable and non-observable arrays
-                var existingEntryIndex = ko.utils.arrayIndexOf(ko.utils.unwrapObservable(modelValue), element.value);
-                if (element.checked && (existingEntryIndex < 0))
-                    modelValue.push(element.value);
-                else if ((!element.checked) && (existingEntryIndex >= 0))
-                    modelValue.splice(existingEntryIndex, 1);
-            } else {
-                ko.bindingExpressionRewriting.writeValueToProperty(modelValue, allBindingsAccessor, 'checked', valueToWrite, true);
-            }
-        };
-        ko.utils.registerEventHandler(element, "click", updateHandler);
-
-        // IE 6 won't allow radio buttons to be selected unless they have a name
-        if ((element.type == "radio") && !element.name)
-            ko.bindingHandlers['uniqueName']['init'](element, function() { return true });
-    },
-    'update': function (element, valueAccessor) {
-        var value = ko.utils.unwrapObservable(valueAccessor());
-
-        if (element.type == "checkbox") {
-            if (value instanceof Array) {
-                // When bound to an array, the checkbox being checked represents its value being present in that array
-                element.checked = ko.utils.arrayIndexOf(value, element.value) >= 0;
-            } else {
-                // When bound to anything other value (not an array), the checkbox being checked represents the value being trueish
-                element.checked = value;
-            }
-        } else if (element.type == "radio") {
-            element.checked = (element.value == value);
+        var elemValue = ko.domObservable(element, 'value'),
+            elemChecked = ko.domObservable(element, 'checked', 'click'),
+            updateModel = function(modelProp, newValue) {
+                ko.bindingExpressionRewriting.writeValueToProperty(modelProp, allBindingsAccessor, 'checked', newValue, true);
+            },
+            updateFlag = ko.observable();
+        switch (element.type) {
+            case "checkbox":
+                var modelSub = ko.utils.updateOnChange(valueAccessor, function(newValue) {
+                        elemChecked(newValue instanceof Array
+                            // When bound to an array, the checkbox being checked represents its value being present in that array
+                            ? (ko.utils.arrayIndexOf(newValue, elemValue()) >= 0)
+                            // When bound to anything other value (not an array), the checkbox being checked represents the value being trueish
+                            : newValue);
+                    }, updateFlag),
+                    elemSub = ko.utils.updateOnChange(elemChecked, function(checkedValue) {
+                        var modelValue = valueAccessor();
+                        if (ko.utils.unwrapObservable(modelValue) instanceof Array) {
+                            // For checkboxes bound to an array, we add/remove the checkbox value to that array
+                            // This works for both observable and non-observable arrays
+                            ko.utils.addOrRemoveItem(modelValue, elemValue(), checkedValue);
+                        } else {
+                            updateModel(modelValue, checkedValue);
+                        }
+                    }, updateFlag, true);
+                break;
+            case "radio":
+                // IE 6 won't allow radio buttons to be selected unless they have a name
+                if (!element.name)
+                    ko.bindingHandlers['uniqueName']['init'](element, function() { return true });
+                var modelSub = ko.utils.updateOnChange(valueAccessor, function(newValue) {
+                        elemChecked(elemValue() == newValue);
+                    }, updateFlag),
+                    elemSub = ko.utils.updateOnChange(function() {
+                        return elemChecked() ? elemValue : null;
+                    }, function(newValue) {
+                        if (newValue !== null)
+                            updateModel(valueAccessor(), newValue);
+                    }, updateFlag, true);
+                break;
+            default:
+                return;
         }
+        ko.utils.domNodeDisposal.addDisposeCallback(element, function() {
+            elemSub.dispose();
+            modelSub.dispose();
+        });
     }
-};
+}
 
 var attrHtmlToJavascriptMap = { 'class': 'className', 'for': 'htmlFor' };
 ko.bindingHandlers['attr'] = {

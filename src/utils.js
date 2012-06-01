@@ -101,6 +101,38 @@ ko.utils = (function () {
             return array;
         },
 
+        addOrRemoveItem: function(array, value, included) {
+            var existingEntryIndex = array.indexOf ? array.indexOf(value) : utils.arrayIndexOf(array, value);
+            if (existingEntryIndex < 0) {
+                if (included)
+                    array.push(value);
+            } else {
+                if (!included)
+                    array.splice(existingEntryIndex, 1);
+            }
+        },
+
+        updateOnChange: function(source, callback, updateFlag, dontSetInitially) {
+            var sourceObservable = ko.isObservable(source)
+                    ? source
+                    : ko.computed(function(){
+                        return utils.unwrapObservable(source());
+                    });
+            var wrappedCallback = !updateFlag ? callback : function(newValue) {
+                if (!updateFlag()) {
+                    try {
+                        updateFlag(true);
+                        callback(newValue);
+                    } finally {
+                        updateFlag(false);
+                    }
+                }
+            }
+            if (!dontSetInitially)
+                wrappedCallback(sourceObservable());
+            return sourceObservable.subscribe(wrappedCallback);
+        },
+
         extendInternal: function (target/*, source, ...*/) {
             for (var i=1, source, prop; source = arguments[i]; i++) {
                 for (prop in source) {
