@@ -65,5 +65,5 @@ describe('DOM node disposal', {
             value_of(didRun1).should_be(false);
             value_of(didRun2).should_be(true);
         }
-    },
+    }
 });

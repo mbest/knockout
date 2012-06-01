@@ -1,3 +1,14 @@
+function setUpBinding(element, modelValue, elemUpdater, elemValue, modelUpdater) {
+    var updateFlag = ko.observable(),
+        modelSub = ko.utils.updateOnChange(modelValue, elemUpdater, updateFlag),
+        elemSub = ko.utils.updateOnChange(elemValue, modelUpdater, updateFlag, true);
+    ko.utils.domNodeDisposal.addDisposeCallback(element, function() {
+        elemSub.dispose();
+        modelSub.dispose();
+    });
+}
+
+
 // For certain common events (currently just 'click'), allow a simplified data-binding syntax
 // e.g. click:handler instead of the usual full-length event:{click:handler}
 var eventHandlersWithShortcuts = ['click'];
@@ -368,52 +379,48 @@ ko.bindingHandlers['checked'] = {
     'flags': bindingFlags_twoWay,
     'init': function (element, valueAccessor, allBindingsAccessor) {
         var elemValue = ko.domObservable(element, 'value'),
-            elemChecked = ko.domObservable(element, 'checked', 'click'),
-            updateModel = function(modelProp, newValue) {
-                ko.bindingExpressionRewriting.writeValueToProperty(modelProp, allBindingsAccessor, 'checked', newValue, true);
-            },
-            updateFlag = ko.observable();
+            elemChecked = ko.domObservable(element, 'checked', 'click');
         switch (element.type) {
             case "checkbox":
-                var modelSub = ko.utils.updateOnChange(valueAccessor, function(newValue) {
+                setUpBinding(element,
+                    valueAccessor,
+                    function(newValue) {
                         elemChecked(newValue instanceof Array
                             // When bound to an array, the checkbox being checked represents its value being present in that array
                             ? (ko.utils.arrayIndexOf(newValue, elemValue()) >= 0)
                             // When bound to anything other value (not an array), the checkbox being checked represents the value being trueish
                             : newValue);
-                    }, updateFlag),
-                    elemSub = ko.utils.updateOnChange(elemChecked, function(checkedValue) {
+                    },
+                    elemChecked,
+                    function(checkedValue) {
                         var modelValue = valueAccessor();
                         if (ko.utils.unwrapObservable(modelValue) instanceof Array) {
                             // For checkboxes bound to an array, we add/remove the checkbox value to that array
                             // This works for both observable and non-observable arrays
                             ko.utils.addOrRemoveItem(modelValue, elemValue(), checkedValue);
                         } else {
-                            updateModel(modelValue, checkedValue);
+                            ko.bindingExpressionRewriting.writeValueToProperty(modelValue, allBindingsAccessor, 'checked', checkedValue, true);
                         }
-                    }, updateFlag, true);
+                    });
                 break;
             case "radio":
                 // IE 6 won't allow radio buttons to be selected unless they have a name
                 if (!element.name)
                     ko.bindingHandlers['uniqueName']['init'](element, function() { return true });
-                var modelSub = ko.utils.updateOnChange(valueAccessor, function(newValue) {
+                setUpBinding(element,
+                    valueAccessor,
+                    function(newValue) {
                         elemChecked(elemValue() == newValue);
-                    }, updateFlag),
-                    elemSub = ko.utils.updateOnChange(function() {
+                    },
+                    function() {
                         return elemChecked() ? elemValue : null;
-                    }, function(newValue) {
+                    },
+                    function(newValue) {
                         if (newValue !== null)
-                            updateModel(valueAccessor(), newValue);
-                    }, updateFlag, true);
+                            ko.bindingExpressionRewriting.writeValueToProperty(valueAccessor(), allBindingsAccessor, 'checked', newValue, true);
+                    });
                 break;
-            default:
-                return;
         }
-        ko.utils.domNodeDisposal.addDisposeCallback(element, function() {
-            elemSub.dispose();
-            modelSub.dispose();
-        });
     }
 }
 

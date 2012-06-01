@@ -1,10 +1,15 @@
+//var attrHtmlToJavascriptMap = { 'class': 'className', 'for': 'htmlFor' }; // already defined in defaultBindings.js
+
 var domObservableDomDataKey = ko.utils.domData.nextKey();
-var attrHtmlToJavascriptMap = { 'class': 'className', 'for': 'htmlFor' };
 
 ko.domObservable = function(element, propertyName, eventsToWatch) {
-    // convert certain attribute names to their property names
-    if (propertyName in attrHtmlToJavascriptMap)
+    // Convert certain attribute names to their property names
+    if (attrHtmlToJavascriptMap[propertyName])
         propertyName = attrHtmlToJavascriptMap[propertyName];
+
+    var elemType = typeof element[propertyName];
+    if (!primitiveTypes[elemType])
+        throw new Exception("domObservable only supports primitive types");
 
     var cache = ko.domDataGetOrSet(element, domObservableDomDataKey, {});
 
@@ -19,8 +24,9 @@ ko.domObservable = function(element, propertyName, eventsToWatch) {
         if (arguments.length > 0) {
             // Ignore writes if the value hasn't changed
             if ((!observable['equalityComparer']) || !observable['equalityComparer'](element[propertyName], newValue)) {
-                // set property and notify of change; if new value is *undefined*, make it *null* instead
-                observable["notifySubscribers"](element[propertyName] = (newValue === undefined ? null : newValue));
+                // Set property and notify of change; for string properties, convert *null* and *undefined* to an empty string
+                element[propertyName] = (elemType == "string" && newValue == null) ? "" : newValue;
+                notifyChange();
             }
         }
         else {
@@ -29,12 +35,17 @@ ko.domObservable = function(element, propertyName, eventsToWatch) {
         }
     }
 
+    function notifyChange() {
+        if (disposer.shouldDispose())
+            disposer.dispose();
+        else
+            observable["notifySubscribers"](element[propertyName]);
+    }
+
     var watchedEvents = {};
     function addEvent(eventType) {
         if (!watchedEvents[eventType]) {
-            ko.utils.registerEventHandler(element, eventType, function(event) {
-                observable["notifySubscribers"](element[propertyName]);
-            });
+            ko.utils.registerEventHandler(element, eventType, notifyChange);
             watchedEvents[eventType] = true;
         }
     }
