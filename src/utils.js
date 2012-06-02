@@ -317,18 +317,12 @@ ko.utils = (function () {
         toggleDomNodeCssClass: function (node, classNames, shouldHaveClass) {
             if (classNames) {
                 var cssClassNameRegex = /[\w-]+/g,
-                    currentClassNames = node.className.match(cssClassNameRegex) || [];
+                    nodeClassName = ko.domObservable(node, 'class'),
+                    currentClassNames = nodeClassName().match(cssClassNameRegex) || [];
                 utils.arrayForEach(classNames.match(cssClassNameRegex), function(className) {
-                    var indexOfClass = utils.arrayIndexOf(currentClassNames, className);
-                    if (indexOfClass >= 0) {
-                        if (!shouldHaveClass)
-                            currentClassNames.splice(indexOfClass, 1);
-                    } else {
-                        if (shouldHaveClass)
-                            currentClassNames.push(className);
-                    }
+                    utils.addOrRemoveItem(currentClassNames, className, shouldHaveClass);
                 });
-                node.className = currentClassNames.join(" ");
+                nodeClassName(currentClassNames.join(" "));
             }
         },
 
