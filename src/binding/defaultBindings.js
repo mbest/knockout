@@ -140,6 +140,42 @@ ko.bindingHandlers['disable'] = {
 ko.bindingHandlers['value'] = {
     'flags': bindingFlags_twoWay | bindingFlags_contentUpdate,
     'init': function (element, valueAccessor, allBindingsAccessor) {
+        switch (ko.utils.tagNameLower(element)) {
+            case "select":
+                return ko.bindingHandlers['oldvalue']['init'](element, valueAccessor, allBindingsAccessor);
+                break;
+            default:
+                // Always catch "change" event
+                var elemValue = ko.domObservable(element, 'value', 'change');
+                // And possibly other events too if asked
+                elemValue.addEvents(allBindingsAccessor("valueUpdate"));
+
+                setUpBinding(element,
+                    valueAccessor,
+                    function(newValue) {
+                        elemValue(newValue);
+                    },
+                    elemValue,
+                    function(newValue) {
+                        ko.bindingExpressionRewriting.writeValueToProperty(valueAccessor(), allBindingsAccessor, 'value', newValue, /* checkIfDifferent: */ true);
+                    });
+                break;
+        }
+    },
+    'update': function (element, valueAccessor) {
+        switch (ko.utils.tagNameLower(element)) {
+            case "select":
+                return ko.bindingHandlers['oldvalue']['update'](element, valueAccessor);
+                break;
+            default:
+                break;
+        }
+    }
+};
+
+ko.bindingHandlers['oldvalue'] = {
+    'flags': bindingFlags_twoWay | bindingFlags_contentUpdate,
+    'init': function (element, valueAccessor, allBindingsAccessor) {
         // Always catch "change" event; possibly other events too if asked
         var eventsToCatch = ["change"];
         var requestedEventsToCatch = allBindingsAccessor("valueUpdate");

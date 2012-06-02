@@ -127,4 +127,4 @@ ko.domObservable = function(element, propertyName, eventsToWatch) {
     });
 
     return (cache[propertyName] = observable);
-}
+};
