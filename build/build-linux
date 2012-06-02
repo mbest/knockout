@@ -11,7 +11,7 @@ OutDebugFile='output/knockout-latest.debug.js'
 OutMinFile='output/knockout-latest.js'
 
 # Combine the source files
-SourceFiles=`grep js < fragments/source-references.js | # Find JS references 
+SourceFiles=`grep js < fragments/source-references.js | # Find JS references
              sed "s/[ \',]//g" |                        # Strip off JSON fluff (whitespace, commas, quotes)
              sed -e 's/.*/..\/&/' |                     # Fix the paths by prefixing with ../
              tr '\n' ' '`                               # Combine into single line
@@ -19,11 +19,11 @@ SourceFiles=`grep js < fragments/source-references.js | # Find JS references
 cat $SourceFiles                    > $OutDebugFile.all.temp
 sed -i 's/throw\( new\)* Error/ko_throw/' $OutDebugFile.all.temp
 
-echo "(function(window,document,navigator,undefined){function ko_throw(e){throw Error(e)}" > $OutDebugFile.temp
+cat fragments/extern-pre.js         > $OutDebugFile.temp
 cat fragments/amd-pre.js            >> $OutDebugFile.temp
 cat $OutDebugFile.all.temp          >> $OutDebugFile.temp
 cat fragments/amd-post.js           >> $OutDebugFile.temp
-echo "})(window,document,navigator);" >> $OutDebugFile.temp
+cat fragments/extern-post.js        >> $OutDebugFile.temp
 rm $OutDebugFile.all.temp
 
 # Now call Google Closure Compiler to produce a minified version
@@ -31,14 +31,14 @@ curl -d output_info=compiled_code -d output_format=text -d compilation_level=ADV
 
 # Finalise each file by prefixing with version header and surrounding in function closure
 cp fragments/version-header.js $OutDebugFile
-echo "(function() {"    >> $OutDebugFile
-echo "var DEBUG=true;"  >> $OutDebugFile
-cat $OutDebugFile.temp  >> $OutDebugFile
-echo "})();"            >> $OutDebugFile
+echo "(function(){"                 >> $OutDebugFile
+echo "var DEBUG=true;"              >> $OutDebugFile
+cat $OutDebugFile.temp              >> $OutDebugFile
+echo "})();"                        >> $OutDebugFile
 rm $OutDebugFile.temp
 
 cp fragments/version-header.js $OutMinFile
-cat $OutMinFile.temp >> $OutMinFile
+cat $OutMinFile.temp                >> $OutMinFile
 rm $OutMinFile.temp
 
 # Inject the version number string

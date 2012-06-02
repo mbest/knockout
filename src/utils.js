@@ -13,6 +13,7 @@ ko.utils = (function () {
                 knownEventTypesByEventName[knownEventsForType[i]] = eventType;
         }
     }
+    var eventsThatMustBeRegisteredUsingAttachEvent = { 'propertychange': true }; // Workaround for an IE9 issue - https://github.com/SteveSanderson/knockout/issues/406
 
     // Detect IE versions for bug workarounds (uses IE conditionals, not UA string, for robustness)
     var ieVersion = (function() {
@@ -233,7 +234,8 @@ ko.utils = (function () {
         },
 
         registerEventHandler: function (element, eventType, handler) {
-            if (typeof jQuery != "undefined") {
+            var mustUseAttachEvent = ieVersion && eventsThatMustBeRegisteredUsingAttachEvent[eventType];
+            if (!mustUseAttachEvent && typeof jQuery != "undefined") {
                 if (isClickOnCheckableElement(element, eventType)) {
                     // For click events on checkboxes, jQuery interferes with the event handling in an awkward way:
                     // it toggles the element checked state *after* the click event handlers run, whereas native
@@ -249,7 +251,7 @@ ko.utils = (function () {
                     };
                 }
                 jQuery(element)['bind'](eventType, handler);
-            } else if (typeof element.addEventListener == "function")
+            } else if (!mustUseAttachEvent && typeof element.addEventListener == "function")
                 element.addEventListener(eventType, handler, false);
             else if (typeof element.attachEvent != "undefined")
                 element.attachEvent("on" + eventType, function (event) {
@@ -301,18 +303,21 @@ ko.utils = (function () {
                     disposeWhen: disposeWhen });
         },
 
-        toggleDomNodeCssClass: function (node, className, shouldHaveClass) {
-            var currentClassNames = (node.className || "").split(/\s+/);
-            var hasClass = utils.arrayIndexOf(currentClassNames, className) >= 0;
-
-            if (shouldHaveClass && !hasClass) {
-                node.className += (currentClassNames[0] ? " " : "") + className;
-            } else if (hasClass && !shouldHaveClass) {
-                var newClassName = "";
-                for (var i = 0; i < currentClassNames.length; i++)
-                    if (currentClassNames[i] != className)
-                        newClassName += currentClassNames[i] + " ";
-                node.className = utils.stringTrim(newClassName);
+        toggleDomNodeCssClass: function (node, classNames, shouldHaveClass) {
+            if (classNames) {
+                var cssClassNameRegex = /[\w-]+/g,
+                    currentClassNames = node.className.match(cssClassNameRegex) || [];
+                utils.arrayForEach(classNames.match(cssClassNameRegex), function(className) {
+                    var indexOfClass = utils.arrayIndexOf(currentClassNames, className);
+                    if (indexOfClass >= 0) {
+                        if (!shouldHaveClass)
+                            currentClassNames.splice(indexOfClass, 1);
+                    } else {
+                        if (shouldHaveClass)
+                            currentClassNames.push(className);
+                    }
+                });
+                node.className = currentClassNames.join(" ");
             }
         },
 

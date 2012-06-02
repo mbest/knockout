@@ -21,11 +21,11 @@ goto :EOF
 type %AllFiles%                   >> %OutDebugFile%_all.temp 2>nul
 cscript tools\searchReplace.js "throw( new)* Error" "ko_throw" %OutDebugFile%_all.temp >nul
 
-echo (function(window,document,navigator,undefined){function ko_throw(e){throw Error(e)} > %OutDebugFile%.temp
+type fragments\extern-pre.js      > %OutDebugFile%.temp
 type fragments\amd-pre.js         >> %OutDebugFile%.temp
 type %OutDebugFile%_all.temp      >> %OutDebugFile%.temp
 type fragments\amd-post.js        >> %OutDebugFile%.temp
-echo })(window,document,navigator); >> %OutDebugFile%.temp
+type fragments\extern-post.js     >> %OutDebugFile%.temp
 del %OutDebugFile%_all.temp
 
 @rem Now call Google Closure Compiler to produce a minified version
@@ -35,12 +35,12 @@ tools\curl -d output_info=compiled_code -d output_format=text -d compilation_lev
 copy /y fragments\version-header.js %OutDebugFile% >nul
 echo (function(){>> %OutDebugFile%
 echo var DEBUG=true;>> %OutDebugFile%
-type %OutDebugFile%.temp                            >> %OutDebugFile%
+type %OutDebugFile%.temp          >> %OutDebugFile%
 echo })();>> %OutDebugFile%
 del %OutDebugFile%.temp
 
 copy /y fragments\version-header.js %OutMinFile% >nul
-type %OutMinFile%.temp >> %OutMinFile%
+type %OutMinFile%.temp            >> %OutMinFile%
 del %OutMinFile%.temp
 
 @rem Inject the version number string

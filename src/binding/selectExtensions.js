@@ -10,7 +10,9 @@ ko.selectExtensions = (function () {
                 case 'option':
                     if (element[hasDomDataExpandoProperty] === true)
                         return ko.domDataGet(element, ko.bindingHandlers.options.optionValueDomDataKey);
-                    return element.getAttribute("value");
+                    return ko.utils.ieVersion <= 7
+                        ? (element.getAttributeNode('value').specified ? element.value : element.text)
+                        : element.value;
                 case 'select':
                     return element.selectedIndex >= 0 ? selectExtensions.readValue(element.options[element.selectedIndex]) : undefined;
                 default:
