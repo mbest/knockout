@@ -1,11 +1,31 @@
 function setUpBinding(element, modelValue, elemUpdater, elemValue, modelUpdater) {
-    var updateFlag = ko.observable(),
-        modelSub = ko.utils.updateOnChange(modelValue, elemUpdater, updateFlag),
-        elemSub = ko.utils.updateOnChange(elemValue, modelUpdater, updateFlag, true);
-    ko.utils.domNodeDisposal.addDisposeCallback(element, function() {
-        elemSub.dispose();
-        modelSub.dispose();
-    });
+    function updateOnChange(source, callback, setInitially) {
+        var sourceObservable = ko.isObservable(source)
+                ? source
+                : ko.computed(function(){
+                    return ko.utils.unwrapObservable(source());
+                });
+        if (setInitially)
+            callback(sourceObservable());
+        return sourceObservable.subscribe(function(newValue) {
+            if (!disposer.disposeIfShould() && !updateFlag) {
+                try {
+                    updateFlag = true;
+                    callback(newValue);
+                } finally {
+                    updateFlag = false;
+                }
+            }
+        });
+    };
+
+    var updateFlag = false,
+        disposer = ko.utils.domNodeDisposal.addDisposeCallback(element, function() {
+            elemSub.dispose();
+            modelSub.dispose();
+        }),
+        modelSub = updateOnChange(modelValue, elemUpdater, true),
+        elemSub = updateOnChange(elemValue, modelUpdater, false);
 }
 
 

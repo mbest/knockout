@@ -45,6 +45,10 @@ ko.domObservable = function(element, propertyName, eventsToWatch) {
 
     function setAsAttribute(attrValue, attrName) {
         if (ko.utils.ieVersion <= 8 && attrName && attrName != propertyName) {
+            // In IE <= 7 and IE8 Quirks Mode, you have to use the Javascript property name instead of the
+            // HTML attribute name for certain attributes. IE8 Standards Mode supports the correct behavior,
+            // but instead of figuring out the mode, we'll just set the attribute through the Javascript
+            // property for IE <= 8.
             observable(attrValue);
         } else {
             var oldValue = element[propertyName];
@@ -60,24 +64,27 @@ ko.domObservable = function(element, propertyName, eventsToWatch) {
             else
                 element.setAttribute(attrName, "" + attrValue);
 
-            // Notify if property has changes
+            // Notify if property has changed
             if (isPropertyDifferent(oldValue))
                 notifyChange();
         }
     }
 
     function notifyChange() {
-        if (disposer.shouldDispose())
-            disposer.dispose();
-        else
+        if (!disposer.disposeIfShould())
             observable["notifySubscribers"](element[propertyName]);
     }
 
     var watchedEvents = {};
-    function addEvent(eventType) {
-        if (!watchedEvents[eventType]) {
-            ko.utils.registerEventHandler(element, eventType, notifyChange);
-            watchedEvents[eventType] = true;
+    function addEvent(eventName) {
+        if (!watchedEvents[eventName]) {
+            watchedEvents[eventName] = true;
+            var handler = notifyChange;
+            if (ko.utils.stringStartsWith(eventName, "after")) {
+                handler = function() { setTimeout(notifyChange) };
+                eventName = eventName.substring("after".length);
+            }
+            ko.utils.registerEventHandler(element, eventName, handler);
         }
     }
     function addEvents(eventsToWatch) {
@@ -111,10 +118,13 @@ ko.domObservable = function(element, propertyName, eventsToWatch) {
     // if the element is removed from the document
     var disposer = ko.utils.domNodeDisposal.addDisposeCallback(element, dispose);
 
-    observable.peek = function() { return element[propertyName] };
-    observable.dispose = disposer.dispose;
-    observable.addEvents = addEvents;
-    observable.setAsAttribute = setAsAttribute;
+    ko.utils.extendInternal(observable, {
+        peek: function() { return element[propertyName] },
+        dispose: disposer.dispose,
+        addEvents: addEvents,
+        setAsAttribute: setAsAttribute,
+        watchedEvents: watchedEvents
+    });
 
     return (cache[propertyName] = observable);
 }

@@ -99,6 +99,12 @@ ko.utils.domNodeDisposal = new (function () {
             return (nodes.length && !ko.utils.arrayFirst(nodes, ko.utils.domNodeIsAttachedToDocument))
                 || (disposeWhen && disposeWhen());
         }
+        function disposeIfShould() {
+            if (shouldDispose()) {
+                dispose();
+                return true;
+            }
+        }
         function getNodes() {
             return nodes;
         }
@@ -117,6 +123,7 @@ ko.utils.domNodeDisposal = new (function () {
             deleteAll: deleteAll,
             dispose: dispose,
             shouldDispose: shouldDispose,
+            disposeIfShould: disposeIfShould,
             getNodes: getNodes,
             getNodesCount: getNodesCount
         };
