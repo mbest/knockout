@@ -1,34 +1,18 @@
-function setUpBinding(element, modelValue, elemUpdater, elemValue, modelUpdater) {
-    function updateOnChange(source, callback, setInitially) {
-        var sourceObservable = ko.isObservable(source)
-                ? source
-                : ko.utils.possiblyWrap(function(){
-                    return ko.utils.unwrapObservable(source());
-                }, element),
-            isSourceObservable = ko.isObservable(sourceObservable);
-        if (setInitially)
-            callback(isSourceObservable ? sourceObservable() : sourceObservable);
-        if (isSourceObservable) {
-            return sourceObservable.subscribe(function(newValue) {
-                if (!disposer.disposeIfShould() && !updateFlag) {
-                    try {
-                        updateFlag = true;
-                        callback(newValue);
-                    } finally {
-                        updateFlag = false;
-                    }
-                }
-            });
-        }
+function setUpTwoWayBinding(element, modelValue, elemUpdater, elemValue, modelUpdater) {
+    var isUpdating = false;
+    function updateOnChange(source, callback, shouldSet) {
+        ko.utils.possiblyWrap(function() {
+            var value = ko.isObservable(source) ? source() : ko.utils.unwrapObservable(source());
+            if (shouldSet && !isUpdating) {
+                isUpdating = true;
+                ko.ignoreDependencies(callback, null, [value]);
+                isUpdating = false;
+            }
+        }, element);
+        shouldSet = true;
     };
-
-    var updateFlag = false,
-        disposer = ko.utils.domNodeDisposal.addDisposeCallback(element, function() {
-            if (elemSub) elemSub.dispose();
-            if (modelSub) modelSub.dispose();
-        }),
-        modelSub = updateOnChange(modelValue, elemUpdater, true),
-        elemSub = updateOnChange(elemValue, modelUpdater, false);
+    updateOnChange(modelValue, elemUpdater, true);
+    updateOnChange(elemValue, modelUpdater, false);
 }
 
 
@@ -153,13 +137,9 @@ ko.bindingHandlers['value'] = {
                 // And possibly other events too if asked
                 elemValue.addEvents(allBindingsAccessor("valueUpdate"));
 
-                setUpBinding(element,
-                    valueAccessor,
-                    function(newValue) {
-                        elemValue(newValue);
-                    },
-                    elemValue,
-                    function(newValue) {
+                setUpTwoWayBinding(element,
+                    valueAccessor, elemValue,
+                    elemValue, function(newValue) {
                         ko.bindingExpressionRewriting.writeValueToProperty(valueAccessor(), allBindingsAccessor, 'value', newValue, /* checkIfDifferent: */ true);
                     });
                 break;
@@ -439,17 +419,15 @@ ko.bindingHandlers['checked'] = {
             elemChecked = ko.domObservable(element, 'checked', 'click');
         switch (element.type) {
             case "checkbox":
-                setUpBinding(element,
-                    valueAccessor,
-                    function(newValue) {
+                setUpTwoWayBinding(element,
+                    valueAccessor, function(newValue) {
                         elemChecked(newValue instanceof Array
                             // When bound to an array, the checkbox being checked represents its value being present in that array
                             ? (ko.utils.arrayIndexOf(newValue, elemValue()) >= 0)
                             // When bound to anything other value (not an array), the checkbox being checked represents the value being trueish
                             : newValue);
                     },
-                    elemChecked,
-                    function(checkedValue) {
+                    elemChecked, function(checkedValue) {
                         var modelValue = valueAccessor();
                         if (ko.utils.unwrapObservable(modelValue) instanceof Array) {
                             // For checkboxes bound to an array, we add/remove the checkbox value to that array
@@ -464,9 +442,8 @@ ko.bindingHandlers['checked'] = {
                 // IE 6 won't allow radio buttons to be selected unless they have a name
                 if (!element.name)
                     ko.bindingHandlers['uniqueName']['init'](element, function() { return true });
-                setUpBinding(element,
-                    valueAccessor,
-                    function(newValue) {
+                setUpTwoWayBinding(element,
+                    valueAccessor, function(newValue) {
                         elemChecked(elemValue() == newValue);
                     },
                     function() {
