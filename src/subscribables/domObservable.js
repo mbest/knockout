@@ -1,5 +1,4 @@
-//var attrHtmlToJavascriptMap = { 'class': 'className', 'for': 'htmlFor' }; // already defined in defaultBindings.js
-
+var attrHtmlToJavascriptMap = { 'class': 'className', 'for': 'htmlFor' };
 var domObservableDomDataKey = ko.utils.domData.nextKey();
 
 ko.domObservable = function(element, propertyName, eventsToWatch) {
@@ -23,15 +22,47 @@ ko.domObservable = function(element, propertyName, eventsToWatch) {
     function observable(newValue) {
         if (arguments.length > 0) {
             // Ignore writes if the value hasn't changed
-            if ((!observable['equalityComparer']) || !observable['equalityComparer'](element[propertyName], newValue)) {
+            if (isPropertyDifferent(newValue)) {
                 // Set property and notify of change; for string properties, convert *null* and *undefined* to an empty string
                 element[propertyName] = (elemType == "string" && newValue == null) ? "" : newValue;
+                // Workaround IE 6/7 issue
+                // - https://github.com/SteveSanderson/knockout/issues/197
+                // - http://www.matts411.com/post/setting_the_name_attribute_in_ie_dom/
+                if (ko.utils.ieVersion <= 7 && propertyName == "name")
+                    element.mergeAttributes(document.createElement("<input name='" + element.name + "'/>"), false);
                 notifyChange();
             }
         }
         else {
             ko.dependencyDetection.registerDependency(observable);
             return element[propertyName];
+        }
+    }
+
+    function isPropertyDifferent(testValue) {
+        return (!observable['equalityComparer']) || !observable['equalityComparer'](element[propertyName], testValue);
+    }
+
+    function setAsAttribute(attrValue, attrName) {
+        if (ko.utils.ieVersion <= 8 && attrName && attrName != propertyName) {
+            observable(attrValue);
+        } else {
+            var oldValue = element[propertyName];
+
+            // Allow passing in alternate attribute name (for cases such as "class" and "for")
+            attrName = attrName || propertyName;
+
+            // To cover cases like "attr: { checked:someProp }", we want to remove the attribute entirely
+            // when someProp is a "no value"-like value (strictly null, false, or undefined)
+            // (because the absence of the "checked" attr is how to mark an element as not checked, etc.)
+            if (attrValue === false || attrValue == null)
+                element.removeAttribute(attrName);
+            else
+                element.setAttribute(attrName, "" + attrValue);
+
+            // Notify if property has changes
+            if (isPropertyDifferent(oldValue))
+                notifyChange();
         }
     }
 
@@ -83,6 +114,7 @@ ko.domObservable = function(element, propertyName, eventsToWatch) {
     observable.peek = function() { return element[propertyName] };
     observable.dispose = disposer.dispose;
     observable.addEvents = addEvents;
+    observable.setAsAttribute = setAsAttribute;
 
     return (cache[propertyName] = observable);
 }
