@@ -186,10 +186,10 @@
             }
         }
         if (!invokedBeforeRemoveCallback && nodesToDelete.length) {
-            var commonParent = nodesToDelete[0]._element.parentNode;
-            if (commonParent) {
-                for (var i = 0; i < nodesToDelete.length; i++)
-                    commonParent.removeChild(nodesToDelete[i]._element);
+            for (var i = 0; i < nodesToDelete.length; i++) {
+                var element = nodesToDelete[i]._element;
+                if (element.parentNode)
+                    element.parentNode.removeChild(element);
             }
         }
 
