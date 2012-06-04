@@ -98,14 +98,6 @@ ko.domObservable = function(element, propertyName, eventsToWatch) {
 
     function dispose() {
         delete cache[propertyName];
-        var subscriptions = observable._subscriptions;
-        for (var eventName in subscriptions) {
-            if (subscriptions.hasOwnProperty(eventName))
-                ko.utils.arrayForEach(subscriptions[eventName], function (subscription) {
-                    if (subscription.isDisposed !== true)
-                        subscription.dispose();
-                });
-        }
     };
 
     ko.subscribable.call(observable);   // make it subscribable
@@ -122,6 +114,8 @@ ko.domObservable = function(element, propertyName, eventsToWatch) {
         peek: function() { return element[propertyName] },
         dispose: disposer.dispose,
         addEvents: addEvents,
+        isEventWatched: function(eventName) { return watchedEvents[eventName] || false },
+        notifyChange: notifyChange,
         setAsAttribute: setAsAttribute,
         watchedEvents: watchedEvents
     });

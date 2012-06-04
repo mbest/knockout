@@ -122,6 +122,8 @@
             hasBindings = bindingsToApply || ko.bindingProvider['instance']['nodeHasBindings'](node),
             independentBindings = bindingContext['$options']['independentBindings'];
 
+        independentBindings = independentBindings === false ? false : true;
+
         if (isElement) // Workaround IE <= 8 HTML parsing weirdness
             ko.virtualElements.normaliseVirtualElementDomStructure(node);
 

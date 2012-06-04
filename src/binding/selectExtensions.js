@@ -10,13 +10,15 @@ ko.selectExtensions = (function () {
                 case 'option':
                     if (element[hasDomDataExpandoProperty] === true)
                         return ko.domDataGet(element, ko.bindingHandlers.options.optionValueDomDataKey);
+                    var elemValue = ko.domObservable(element, 'value');
                     return ko.utils.ieVersion <= 7
-                        ? (element.getAttributeNode('value').specified ? element.value : element.text)
-                        : element.value;
+                        ? (element.getAttributeNode('value').specified ? elemValue() : element.text)
+                        : elemValue();
                 case 'select':
-                    return element.selectedIndex >= 0 ? selectExtensions.readValue(element.options[element.selectedIndex]) : undefined;
+                    var elemSelIndex = ko.domObservable(element, 'selectedIndex')();
+                    return elemSelIndex >= 0 ? selectExtensions.readValue(element.options[elemSelIndex]) : undefined;
                 default:
-                    return element.value;
+                    return ko.domObservable(element, 'value')();
             }
         },
 
@@ -29,7 +31,7 @@ ko.selectExtensions = (function () {
                             if (hasDomDataExpandoProperty in element) { // IE <= 8 throws errors if you delete non-existent properties from a DOM node
                                 delete element[hasDomDataExpandoProperty];
                             }
-                            element.value = value;
+                            ko.domObservable(element, 'value')(value);
                             break;
                         default:
                             // Store arbitrary object using DomData
@@ -44,7 +46,7 @@ ko.selectExtensions = (function () {
                 case 'select':
                     for (var i = element.options.length - 1; i >= 0; i--) {
                         if (selectExtensions.readValue(element.options[i]) == value) {
-                            element.selectedIndex = i;
+                            ko.domObservable(element, 'selectedIndex')(i);
                             break;
                         }
                     }
@@ -52,7 +54,7 @@ ko.selectExtensions = (function () {
                 default:
                     if ((value === null) || (value === undefined))
                         value = "";
-                    element.value = value;
+                    ko.domObservable(element, 'value')(value);
                     break;
             }
         }

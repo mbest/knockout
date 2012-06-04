@@ -383,7 +383,7 @@ describe('Binding attribute syntax', {
         };
         testNode.innerHTML = "<div data-bind='test: true'></div>"
 
-        ko.applyBindings(null, testNode);
+        ko.applyBindings(null, testNode, {independentBindings: false});
         // shouldn't throw any error
     },
 
@@ -405,7 +405,7 @@ describe('Binding attribute syntax', {
         };
         testNode.innerHTML = "<div data-bind='test: true'></div>"
 
-        ko.applyBindings(null, testNode);
+        ko.applyBindings(null, testNode, {independentBindings: false});
         // shouldn't throw any error
     },
 
@@ -773,7 +773,7 @@ describe('Binding attribute syntax', {
         testNode.innerHTML = "<div data-bind='existentHandler: true, nonexistentHandler: myObservable()'></div>";
 
         // dependent mode: should update
-        ko.applyBindings({ myObservable: observable }, testNode);
+        ko.applyBindings({ myObservable: observable }, testNode, {independentBindings: false});
         value_of(countUpdates).should_be(1);
         observable(3);
         value_of(countUpdates).should_be(2);
@@ -860,7 +860,7 @@ describe('Binding attribute syntax', {
         }
         testNode.innerHTML = "<div data-bind='sometimesRequiresValue'></div>";
         // first time works fine
-        ko.applyBindings(vm, testNode);
+        ko.applyBindings(vm, testNode, {independentBindings: false});
         value_of(updateCalls).should_be(1);
 
         // change type of handler; it will still work because of cache
