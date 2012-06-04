@@ -1,6 +1,8 @@
 function setUpTwoWayBinding(element, modelValue, elemUpdater, elemValue, modelUpdater) {
-    var isUpdating = false;
-    function updateOnChange(source, callback, shouldSet) {
+    var isUpdating = false,
+        shouldSet = false;
+
+    function updateOnChange(source, callback) {
         ko.utils.possiblyWrap(function() {
             var value = ko.isObservable(source) ? source() : ko.utils.unwrapObservable(source());
             if (shouldSet && !isUpdating) {
@@ -9,10 +11,14 @@ function setUpTwoWayBinding(element, modelValue, elemUpdater, elemValue, modelUp
                 isUpdating = false;
             }
         }, element);
-        shouldSet = true;
     };
-    updateOnChange(modelValue, elemUpdater, true);
-    updateOnChange(elemValue, modelUpdater, false);
+
+    // Update model from view when changed (but not updated initially)
+    updateOnChange(elemValue, modelUpdater);
+
+    // Update view from model initially and when changed
+    shouldSet = true;
+    updateOnChange(modelValue, elemUpdater);
 }
 
 
@@ -164,8 +170,7 @@ ko.bindingHandlers['value'] = {
             : modelUpdater;
 
         setUpTwoWayBinding(element,
-            valueAccessor,
-            function(newValue) {
+            valueAccessor, function(newValue) {
                 ko.selectExtensions.writeValue(element, newValue);
 
                 // If you try to set a model value that can't be represented in an already-populated dropdown, reject that change,
@@ -178,8 +183,7 @@ ko.bindingHandlers['value'] = {
             },
             function() {
                 return ko.selectExtensions.readValue(element);
-            },
-            modelUpdaterWrapped);
+            }, modelUpdaterWrapped);
     }
 };
 
@@ -370,24 +374,25 @@ ko.bindingHandlers['checked'] = {
             elemChecked = ko.domObservable(element, 'checked', 'click');
         switch (element.type) {
             case "checkbox":
-                setUpTwoWayBinding(element,
-                    valueAccessor, function(newValue) {
-                        elemChecked(newValue instanceof Array
-                            // When bound to an array, the checkbox being checked represents its value being present in that array
-                            ? (ko.utils.arrayIndexOf(newValue, elemValue()) >= 0)
-                            // When bound to anything other value (not an array), the checkbox being checked represents the value being trueish
-                            : newValue);
-                    },
-                    elemChecked, function(checkedValue) {
-                        var modelValue = valueAccessor();
-                        if (ko.utils.unwrapObservable(modelValue) instanceof Array) {
+                if (ko.utils.unwrapObservable(valueAccessor()) instanceof Array) {
+                    // When bound to an array, the checkbox being checked represents its value being present in that array
+                    setUpTwoWayBinding(element,
+                        function() {
+                            return (ko.utils.arrayIndexOf(ko.utils.unwrapObservable(valueAccessor()), elemValue()) >= 0);
+                        }, elemChecked,
+                        elemChecked, function(checkedValue) {
                             // For checkboxes bound to an array, we add/remove the checkbox value to that array
                             // This works for both observable and non-observable arrays
-                            ko.utils.addOrRemoveItem(modelValue, elemValue(), checkedValue);
-                        } else {
-                            ko.bindingExpressionRewriting.writeValueToProperty(modelValue, allBindingsAccessor, 'checked', checkedValue, true);
-                        }
-                    });
+                            ko.utils.addOrRemoveItem(valueAccessor(), elemValue(), checkedValue);
+                        });
+                } else {
+                    // When bound to anything other value (not an array), the checkbox being checked represents the value being trueish
+                    setUpTwoWayBinding(element,
+                        valueAccessor, elemChecked,
+                        elemChecked, function(checkedValue) {
+                            ko.bindingExpressionRewriting.writeValueToProperty(valueAccessor(), allBindingsAccessor, 'checked', checkedValue, true);
+                        });
+                }
                 break;
             case "radio":
                 // IE 6 won't allow radio buttons to be selected unless they have a name
@@ -399,15 +404,14 @@ ko.bindingHandlers['checked'] = {
                     },
                     function() {
                         return elemChecked() ? elemValue : null;
-                    },
-                    function(newValue) {
+                    }, function(newValue) {
                         if (newValue !== null)
                             ko.bindingExpressionRewriting.writeValueToProperty(valueAccessor(), allBindingsAccessor, 'checked', newValue, true);
                     });
                 break;
         }
     }
-}
+};
 
 ko.bindingHandlers['attr'] = {
     'flags': bindingFlags_twoLevel,

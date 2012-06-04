@@ -180,7 +180,7 @@ ko.bindingExpressionRewriting = (function () {
                 var propWriters = allBindingsAccessor('_ko_property_writers');
                 if (propWriters && propWriters[key])
                     propWriters[key](value);
-            } else if (!checkIfDifferent || property() !== value) {
+            } else if (!checkIfDifferent || property.peek() !== value) {
                 property(value);
             }
         }
