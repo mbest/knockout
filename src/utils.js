@@ -182,11 +182,12 @@ ko.utils = (function () {
         },
 
         setOptionNodeSelectionState: function (optionNode, isSelected) {
+            var elemSelected = ko.domObservable(optionNode, 'selected');
             // IE6 sometimes throws "unknown error" if you try to write to .selected directly, whereas Firefox struggles with setAttribute. Pick one based on browser.
-            if (navigator.userAgent.indexOf("MSIE 6") >= 0)
-                optionNode.setAttribute("selected", isSelected);
+            if (utils.isIe6)
+                elemSelected.setAsAttribute(isSelected);
             else
-                optionNode.selected = isSelected;
+                elemSelected(isSelected);
         },
 
         stringTrim: function (string) {

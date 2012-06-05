@@ -47,7 +47,7 @@ var protoProperty = ko.observable.protoProperty = "__ko_proto__";
 ko.observable['fn'][protoProperty] = ko.observable;
 
 ko.hasPrototype = function(instance, prototype) {
-    if ((instance === null) || (instance === undefined) || (instance[protoProperty] === undefined)) return false;
+    if ((instance == null) || (instance[protoProperty] === undefined)) return false;
     if (instance[protoProperty] === prototype) return true;
     return ko.hasPrototype(instance[protoProperty], prototype); // Walk the prototype chain
 };

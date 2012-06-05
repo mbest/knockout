@@ -239,7 +239,7 @@ ko.bindingHandlers['options'] = {
                     optionText = optionValue;				 // Given no optionsText arg; use the data value itself
                 optionText = ko.utils.unwrapObservable(optionText);
 
-                option.appendChild(document.createTextNode((optionText === null || optionText === undefined) ? "" : optionText));
+                option.appendChild(document.createTextNode((optionText == null) ? "" : optionText));
 
                 element.appendChild(option);
             }
@@ -318,7 +318,7 @@ ko.bindingHandlers['text'] = {
     },
     'update': function (element, valueAccessor) {
         var value = ko.utils.unwrapObservable(valueAccessor());
-        ko.virtualElements.firstChild(element).data = (value === null || value === undefined) ? "" : value;
+        ko.virtualElements.firstChild(element).data = (value == null) ? "" : value;
     }
 };
 

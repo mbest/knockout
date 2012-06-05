@@ -52,7 +52,7 @@ ko.selectExtensions = (function () {
                     }
                     break;
                 default:
-                    if ((value === null) || (value === undefined))
+                    if (value == null)
                         value = "";
                     ko.domObservable(element, 'value')(value);
                     break;
