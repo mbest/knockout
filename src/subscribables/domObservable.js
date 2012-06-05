@@ -15,7 +15,8 @@ ko.domObservable = function(element, propertyName, eventsToWatch) {
     // Return cached value if set
     if (cache[propertyName]) {
         var cachedObservable = cache[propertyName];
-        cachedObservable.addEvents(eventsToWatch);    // update observable with any new events
+        if (eventsToWatch)
+            cachedObservable.addEvents(eventsToWatch);    // update observable with any new events
         return cachedObservable;
     }
 
@@ -96,10 +97,6 @@ ko.domObservable = function(element, propertyName, eventsToWatch) {
         }
     };
 
-    function dispose() {
-        delete cache[propertyName];
-    };
-
     ko.subscribable.call(observable);   // make it subscribable
     ko.utils.extendInternal(observable, ko.observable['fn']);   // make it just like an observable
 
@@ -108,7 +105,10 @@ ko.domObservable = function(element, propertyName, eventsToWatch) {
 
     // Set up a dispose handler that disposes all subscriptions to the observable
     // if the element is removed from the document
-    var disposer = ko.utils.domNodeDisposal.addDisposeCallback(element, dispose);
+    var disposer = ko.utils.domNodeDisposal.addDisposeCallback(element,
+        function() {
+            delete cache[propertyName];
+        });
 
     ko.utils.extendInternal(observable, {
         peek: function() { return element[propertyName] },

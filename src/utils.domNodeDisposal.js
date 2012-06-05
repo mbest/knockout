@@ -54,7 +54,7 @@ ko.utils.domNodeDisposal = new (function () {
     }
 
     function addDisposeCallback(nodeOrNodes, disposeCallback, disposeWhen) {
-        var nodes = [];
+        var nodes = [], wasDisposed = false;
         function addNode(node) {
             nodes.push(node);
             if (node.nodeType !== 3)
@@ -94,9 +94,10 @@ ko.utils.domNodeDisposal = new (function () {
         function dispose() {
             deleteAll();
             disposeCallback();
+            wasDisposed = true;
         }
         function shouldDispose() {
-            return (nodes.length && !ko.utils.arrayFirst(nodes, ko.utils.domNodeIsAttachedToDocument))
+            return wasDisposed || (nodes.length && !ko.utils.arrayFirst(nodes, ko.utils.domNodeIsAttachedToDocument))
                 || (disposeWhen && disposeWhen());
         }
         function disposeIfShould() {

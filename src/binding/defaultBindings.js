@@ -4,7 +4,7 @@ function setUpTwoWayBinding(element, modelValue, elemUpdater, elemValue, modelUp
 
     function updateOnChange(source, callback) {
         ko.utils.possiblyWrap(function() {
-            var value = ko.isObservable(source) ? source() : ko.utils.unwrapObservable(source());
+            var value = ko.utils.unwrapObservable(source());
             if (shouldSet && !isUpdating) {
                 isUpdating = true;
                 ko.ignoreDependencies(callback, null, [value]);
@@ -20,7 +20,6 @@ function setUpTwoWayBinding(element, modelValue, elemUpdater, elemValue, modelUp
     shouldSet = true;
     updateOnChange(modelValue, elemUpdater);
 }
-
 
 // For certain common events (currently just 'click'), allow a simplified data-binding syntax
 // e.g. click:handler instead of the usual full-length event:{click:handler}
@@ -269,40 +268,45 @@ ko.bindingHandlers['options'].optionValueDomDataKey = ko.utils.domData.nextKey()
 
 ko.bindingHandlers['selectedOptions'] = {
     'flags': bindingFlags_twoWay | bindingFlags_contentUpdate,
-    getSelectedValuesFromSelectNode: function (selectNode) {
-        var result = [];
-        var nodes = selectNode.childNodes;
-        for (var i = 0, j = nodes.length; i < j; i++) {
-            var node = nodes[i], tagName = ko.utils.tagNameLower(node);
-            if (tagName == "option" && node.selected)
-                result.push(ko.selectExtensions.readValue(node));
-            else if (tagName == "optgroup") {
-                var selectedValuesFromOptGroup = ko.bindingHandlers['selectedOptions'].getSelectedValuesFromSelectNode(node);
-                Array.prototype.splice.apply(result, [result.length, 0].concat(selectedValuesFromOptGroup)); // Add new entries to existing 'result' instance
-            }
-        }
-        return result;
-    },
     'init': function (element, valueAccessor, allBindingsAccessor) {
-        ko.utils.registerEventHandler(element, "change", function () {
-            var value = valueAccessor();
-            var valueToWrite = ko.bindingHandlers['selectedOptions'].getSelectedValuesFromSelectNode(this);
-            ko.bindingExpressionRewriting.writeValueToProperty(value, allBindingsAccessor, 'value', valueToWrite);
-        });
-    },
-    'update': function (element, valueAccessor) {
         if (ko.utils.tagNameLower(element) != "select")
             throw new Error("values binding applies only to SELECT elements");
 
-        var newValue = ko.utils.unwrapObservable(valueAccessor());
-        if (newValue && typeof newValue.length == "number") {
-            var nodes = element.childNodes;
-            for (var i = 0, j = nodes.length; i < j; i++) {
-                var node = nodes[i];
-                if (ko.utils.tagNameLower(node) === "option")
-                    ko.utils.setOptionNodeSelectionState(node, ko.utils.arrayIndexOf(newValue, ko.selectExtensions.readValue(node)) >= 0);
+        function elementUpdater(newValue) {
+            if (newValue && typeof newValue.length == "number") {
+                var nodes = element.childNodes;
+                for (var i = 0, j = nodes.length; i < j; i++) {
+                    var node = nodes[i];
+                    if (ko.utils.tagNameLower(node) === "option")
+                        ko.utils.setOptionNodeSelectionState(node, ko.utils.arrayIndexOf(newValue, ko.selectExtensions.readValue(node)) >= 0);
+                }
             }
         }
+
+        function getSelectedValuesFromNode(node, result) {
+            var options = node.childNodes;
+            for (var i = 0, j = options.length; i < j; i++) {
+                var option = options[i], tagName = ko.utils.tagNameLower(option);
+                if (tagName == "optgroup")
+                    getSelectedValuesFromNode(option, result);
+                else if (tagName == "option" && ko.domObservable(option, 'selected')())
+                    result.push(ko.selectExtensions.readValue(option));
+            }
+            return result;
+        }
+
+        function getSelectedValuesFromSelectNode() {
+            ko.domObservable(element, 'value', 'change')();   // update on change events
+            return getSelectedValuesFromNode(element, []);
+        }
+
+        function modelUpdater(newValue) {
+            ko.bindingExpressionRewriting.writeValueToProperty(valueAccessor(), allBindingsAccessor, 'value', newValue);
+        };
+
+        setUpTwoWayBinding(element,
+            valueAccessor, elementUpdater,
+            getSelectedValuesFromSelectNode, modelUpdater);
     }
 };
 
@@ -372,43 +376,40 @@ ko.bindingHandlers['checked'] = {
     'init': function (element, valueAccessor, allBindingsAccessor) {
         var elemValue = ko.domObservable(element, 'value'),
             elemChecked = ko.domObservable(element, 'checked', 'click');
-        switch (element.type) {
-            case "checkbox":
-                if (ko.utils.unwrapObservable(valueAccessor()) instanceof Array) {
-                    // When bound to an array, the checkbox being checked represents its value being present in that array
-                    setUpTwoWayBinding(element,
-                        function() {
-                            return (ko.utils.arrayIndexOf(ko.utils.unwrapObservable(valueAccessor()), elemValue()) >= 0);
-                        }, elemChecked,
-                        elemChecked, function(checkedValue) {
-                            // For checkboxes bound to an array, we add/remove the checkbox value to that array
-                            // This works for both observable and non-observable arrays
-                            ko.utils.addOrRemoveItem(valueAccessor(), elemValue(), checkedValue);
-                        });
-                } else {
-                    // When bound to anything other value (not an array), the checkbox being checked represents the value being trueish
-                    setUpTwoWayBinding(element,
-                        valueAccessor, elemChecked,
-                        elemChecked, function(checkedValue) {
-                            ko.bindingExpressionRewriting.writeValueToProperty(valueAccessor(), allBindingsAccessor, 'checked', checkedValue, true);
-                        });
-                }
-                break;
-            case "radio":
-                // IE 6 won't allow radio buttons to be selected unless they have a name
-                if (!element.name)
-                    ko.bindingHandlers['uniqueName']['init'](element, function() { return true });
+        if (element.type == "checkbox") {
+            if (ko.utils.unwrapObservable(valueAccessor()) instanceof Array) {
+                // When bound to an array, the checkbox being checked represents its value being present in that array
                 setUpTwoWayBinding(element,
-                    valueAccessor, function(newValue) {
-                        elemChecked(elemValue() == newValue);
-                    },
                     function() {
-                        return elemChecked() ? elemValue : null;
-                    }, function(newValue) {
-                        if (newValue !== null)
-                            ko.bindingExpressionRewriting.writeValueToProperty(valueAccessor(), allBindingsAccessor, 'checked', newValue, true);
+                        return (ko.utils.arrayIndexOf(ko.utils.unwrapObservable(valueAccessor()), elemValue()) >= 0);
+                    }, elemChecked,
+                    elemChecked, function(checkedValue) {
+                        // For checkboxes bound to an array, we add/remove the checkbox value to that array
+                        // This works for both observable and non-observable arrays
+                        ko.utils.addOrRemoveItem(valueAccessor(), elemValue(), checkedValue);
                     });
-                break;
+            } else {
+                // When bound to anything other value (not an array), the checkbox being checked represents the value being trueish
+                setUpTwoWayBinding(element,
+                    valueAccessor, elemChecked,
+                    elemChecked, function(checkedValue) {
+                        ko.bindingExpressionRewriting.writeValueToProperty(valueAccessor(), allBindingsAccessor, 'checked', checkedValue, true);
+                    });
+            }
+        } else if (element.type == "radio") {
+            // IE 6 won't allow radio buttons to be selected unless they have a name
+            if (!element.name)
+                ko.bindingHandlers['uniqueName']['init'](element, function() { return true });
+            setUpTwoWayBinding(element,
+                valueAccessor, function(newValue) {
+                    elemChecked(elemValue() == newValue);
+                },
+                function() {
+                    return elemChecked() ? elemValue : null;
+                }, function(newValue) {
+                    if (newValue !== null)
+                        ko.bindingExpressionRewriting.writeValueToProperty(valueAccessor(), allBindingsAccessor, 'checked', newValue, true);
+                });
         }
     }
 };
@@ -443,19 +444,18 @@ ko.bindingHandlers['withlight'] = {
 ko.bindingHandlers['hasfocus'] = {
     'flags': bindingFlags_twoWay,
     'init': function(element, valueAccessor, allBindingsAccessor) {
-        var writeValue = function(valueToWrite) {
-            var modelValue = valueAccessor();
-            ko.bindingExpressionRewriting.writeValueToProperty(modelValue, allBindingsAccessor, 'hasfocus', valueToWrite, true);
-        };
-        ko.utils.registerEventHandler(element, "focus", function() { writeValue(true) });
-        ko.utils.registerEventHandler(element, "focusin", function() { writeValue(true) }); // For IE
-        ko.utils.registerEventHandler(element, "blur",  function() { writeValue(false) });
-        ko.utils.registerEventHandler(element, "focusout",  function() { writeValue(false) }); // For IE
-    },
-    'update': function(element, valueAccessor) {
-        var value = ko.utils.unwrapObservable(valueAccessor());
-        value ? element.focus() : element.blur();
-        ko.utils.triggerEvent(element, value ? "focusin" : "focusout"); // For IE, which doesn't reliably fire "focus" or "blur" events synchronously
+        setUpTwoWayBinding(element, valueAccessor, function(newValue) {
+            newValue ? element.focus() : element.blur();
+            // For IE, which doesn't reliably fire "focus" or "blur" events synchronously
+            ko.utils.triggerEvent(element, newValue ? "focusin" : "focusout");
+        },
+        function() {
+            // set up and access an unrelated property to get event updates
+            ko.domObservable(element, 'tagName', ['focus', 'blur', 'focusin', 'focusout'])();
+            return element.ownerDocument.activeElement === element;
+        }, function(newValue) {
+            ko.bindingExpressionRewriting.writeValueToProperty(valueAccessor(), allBindingsAccessor, 'hasfocus', newValue, true);
+        });
     }
 };
 
