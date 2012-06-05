@@ -103,8 +103,7 @@ ko.domObservable = function(element, propertyName, eventsToWatch) {
     // Set up event handlers to trigger updating the observable from the element
     addEvents(eventsToWatch);
 
-    // Set up a dispose handler that disposes all subscriptions to the observable
-    // if the element is removed from the document
+    // Set up a dispose handler that clears the observable from the cache
     var disposer = ko.utils.domNodeDisposal.addDisposeCallback(element,
         function() {
             delete cache[propertyName];
@@ -116,8 +115,7 @@ ko.domObservable = function(element, propertyName, eventsToWatch) {
         addEvents: addEvents,
         isEventWatched: function(eventName) { return watchedEvents[eventName] || false },
         notifyChange: notifyChange,
-        setAsAttribute: setAsAttribute,
-        watchedEvents: watchedEvents
+        setAsAttribute: setAsAttribute
     });
 
     return (cache[propertyName] = observable);

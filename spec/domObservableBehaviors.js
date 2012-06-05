@@ -95,7 +95,6 @@ describe('DOM Observable', {
         value_of(textBox.value).should_be("");
     },
 
-    'Test 1': function() {
-
+    'dummy': function() {
     }
 });

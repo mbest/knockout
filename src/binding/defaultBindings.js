@@ -295,8 +295,9 @@ ko.bindingHandlers['selectedOptions'] = {
             return result;
         }
 
+        var elemChangeObservable = ko.domObservable(element, '__ko_options', 'change');
         function getSelectedValuesFromSelectNode() {
-            ko.domObservable(element, 'value', 'change')();   // update on change events
+            elemChangeObservable();   // update on change events
             return getSelectedValuesFromNode(element, []);
         }
 
@@ -444,6 +445,8 @@ ko.bindingHandlers['withlight'] = {
 ko.bindingHandlers['hasfocus'] = {
     'flags': bindingFlags_twoWay,
     'init': function(element, valueAccessor, allBindingsAccessor) {
+        var elemFocusObservable = ko.domObservable(element, '__ko_focus', ['focus', 'blur', 'focusin', 'focusout']);
+
         setUpTwoWayBinding(element, valueAccessor, function(newValue) {
             newValue ? element.focus() : element.blur();
             // For IE, which doesn't reliably fire "focus" or "blur" events synchronously
@@ -451,7 +454,7 @@ ko.bindingHandlers['hasfocus'] = {
         },
         function() {
             // set up and access an unrelated property to get event updates
-            ko.domObservable(element, 'tagName', ['focus', 'blur', 'focusin', 'focusout'])();
+            elemFocusObservable();
             return element.ownerDocument.activeElement === element;
         }, function(newValue) {
             ko.bindingExpressionRewriting.writeValueToProperty(valueAccessor(), allBindingsAccessor, 'hasfocus', newValue, true);
