@@ -272,26 +272,23 @@ ko.bindingHandlers['selectedOptions'] = {
         if (ko.utils.tagNameLower(element) != "select")
             throw new Error("values binding applies only to SELECT elements");
 
-        function processOptionElements(node, callback) {
-            ko.utils.arrayMap(node.getElementsByTagName("option"), callback);
-        }
+        var options = element.getElementsByTagName("option");
 
         function elementUpdater(newValue) {
-            processOptionElements(element, function(option) {
+            ko.utils.arrayForEach(options, function(option) {
                 var isSelected = ko.utils.arrayIndexOf(newValue, ko.selectExtensions.readValue(option)) >= 0;
                 ko.utils.setOptionNodeSelectionState(option, isSelected);
             });
         }
 
+        function isOptionSelected(option) {
+            return ko.domObservable(option, 'selected')();
+        }
+
         var elemChangeObservable = ko.domObservable(element, '__ko_options', 'change');
         function getSelectedValuesFromSelectNode() {
             elemChangeObservable();   // update on change events
-            var result = [];
-            processOptionElements(element, function(option) {
-                if (ko.domObservable(option, 'selected')())
-                   result.push(ko.selectExtensions.readValue(option));
-            });
-            return result;
+            return ko.utils.arrayMap(ko.utils.arrayFilter(options, isOptionSelected), ko.selectExtensions.readValue);
         }
 
         function modelUpdater(newValue) {
