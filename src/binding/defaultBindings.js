@@ -272,33 +272,26 @@ ko.bindingHandlers['selectedOptions'] = {
         if (ko.utils.tagNameLower(element) != "select")
             throw new Error("values binding applies only to SELECT elements");
 
-        function elementUpdater(newValue) {
-            if (newValue && typeof newValue.length == "number") {
-                var nodes = element.childNodes;
-                for (var i = 0, j = nodes.length; i < j; i++) {
-                    var node = nodes[i];
-                    if (ko.utils.tagNameLower(node) === "option")
-                        ko.utils.setOptionNodeSelectionState(node, ko.utils.arrayIndexOf(newValue, ko.selectExtensions.readValue(node)) >= 0);
-                }
-            }
+        function processOptionElements(node, callback) {
+            ko.utils.arrayMap(node.getElementsByTagName("option"), callback);
         }
 
-        function getSelectedValuesFromNode(node, result) {
-            var options = node.childNodes;
-            for (var i = 0, j = options.length; i < j; i++) {
-                var option = options[i], tagName = ko.utils.tagNameLower(option);
-                if (tagName == "optgroup")
-                    getSelectedValuesFromNode(option, result);
-                else if (tagName == "option" && ko.domObservable(option, 'selected')())
-                    result.push(ko.selectExtensions.readValue(option));
-            }
-            return result;
+        function elementUpdater(newValue) {
+            processOptionElements(element, function(option) {
+                var isSelected = ko.utils.arrayIndexOf(newValue, ko.selectExtensions.readValue(option)) >= 0;
+                ko.utils.setOptionNodeSelectionState(option, isSelected);
+            });
         }
 
         var elemChangeObservable = ko.domObservable(element, '__ko_options', 'change');
         function getSelectedValuesFromSelectNode() {
             elemChangeObservable();   // update on change events
-            return getSelectedValuesFromNode(element, []);
+            var result = [];
+            processOptionElements(element, function(option) {
+                if (ko.domObservable(option, 'selected')())
+                   result.push(ko.selectExtensions.readValue(option));
+            });
+            return result;
         }
 
         function modelUpdater(newValue) {
