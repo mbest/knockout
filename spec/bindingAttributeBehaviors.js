@@ -233,6 +233,29 @@ describe('Binding attribute syntax', {
         value_of(testNode).should_contain_text("Third view model");
     },
 
+    'Updates to an observable view model should update all extended contexts (uncluding values copied from the parent)': function() {
+        ko.bindingHandlers.withProperties = {
+            flags: ko.bindingFlags.contentBind,
+            init: function(element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
+                var innerBindingContext = bindingContext.extend(valueAccessor);
+                ko.applyBindingsToDescendants(innerBindingContext, element);
+            }
+        };
+
+        testNode.innerHTML = "<div data-bind='withProperties: obj1'><span data-bind='text:prop1'></span><span data-bind='text:prop2'></span></div>";
+        var vm = ko.observable({obj1: {prop1: "First "}, prop2: "view model"});
+        ko.applyBindings(vm, testNode);
+        value_of(testNode).should_contain_text("First view model");
+
+        // ch ange view model to new object
+        vm({obj1: {prop1: "Second view "}, prop2: "model"});
+        value_of(testNode).should_contain_text("Second view model");
+
+        // change it again
+        vm({obj1: {prop1: "Third view model"}, prop2: ""});
+        value_of(testNode).should_contain_text("Third view model");
+    },
+
     'Should be able to get all updates to observables in both init and update': function() {
         var lastBoundValueInit, lastBoundValueUpdate;
         ko.bindingHandlers.testInit = {
