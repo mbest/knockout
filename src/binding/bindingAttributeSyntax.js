@@ -38,40 +38,48 @@
     ko.bindingHandlers = {};
 
     // Accepts either a data value or a value accessor function; note that an observable qualifies as a value accessor function
-    ko.bindingContext = function(dataItemOrValueAccessor, parent, options) {
-        var self = this, isFunc = typeof(dataItemOrValueAccessor) == "function",
-            altModelName = options && options['modelName'], subscribable;
+    ko.bindingContext = function(dataItemOrValueAccessor, parentContext, options, extendCallback) {
+        var self = this,
+            isFunc = typeof(dataItemOrValueAccessor) == "function",
+            subscribable;
         self._subscribable = subscribable = ko.utils.possiblyWrap(function() {
             var model = isFunc ? dataItemOrValueAccessor() : dataItemOrValueAccessor;
-            if (parent) {
-                if (parent._subscribable)
-                    ko.dependencyDetection.registerDependency(parent._subscribable);
+            if (parentContext) {
+                if (parentContext._subscribable)
+                    ko.dependencyDetection.registerDependency(parentContext._subscribable);
                 // copy $root, $options, and any custom properties from parent binding context
                 // will also copy/overwrite our own properties, but we'll set those below
-                ko.utils.extendInternal(self, parent);
+                ko.utils.extendInternal(self, parentContext);
                 // set our properties
                 self._subscribable = subscribable;
-                self['$parentContext'] = parent;
-                self['$parents'] = parent['$parents'].slice(0);
-                self['$parents'].unshift(self['$parent'] = parent['$data']);
-
-                self['$options'] = ko.utils.extendInternal({}, parent['$options'], options);
+                self['$options'] = ko.utils.extendInternal({}, parentContext['$options'], options);
             } else {
                 self['$parents'] = [];
                 self['$root'] = model;
                 self['$options'] = ko.utils.extendInternal({}, options);
             }
             self['$data'] = model;
-            if (altModelName)
-                self[altModelName] = model;
+            if (extendCallback)
+                extendCallback(self, parentContext, model);
         });
-    }
-    ko.bindingContext.prototype['createChildContext'] = function (dataItemOrValueAccessor, modelName) {
-        return new ko.bindingContext(dataItemOrValueAccessor, this, {'modelName': modelName});
     };
-    ko.bindingContext.prototype['extend'] = function(properties) {
-        return ko.utils.extendInternal(new ko.bindingContext(), this, properties);
-    };
+    ko.utils.extendInternal(ko.bindingContext.prototype, {
+        'createChildContext': function (dataItemOrValueAccessor, modelName) {
+            return new ko.bindingContext(dataItemOrValueAccessor, this, null, function(self, parentContext, model) {
+                self['$parentContext'] = parentContext;
+                self['$parents'] = parentContext['$parents'].slice(0);
+                self['$parents'].unshift(self['$parent'] = parentContext['$data']);
+                if (modelName)
+                    self[modelName] = model;
+            });
+        },
+        'extend': function(properties) {
+            return new ko.bindingContext(null, this, null, function(self, parentContext) {
+                self['$data'] = parentContext['$data'];
+                ko.utils.extendInternal(self, typeof(properties) == "function" ? properties() : properties);
+            });
+        }
+    });
 
     function getTwoLevelBindingData(bindingKey, justHandler) {
         var dotPos = bindingKey.indexOf(".");
