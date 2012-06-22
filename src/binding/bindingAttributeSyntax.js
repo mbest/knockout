@@ -106,7 +106,7 @@
                     if (initPhase === 0) {
                         initPhase = 1;
                         for (var bindingKey in parsedBindings) {
-                            var binding = ko.bindingHandlers[bindingKey];
+                            var binding = ko.getBindingHandler(bindingKey);
                             if (binding && node.nodeType === 8)
                                 validateThatBindingIsAllowedForVirtualElements(bindingKey);
 
@@ -128,7 +128,7 @@
                     // ... then run all the updates, which might trigger changes even on the first evaluation
                     if (initPhase === 2) {
                         for (var bindingKey in parsedBindings) {
-                            var binding = ko.bindingHandlers[bindingKey];
+                            var binding = ko.getBindingHandler(bindingKey);
                             if (binding && typeof binding["update"] == "function") {
                                 var handlerUpdateFn = binding["update"];
                                 handlerUpdateFn(node, makeValueAccessor(bindingKey), parsedBindingsAccessor, viewModel, bindingContextInstance);
