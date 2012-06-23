@@ -1,6 +1,10 @@
 (function () {
     ko.bindingHandlers = {};
 
+    ko.getBindingHandler = function(bindingKey) {
+        return ko.bindingHandlers[bindingKey] || makeKeySubkeyBinding(bindingKey);
+    };
+
     ko.bindingContext = function(dataItem, parentBindingContext) {
         if (parentBindingContext) {
             ko.utils.extend(this, parentBindingContext); // Inherit $root and any custom properties
@@ -192,6 +196,7 @@
     };
 
     ko.exportSymbol('bindingHandlers', ko.bindingHandlers);
+    ko.exportSymbol('getBindingHandler', ko.getBindingHandler);
     ko.exportSymbol('applyBindings', ko.applyBindings);
     ko.exportSymbol('applyBindingsToDescendants', ko.applyBindingsToDescendants);
     ko.exportSymbol('applyBindingsToNode', ko.applyBindingsToNode);

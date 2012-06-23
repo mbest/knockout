@@ -1,9 +1,11 @@
-function makeDotSyntaxBinding(bindingKey) {
-    var dotPos = bindingKey.indexOf(".");
-    if (dotPos > 0) {
-        var baseKey = bindingKey.substring(0, dotPos),
+var keySubkeyMatch = /([^_]+)_(.+)/, keySubkeyBindingDivider = '_';
+function makeKeySubkeyBinding(bindingKey) {
+    var match = bindingKey.match(keySubkeyMatch);
+    if (match) {
+        var baseKey = match[1],
             baseHandler = ko.bindingHandlers[baseKey];
         if (baseHandler) {
+            var subKey = match[2], subHandler = {};
             function setHandlerFunction(funcName) {
                 if (baseHandler[funcName]) {
                     subHandler[funcName] = function(element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
@@ -16,16 +18,11 @@ function makeDotSyntaxBinding(bindingKey) {
                     };
                 }
             }
-            var subKey = bindingKey.substring(dotPos + 1), subHandler = {};
             ko.utils.arrayForEach(['init', 'update'], setHandlerFunction);
             return (ko.bindingHandlers[bindingKey] = subHandler);
         }
     }
 }
-
-ko.getBindingHandler = function(bindingKey) {
-    return ko.bindingHandlers[bindingKey] || makeDotSyntaxBinding(bindingKey);
-};
 
 ko.bindingHandlers['event'] = {
     'init' : function (element, valueAccessor, allBindingsAccessor, viewModel) {
@@ -72,7 +69,7 @@ ko.bindingHandlers['event'] = {
 // e.g. click:handler instead of the usual full-length event:{click:handler} or event.click:handler
 var eventHandlersWithShortcuts = ['click'];
 ko.utils.arrayForEach(eventHandlersWithShortcuts, function(eventName) {
-    ko.bindingHandlers[eventName] = makeDotSyntaxBinding('event.'+eventName);
+    ko.bindingHandlers[eventName] = makeKeySubkeyBinding('event' + keySubkeyBindingDivider + eventName);
 });
 
 ko.bindingHandlers['submit'] = {
