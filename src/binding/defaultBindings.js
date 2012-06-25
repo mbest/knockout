@@ -66,11 +66,8 @@ ko.bindingHandlers['event'] = {
 };
 
 // For certain common events (currently just 'click'), allow a simplified data-binding syntax
-// e.g. click:handler instead of the usual full-length event:{click:handler} or event.click:handler
-var eventHandlersWithShortcuts = ['click'];
-ko.utils.arrayForEach(eventHandlersWithShortcuts, function(eventName) {
-    ko.bindingHandlers[eventName] = makeKeySubkeyBinding('event' + keySubkeyBindingDivider + eventName);
-});
+// e.g. click:handler instead of the usual full-length event:{click:handler} or event_click:handler
+ko.bindingHandlers['click'] = makeKeySubkeyBinding('event' + keySubkeyBindingDivider + 'click');
 
 ko.bindingHandlers['submit'] = {
     'init': function (element, valueAccessor, allBindingsAccessor, viewModel) {
