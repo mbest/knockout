@@ -23,6 +23,11 @@ ko.bindingExpressionRewriting = (function () {
         return "'" + key + "'";
     }
 
+    // A full tokeniser+lexer would add too much weight to this library, so here's a simple parser
+    // that is sufficient just to split an object literal string into a set of top-level key-value pairs
+    // This parser is by Michael Best (https://github.com/mbest) and inspired by
+    // json-sans-eval by Mike Samuel (http://code.google.com/p/json-sans-eval/)
+
     var stringDouble = '(?:"(?:[^"\\\\]|\\\\.)*")';
     var stringSingle = "(?:'(?:[^'\\\\]|\\\\.)*')";
     var stringRegexp = '(?:/(?:[^/\\\\]|\\\\.)*/)';
@@ -39,8 +44,6 @@ ko.bindingExpressionRewriting = (function () {
         + ')', 'g');
 
     function parseObjectLiteral(objectLiteralString) {
-        // A full tokeniser+lexer would add too much weight to this library, so here's a simple parser
-        // that is sufficient just to split an object literal string into a set of top-level key-value pairs
         var str = ko.utils.stringTrim(objectLiteralString);
         if (str.charCodeAt(0) === 123) // '{' Ignore braces surrounding the whole object literal
             str = str.slice(1, -1);
