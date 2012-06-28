@@ -1,14 +1,25 @@
-/** @const */ var bindingFlags_twoWay=01;
-/** @const */ var bindingFlags_eventHandler=02;
-/** @const */ var bindingFlags_twoLevel=04;
-/** @const */ var bindingFlags_contentSet=010;
-/** @const */ var bindingFlags_contentBind=020;
-/** @const */ var bindingFlags_contentUpdate=040;
-/** @const */ var bindingFlags_canUseVirtual=0100;
-/** @const */ var bindingFlags_noValue=0200;
+/*jshint eqnull:true, noarg:true, noempty:true, boss:true, browser:true, indent:4, maxerr:50, sub:true */
+
+/** @const */
+var bindingFlags_twoWay = 1;
+/** @const */
+var bindingFlags_eventHandler = 2;
+/** @const */
+var bindingFlags_twoLevel = 4;
+/** @const */
+var bindingFlags_contentSet = 8;
+/** @const */
+var bindingFlags_contentBind = 16;
+/** @const */
+var bindingFlags_contentUpdate = 32;
+/** @const */
+var bindingFlags_canUseVirtual = 64;
+/** @const */
+var bindingFlags_noValue = 128;
 
 // Internal flag for bindings used by the binding system itself
-/** @const */ var bindingFlags_builtIn=01000;
+/** @const */
+var bindingFlags_builtIn = 512;
 
 (function () {
     ko.bindingFlags = {
@@ -31,18 +42,18 @@
             // Virtual element bindings can be used in comments: <!-- ko if: value --><!-- /ko -->
     };
 
-    ko.checkBindingFlags = function(binding, flagsSet, flagsUnset) {
+    ko.checkBindingFlags = function (binding, flagsSet, flagsUnset) {
         return (!flagsSet || (binding['flags'] & flagsSet)) && !(binding['flags'] & flagsUnset);
     };
 
     ko.bindingHandlers = {};
 
     // Accepts either a data value or a value accessor function; note that an observable qualifies as a value accessor function
-    ko.bindingContext = function(dataItemOrValueAccessor, parentContext, options, extendCallback) {
+    ko.bindingContext = function (dataItemOrValueAccessor, parentContext, options, extendCallback) {
         var self = this,
             isFunc = typeof(dataItemOrValueAccessor) == "function",
             subscribable;
-        self._subscribable = subscribable = ko.utils.possiblyWrap(function() {
+        self._subscribable = subscribable = ko.utils.possiblyWrap(function () {
             var model = isFunc ? dataItemOrValueAccessor() : dataItemOrValueAccessor;
             if (parentContext) {
                 if (parentContext._subscribable)
@@ -65,7 +76,7 @@
     };
     ko.utils.extendInternal(ko.bindingContext.prototype, {
         'createChildContext': function (dataItemOrValueAccessor, modelName) {
-            return new ko.bindingContext(dataItemOrValueAccessor, this, null, function(self, parentContext, model) {
+            return new ko.bindingContext(dataItemOrValueAccessor, this, null, function (self, parentContext, model) {
                 self['$parentContext'] = parentContext;
                 self['$parents'] = parentContext['$parents'].slice(0);
                 self['$parents'].unshift(self['$parent'] = parentContext['$data']);
@@ -73,8 +84,8 @@
                     self[modelName] = model;
             });
         },
-        'extend': function(properties) {
-            return new ko.bindingContext(null, this, null, function(self, parentContext) {
+        'extend': function (properties) {
+            return new ko.bindingContext(null, this, null, function (self, parentContext) {
                 self['$data'] = parentContext['$data'];
                 ko.utils.extendInternal(self, typeof(properties) == "function" ? properties() : properties);
             });
@@ -88,34 +99,34 @@
             if (binding) {
                 if (!(binding['flags'] & bindingFlags_twoLevel))
                     throw new Error(realKey + " does not support two-level binding");
-                return justHandler
-                    ? binding
-                    : { key: realKey, subKey: bindingKey.substring(dotPos + 1), handler: binding };
+                return justHandler ?
+                    binding :
+                    { key: realKey, subKey: bindingKey.substring(dotPos + 1), handler: binding };
             }
         }
     }
 
     function getBindingData(bindingKey) {
         var handler = ko.bindingHandlers[bindingKey];
-        return handler
-            ? { handler: handler, key: bindingKey }
-            : getTwoLevelBindingData(bindingKey);
+        return handler ?
+            { handler: handler, key: bindingKey } :
+            getTwoLevelBindingData(bindingKey);
     }
 
-    ko.getBindingHandler = function(bindingKey) {
+    ko.getBindingHandler = function (bindingKey) {
         return ko.bindingHandlers[bindingKey] || getTwoLevelBindingData(bindingKey, true /* justHandler */);
     };
 
-    ko.bindingValueWrap = function(valueFunction) {
+    ko.bindingValueWrap = function (valueFunction) {
         valueFunction.__ko_wraptest = ko.bindingValueWrap;
         return valueFunction;
     };
 
     function unwrapBindingValue(value) {
-        return (value && value.__ko_wraptest && value.__ko_wraptest === ko.bindingValueWrap) ? value() : value;
-    };
+        return (value && value.__ko_wraptest === ko.bindingValueWrap) ? value() : value;
+    }
 
-    function applyBindingsToDescendantsInternal (bindingContext, elementOrVirtualElement, bindingContextsMayDifferFromDomParentElement) {
+    function applyBindingsToDescendantsInternal(bindingContext, elementOrVirtualElement, bindingContextsMayDifferFromDomParentElement) {
         var currentChild, nextInQueue = ko.virtualElements.firstChild(elementOrVirtualElement);
         while (currentChild = nextInQueue) {
             // Keep a record of the next child *before* applying bindings, in case the binding removes the current child from its position
@@ -125,7 +136,7 @@
     }
 
     var needsName = 'needs', needsBinding = { 'flags': bindingFlags_builtIn };
-    function applyBindingsToNodeAndDescendantsInternal (bindingContext, node, bindingContextsMayDifferFromDomParentElement, bindingsToApply, dontBindDescendants) {
+    function applyBindingsToNodeAndDescendantsInternal(bindingContext, node, bindingContextsMayDifferFromDomParentElement, bindingsToApply, dontBindDescendants) {
         var isElement = (node.nodeType === 1),
             hasBindings = bindingsToApply || ko.bindingProvider['instance']['nodeHasBindings'](node),
             independentBindings = bindingContext['$options']['independentBindings'];
@@ -153,7 +164,7 @@
 
         // Parse bindings; track observables so that the bindings are reparsed if needed
         var parsedBindings, extraBindings = {}, viewModel = bindingContext['$data'], runInits = true;
-        var bindingUpdater = ko.utils.possiblyWrap(function() {
+        var bindingUpdater = ko.utils.possiblyWrap(function () {
             // Make sure needs binding is set correctly
             ko.bindingHandlers[needsName] = needsBinding;
 
@@ -178,13 +189,15 @@
 
         // These functions make values accessible to bindings.
         function makeValueAccessor(fullKey, subKey) {
-            return subKey
-            ? function() {
+            return subKey ?
+            function () {
                 if (bindingUpdater)
                     bindingUpdater();
-                var _z = {}; _z[subKey] = unwrapBindingValue(parsedBindings[fullKey]); return _z;
-            }
-            : function () {
+                var _z = {};
+                _z[subKey] = unwrapBindingValue(parsedBindings[fullKey]);
+                return _z;
+            } :
+            function () {
                 if (bindingUpdater)
                     bindingUpdater();
                 return unwrapBindingValue(parsedBindings[fullKey]);
@@ -211,7 +224,7 @@
 
         // These functions call the binding handler functions
         function initCaller(binding) {
-            return function() {
+            return function () {
                 var handlerInitFn = binding.handler['init'];
                 var initResult = handlerInitFn(node, binding.valueAccessor, allBindingsAccessor, viewModel, bindingContext);
                 // throw an error if binding handler is only using the old method of indicating that it controls binding descendants
@@ -227,11 +240,11 @@
             };
         }
         function updateCaller(binding) {
-            return function() {
+            return function () {
                 // needBindings is set if we're running in independent mode. Go through each
-                // and create a dependency on it's subscribable.
+                // and create a dependency on its subscribable.
                 if (binding.needBindings)
-                    ko.utils.arrayForEach(binding.needBindings, function(needBinding) {
+                    ko.utils.arrayForEach(binding.needBindings, function (needBinding) {
                         if (needBinding.subscribable)
                             ko.dependencyDetection.registerDependency(needBinding.subscribable);
                     });
@@ -259,18 +272,22 @@
             callHandlers = independentBindings ? callHandlersIndependent : callHandlersDependent,
             allBindings = [],
             bindings = [[], [], undefined, []];
-        /** @const */ var unorderedBindings = 0;
-        /** @const */ var contentSetBindings = 1;
-        /** @const */ var contentBindBinding = 2;
-        /** @const */ var contentUpdateBindings = 3;
+        /** @const */
+        var unorderedBindings = 0;
+        /** @const */
+        var contentSetBindings = 1;
+        /** @const */
+        var contentBindBinding = 2;
+        /** @const */
+        var contentUpdateBindings = 3;
 
-        ko.utils.possiblyWrap(function() {
+        ko.utils.possiblyWrap(function () {
             if (runInits) {
                 var bindingIndexes = {}, needs = parsedBindings && parsedBindings[needsName] || {},
                     lastIndex = unorderedBindings, thisIndex;
 
                 // Get binding handlers, call init function if not in independent mode, and determine run order
-                function pushBinding(bindingKey) {
+                var pushBinding = function (bindingKey) {
                     if (bindingKey in bindingIndexes)
                         return allBindings[bindingIndexes[bindingKey]];
 
@@ -293,17 +310,17 @@
                             dependentOrder = contentBindBinding - 1;
                         } else {
                             dependentOrder = binding.order =
-                                (binding.flags & bindingFlags_contentSet)
-                                    ? contentSetBindings
-                                : (binding.flags & bindingFlags_contentUpdate)
-                                    ? contentUpdateBindings
-                                    : unorderedBindings;
+                                (binding.flags & bindingFlags_contentSet) ?
+                                    contentSetBindings :
+                                (binding.flags & bindingFlags_contentUpdate) ?
+                                    contentUpdateBindings :
+                                    unorderedBindings;
                         }
 
                         if (handler[needsName] || needs[bindingKey]) {
                             bindingIndexes[bindingKey] = -1;    // Allows for recursive needs check
                             binding.needBindings = [];
-                            ko.utils.arrayForEach([].concat(handler[needsName] || [], needs[bindingKey] || []), function(needKey) {
+                            ko.utils.arrayForEach([].concat(handler[needsName] || [], needs[bindingKey] || []), function (needKey) {
                                 var needBinding;
                                 if (!(needKey in parsedBindings) || !(needBinding = pushBinding(needKey)))
                                     needBindingError(bindingKey, needKey, "missing or recursive");
@@ -322,14 +339,14 @@
                     }
                     if (independentBindings)
                         extraBindings[bindingKey] = parsedBindings[bindingKey];
-                }
+                };
 
                 for (var bindingKey in parsedBindings) {
                     pushBinding(bindingKey);
                 }
 
                 // Organize bindings by run order
-                for (var i=0, binding; binding = allBindings[i]; i++) {
+                for (var i = 0, binding; binding = allBindings[i]; ++i) {
                     if (binding.order == contentBindBinding) {
                         thisIndex = contentBindBinding + 1;
                     } else {
@@ -359,7 +376,7 @@
 
         // Don't want to call init function or bind descendents twice
         runInits = dontBindDescendants = false;
-    };
+    }
 
     var storedBindingContextDomDataKey = ko.utils.domData.nextKey();
     ko.storedBindingContextForNode = function (node, bindingContext) {
@@ -370,12 +387,12 @@
         }
         else
             return ko.domDataGet(node, storedBindingContextDomDataKey);
-    }
+    };
 
     function getBindingContext(viewModelOrBindingContext, options) {
-        return viewModelOrBindingContext && (viewModelOrBindingContext instanceof ko.bindingContext)
-            ? viewModelOrBindingContext
-            : new ko.bindingContext(viewModelOrBindingContext, null, options);
+        return viewModelOrBindingContext && (viewModelOrBindingContext instanceof ko.bindingContext) ?
+            viewModelOrBindingContext :
+            new ko.bindingContext(viewModelOrBindingContext, null, options);
     }
 
     ko.applyBindingsToNode = function (node, bindings, viewModelOrBindingContext, shouldBindDescendants) {
@@ -384,7 +401,7 @@
         applyBindingsToNodeAndDescendantsInternal(getBindingContext(viewModelOrBindingContext), node, true, bindings, !shouldBindDescendants);
     };
 
-    ko.applyBindingsToDescendants = function(viewModelOrBindingContext, rootNode) {
+    ko.applyBindingsToDescendants = function (viewModelOrBindingContext, rootNode) {
         if (rootNode.nodeType === 1 || rootNode.nodeType === 8)
             applyBindingsToDescendantsInternal(getBindingContext(viewModelOrBindingContext), rootNode, true);
     };
@@ -398,19 +415,19 @@
     };
 
     // Retrieving binding context from arbitrary nodes
-    ko.contextFor = function(node) {
+    ko.contextFor = function (node) {
         // We can only do something meaningful for elements and comment nodes (in particular, not text nodes, as IE can't store domdata for them)
         switch (node.nodeType) {
-            case 1:
-            case 8:
-                var context = ko.storedBindingContextForNode(node);
-                if (context) return context;
-                if (node.parentNode) return ko.contextFor(node.parentNode);
-                break;
+        case 1:
+        case 8:
+            var context = ko.storedBindingContextForNode(node);
+            if (context) return context;
+            if (node.parentNode) return ko.contextFor(node.parentNode);
+            break;
         }
         return undefined;
     };
-    ko.dataFor = function(node) {
+    ko.dataFor = function (node) {
         var context = ko.contextFor(node);
         return context ? context['$data'] : undefined;
     };
