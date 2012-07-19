@@ -1,4 +1,4 @@
-## Better Binding for Knockout
+## Knockout Grand
 
 ### What’s great about Knockout?
 
