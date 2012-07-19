@@ -10,15 +10,25 @@
     // "callbackAfterAddingNodes" will be invoked after any "mapping"-generated nodes are inserted into the container node
     // You can use this, for example, to activate bindings on those nodes.
 
-    function fixUpVirtualElements(contiguousNodeArray) {
-        // Remove any initial nodes that aren't in the document
+    function fixUpNodesToBeRemoved(contiguousNodeArray) {
+        // Before deleting or replacing a set of nodes that were previously outputted by the "map" function, we have to reconcile
+        // them against what is in the DOM right now. It may be that some of the nodes have already been removed from the document,
+        // or that new nodes might have been inserted in the middle, for example by a binding. Also, there may previously have been
+        // leading comment nodes (created by rewritten string-based templates) that have since been removed during binding.
+        // So, this function translates the old "map" output array into its best guess of what set of current DOM nodes should be removed.
+        //
+        // Rules:
+        //   [A] Any leading nodes that aren't in the document any more should be ignored
+        //       These most likely correspond to memoization nodes that were already removed during binding
+        //       See https://github.com/SteveSanderson/knockout/pull/440
+        //   [B] We want to output a contiguous series of nodes that are still in the document. So, ignore any nodes that
+        //       have already been removed, and include any nodes that have been inserted among the previous collection
+
+        // Rule [A]
         while (contiguousNodeArray.length && !ko.utils.domNodeIsAttachedToDocument(contiguousNodeArray[0]))
             contiguousNodeArray.splice(0, 1);
 
-        // Ensures that contiguousNodeArray really *is* an array of contiguous siblings, even if some of the interior
-        // ones have changed since your array was first built (e.g., because your array contains virtual elements, and
-        // their virtual children changed when binding was applied to them).
-        // This is needed so that we can reliably remove or update the nodes corresponding to a given array item
+        // Rule [B]
         if (contiguousNodeArray.length > 1) {
             // Build up the actual new contiguous node set
             var current = contiguousNodeArray[0], last = contiguousNodeArray[contiguousNodeArray.length - 1], newContiguousSet = [current];
@@ -38,7 +48,7 @@
 
     function defaultCallbackAfterAddingNodes(value, mappedNodes, index, subscription) {
         if (subscription) {
-            subscription.addDisposalNodes(fixUpVirtualElements(mappedNodes));
+            subscription.addDisposalNodes(fixUpNodesToBeRemoved(mappedNodes));
         }
     }
 
@@ -62,7 +72,7 @@
             } else {
                 // On subsequent evaluations, just replace the previously-inserted DOM nodes
                 dependentObservable.replaceDisposalNodes();    // must clear before calling replaceDomNodes
-                ko.utils.replaceDomNodes(fixUpVirtualElements(mappedNodes), newMappedNodes);
+                ko.utils.replaceDomNodes(fixUpNodesToBeRemoved(mappedNodes), newMappedNodes);
                 callbackAfterAddingNodes(valueToMap, newMappedNodes, index, dependentObservable);
 
                 // Replace the contents of the mappedNodes array, thereby updating the record
@@ -113,7 +123,7 @@
                             mapData.dependentObservable.dispose();
 
                         // Queue these nodes for later removal
-                        ko.utils.arrayForEach(fixUpVirtualElements(mapData.domNodes), function (node) {
+                        ko.utils.arrayForEach(fixUpNodesToBeRemoved(mapData.domNodes), function (node) {
                             nodesToDelete.push({
                               _element: node,
                               _index: i,
@@ -130,7 +140,7 @@
                     if (editScriptItem['moved'] !== undefined) {
                         var dataToRetain = lastMappingResult[editScriptItem['moved']];
                         dataToRetain.indexObservable(newMappingResultIndex++);
-                        mappedNodes = fixUpVirtualElements(dataToRetain.domNodes);
+                        mappedNodes = fixUpNodesToBeRemoved(dataToRetain.domNodes);
                         movingNodes = true;
                         newMappingResult.push(dataToRetain);
                     } else {

@@ -558,10 +558,45 @@ describe('Binding: Options', {
             { name: 'bob', job: 'manager' },
             { name: 'frank', job: 'coder & tester' }
         ]);
-        testNode.innerHTML = "<select data-bind='options:myValues, optionsText: function (v) { return v[\"name\"] + \" (\" + v[\"job\"] + \")\"; }, optionsValue: \"id\"'><option>should be deleted</option></select>";
+        testNode.innerHTML = "<select data-bind='options:myValues, optionsText: function (v) { return v[\"name\"] + \" (\" + v[\"job\"] + \")\"; }'><option>should be deleted</option></select>";
         ko.applyBindings({ myValues: modelValues }, testNode);
         var displayedText = ko.utils.arrayMap(testNode.childNodes[0].childNodes, function (node) { return node.innerText || node.textContent; });
         value_of(displayedText).should_be(["bob (manager)", "frank (coder & tester)"]);
+    },
+
+    'Should accept a function in optionsValue param to select subproperties of the model values (and use that for the option text)': function() {
+        var modelValues = new ko.observableArray([
+            { name: 'bob', job: 'manager' },
+            { name: 'frank', job: 'coder & tester' }
+        ]);
+        testNode.innerHTML = "<select data-bind='options: myValues, optionsValue: function (v) { return v.name + \" (\" + v.job + \")\"; }'><option>should be deleted</option></select>";
+        ko.applyBindings({ myValues: modelValues }, testNode);
+        var values = ko.utils.arrayMap(testNode.childNodes[0].childNodes, function (node) { return node.value; });
+        value_of(values).should_be(["bob (manager)", "frank (coder & tester)"]);
+        var displayedText = ko.utils.arrayMap(testNode.childNodes[0].childNodes, function (node) { return node.innerText || node.textContent; });
+        value_of(displayedText).should_be(["bob (manager)", "frank (coder & tester)"]);
+    },
+
+    'Should exclude any items marked as destroyed': function() {
+        var modelValues = new ko.observableArray([
+            { name: 'bob', _destroy: true },
+            { name: 'frank' }
+        ]);
+        testNode.innerHTML = "<select data-bind='options: myValues, optionsValue: \"name\"'></select>";
+        ko.applyBindings({ myValues: modelValues }, testNode);
+        var values = ko.utils.arrayMap(testNode.childNodes[0].childNodes, function (node) { return node.value; });
+        value_of(values).should_be(["frank"]);
+    },
+
+    'Should include items marked as destroyed if optionsIncludeDestroyed is set': function() {
+        var modelValues = new ko.observableArray([
+            { name: 'bob', _destroy: true },
+            { name: 'frank' }
+        ]);
+        testNode.innerHTML = "<select data-bind='options: myValues, optionsValue: \"name\", optionsIncludeDestroyed: true'></select>";
+        ko.applyBindings({ myValues: modelValues }, testNode);
+        var values = ko.utils.arrayMap(testNode.childNodes[0].childNodes, function (node) { return node.value; });
+        value_of(values).should_be(["bob", "frank"]);
     },
 
     'Should update the SELECT node\'s options if the model changes': function () {
@@ -585,6 +620,25 @@ describe('Binding: Options', {
         ko.applyBindings({}, testNode);
         var displayedOptions = ko.utils.arrayMap(testNode.childNodes[0].childNodes, function (node) { return node.innerHTML; });
         value_of(displayedOptions).should_be(["Select one...", "A", "B"]);
+    },
+
+    'Should allow the caption to be given by an observable, and update it when the model value changes (without affecting selection)': function() {
+        var myCaption = ko.observable("Initial caption"),
+            mySelectedValue = ko.observable("B");
+        testNode.innerHTML = "<select data-bind='options:[\"A\", \"B\"], optionsCaption: myCaption, value: mySelectedValue'></select>";
+        ko.applyBindings({ myCaption: myCaption, mySelectedValue: mySelectedValue }, testNode);
+
+        var displayedOptions = ko.utils.arrayMap(testNode.childNodes[0].childNodes, function (node) { return node.innerHTML; });
+        value_of(testNode.childNodes[0].selectedIndex).should_be(2);
+        value_of(mySelectedValue()).should_be("B");
+        value_of(displayedOptions).should_be(["Initial caption", "A", "B"]);
+
+        // Also show we can update the caption without affecting selection
+        myCaption("New caption");
+        var displayedOptions2 = ko.utils.arrayMap(testNode.childNodes[0].childNodes, function (node) { return node.innerHTML; });
+        value_of(testNode.childNodes[0].selectedIndex).should_be(2);
+        value_of(mySelectedValue()).should_be("B");
+        value_of(displayedOptions2).should_be(["New caption", "A", "B"]);
     }
 });
 
@@ -1118,6 +1172,19 @@ describe('Binding: Attr', {
         ko.applyBindings(model, testNode);
         value_of(testNode.childNodes[0].getAttribute("firstAttribute")).should_be("first value");
         value_of(testNode.childNodes[0].getAttribute("second-attribute")).should_be("true");
+    },
+
+    'Should be able to set \"name\" attribute, even on IE6-7': function() {
+        var myValue = ko.observable("myName");
+        testNode.innerHTML = "<input data-bind='attr: { name: myValue }' />";
+        ko.applyBindings({ myValue: myValue }, testNode);
+        value_of(testNode.childNodes[0].name).should_be("myName");
+        value_of(testNode.childNodes[0].outerHTML).should_match('name="?myName"?');
+
+        // Also check we can remove it (which, for a name attribute, means setting it to an empty string)
+        myValue(false);
+        value_of(testNode.childNodes[0].name).should_be("");
+        value_of(testNode.childNodes[0].outerHTML).should_not_match('name="?([^">]+)');
     },
 
     'Should respond to changes in an observable value': function() {
@@ -1788,6 +1855,25 @@ describe('Binding: Foreach', {
         // Now remove items, and check the corresponding child nodes vanished
         someitems.splice(1, 1);
         value_of(testNode).should_contain_html('<div data-bind="foreach: someitems">a<!-- ko if:true -->b<!-- /ko --></div>');
+    },
+
+    'Should remove all nodes corresponding to a removed array item, even if they were added via containerless syntax and there are no other nodes': function() {
+        ko.bindingHandlers.test = {
+            init: function (element, valueAccessor) {
+                var value = valueAccessor();
+                ko.virtualElements.prepend(element, document.createTextNode(value));
+            }
+        };
+        ko.virtualElements.allowedBindings['test'] = true;
+
+        testNode.innerHTML = "x-<!--ko foreach: someitems--><!--ko test:$data--><!--/ko--><!--/ko-->";
+        var someitems = ko.observableArray(["aaa","bbb"]);
+        ko.applyBindings({ someitems: someitems }, testNode);
+        value_of(testNode).should_contain_text('x-aaabbb');
+
+        // Now remove items, and check the corresponding child nodes vanished
+        someitems.splice(1, 1);
+        value_of(testNode).should_contain_text('x-aaa');
     },
 
     'Should move all nodes corresponding to a moved array item, even if they were generated via containerless templates': function() {

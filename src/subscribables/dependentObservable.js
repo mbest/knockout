@@ -110,27 +110,19 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
 
     function dependentObservable() {
         if (arguments.length > 0) {
-            set.apply(dependentObservable, arguments);
+            if (typeof writeFunction === "function") {
+                // Writing a value
+                writeFunction.apply(evaluatorFunctionTarget, arguments);
+            } else {
+                throw new Error("Cannot write a value to a ko.computed unless you specify a 'write' option. If you wish to read the current value, don't pass any parameters.");
+            }
         } else {
-            return get();
+            // Reading the value
+            if (_needsEvaluation)
+                evaluateImmediate();
+            ko.dependencyDetection.registerDependency(dependentObservable);
+            return _latestValue;
         }
-    }
-
-    function set() {
-        if (typeof writeFunction === "function") {
-            // Writing a value
-            writeFunction.apply(evaluatorFunctionTarget, arguments);
-        } else {
-            throw new Error("Cannot write a value to a ko.computed unless you specify a 'write' option. If you wish to read the current value, don't pass any parameters.");
-        }
-    }
-
-    function get() {
-        // Reading the value
-        if (_needsEvaluation)
-            evaluateImmediate();
-        ko.dependencyDetection.registerDependency(dependentObservable);
-        return _latestValue;
     }
 
     // Evaluate, unless deferEvaluation is true, unless returnValueIfNoDependencies is true

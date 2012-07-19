@@ -93,7 +93,7 @@
                         : new ko.bindingContext(ko.utils.unwrapObservable(dataOrBindingContext));
 
                     // Support selecting template as a function of the data being rendered
-                    var templateName = typeof(template) == 'function' ? template(bindingContext['$data']) : template;
+                    var templateName = typeof(template) == 'function' ? template(bindingContext['$data'], bindingContext) : template;
 
                     var renderedNodesArray = executeTemplate(targetNodeOrNodeArray, renderMode, templateName, bindingContext, options);
                     if (renderMode == "replaceNode") {
@@ -123,9 +123,9 @@
         // This will be called by setDomNodeChildrenFromArrayMapping to get the nodes to add to targetNode
         var executeTemplateForArrayItem = function (arrayValue, index) {
             // Support selecting template as a function of the data being rendered
-            var templateName = typeof(template) == 'function' ? template(arrayValue) : template;
             arrayItemContext = parentBindingContext['createChildContext'](arrayValue);
             arrayItemContext['$index'] = index;
+            var templateName = typeof(template) == 'function' ? template(arrayValue, arrayItemContext) : template;
             return executeTemplate(null, "ignoreTargetNode", templateName, arrayItemContext, options);
         }
 

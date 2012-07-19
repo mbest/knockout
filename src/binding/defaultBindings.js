@@ -211,7 +211,9 @@ ko.bindingHandlers['options'] = {
         }
 
         if (value) {
-            var allBindings = allBindingsAccessor();
+            var allBindings = allBindingsAccessor(),
+                includeDestroyed = allBindings['optionsIncludeDestroyed'];
+
             if (typeof value.length != "number")
                 value = [value];
             if (allBindings['optionsCaption']) {
@@ -220,25 +222,32 @@ ko.bindingHandlers['options'] = {
                 ko.selectExtensions.writeValue(option, undefined);
                 element.appendChild(option);
             }
+
             for (var i = 0, j = value.length; i < j; i++) {
+                // Skip destroyed items
+                var arrayEntry = value[i];
+                if (arrayEntry && arrayEntry['_destroy'] && !includeDestroyed)
+                    continue;
+
                 var option = document.createElement("option");
 
+                function applyToObject(object, predicate, defaultValue) {
+                    var predicateType = typeof predicate;
+                    if (predicateType == "function")    // Given a function; run it against the data value
+                        return predicate(object);
+                    else if (predicateType == "string") // Given a string; treat it as a property name on the data value
+                        return object[predicate];
+                    else                                // Given no optionsText arg; use the data value itself
+                        return defaultValue;
+                }
+
                 // Apply a value to the option element
-                var optionValue = typeof allBindings['optionsValue'] == "string" ? value[i][allBindings['optionsValue']] : value[i];
-                optionValue = ko.utils.unwrapObservable(optionValue);
-                ko.selectExtensions.writeValue(option, optionValue);
+                var optionValue = applyToObject(arrayEntry, allBindings['optionsValue'], arrayEntry);
+                ko.selectExtensions.writeValue(option, ko.utils.unwrapObservable(optionValue));
 
                 // Apply some text to the option element
-                var optionsTextValue = allBindings['optionsText'];
-                var optionText;
-                if (typeof optionsTextValue == "function")
-                    optionText = optionsTextValue(value[i]); // Given a function; run it against the data value
-                else if (typeof optionsTextValue == "string")
-                    optionText = value[i][optionsTextValue]; // Given a string; treat it as a property name on the data value
-                else
-                    optionText = optionValue;				 // Given no optionsText arg; use the data value itself
+                var optionText = applyToObject(arrayEntry, allBindings['optionsText'], optionValue);
                 optionText = ko.utils.unwrapObservable(optionText);
-
                 option.appendChild(document.createTextNode((optionText == null) ? "" : optionText));
 
                 element.appendChild(option);
@@ -315,8 +324,8 @@ ko.bindingHandlers['text'] = {
 ko.bindingHandlers['html'] = {
     'flags': bindingFlags_contentBind | bindingFlags_contentSet,
     'update': function (element, valueAccessor) {
-        var value = ko.utils.unwrapObservable(valueAccessor());
-        ko.utils.setHtml(element, value);
+        // setHtml will unwrap the value if needed
+        ko.utils.setHtml(element, valueAccessor());
     }
 };
 

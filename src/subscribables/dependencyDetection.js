@@ -23,10 +23,10 @@ ko.dependencyDetection = (function () {
             }
         },
 
-        ignore: function(callback, object, args) {
+        ignore: function(callback, callbackTarget, args) {
             try {
                 _frames.push(null);
-                return callback.apply(object, args || []);
+                return callback.apply(callbackTarget, args || []);
             } finally {
                 _frames.pop();
             }
