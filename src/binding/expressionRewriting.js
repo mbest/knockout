@@ -93,6 +93,7 @@ ko.expressionRewriting = (function () {
             var resultStrings = [], propertyAccessorResultStrings = [],
                 eventHandlersUseObjectForThis = bindingOptions['eventHandlersUseObjectForThis'],
                 independentBindings = bindingOptions['independentBindings'];
+            eventHandlersUseObjectForThis = eventHandlersUseObjectForThis === false ? false : true;
             independentBindings = independentBindings === false ? false : true;
 
             function processKeyValue(key, val, parentBinding) {

@@ -1542,13 +1542,13 @@ describe('Binding: With Light', {
     },
 
     'Should be able to specify child context model name via option': function() {
-        testNode.innerHTML = "<div data-bind='withlight: someItem, withItemName:\"$me\"'><span data-bind='text: $me.myProp'></span></div>";
+        testNode.innerHTML = "<div data-bind='withlight: someItem, as:\"$me\"'><span data-bind='text: $me.myProp'></span></div>";
         ko.applyBindings({ someItem: { myProp: 'Sub prop value' }, myProp: 'Parent prop value' }, testNode);
         value_of(testNode.childNodes[0].childNodes[0]).should_contain_text("Sub prop value");
     },
 
     'Should be able to specify child context model name via parsed syntax': function() {
-        testNode.innerHTML = "<div data-bind='withlight: $me = someItem'><span data-bind='text: $me.myProp'></span></div>";
+        testNode.innerHTML = "<div data-bind='withlight: someItem as $me'><span data-bind='text: $me.myProp'></span></div>";
         ko.applyBindings({ someItem: { myProp: 'Sub prop value' }, myProp: 'Parent prop value' }, testNode);
         value_of(testNode.childNodes[0].childNodes[0]).should_contain_text("Sub prop value");
     }
@@ -1721,7 +1721,7 @@ describe('Binding: With', {
     },
 
     'Should be able to bind $data to an alias and use it within \"with\"': function() {
-        testNode.innerHTML = "<div data-bind='with: topitem, as: item'><span data-bind='text: item.name'></span></div>";
+        testNode.innerHTML = "<div data-bind='with: topitem as item'><span data-bind='text: item.name'></span></div>";
         ko.applyBindings({ topitem: { name: 'alpha' } }, testNode);
         value_of(testNode.childNodes[0]).should_contain_html('<span data-bind="text: item.name">alpha</span>');
     },
@@ -2133,7 +2133,7 @@ describe('Binding: Foreach', {
     },
 
     'Should be able to bind $data to an alias and use it within a loop': function() {
-        testNode.innerHTML = "<div data-bind='foreach: someItems, as: item'><span data-bind='text: item'></span></div>";
+        testNode.innerHTML = "<div data-bind='foreach: someItems as item'><span data-bind='text: item'></span></div>";
         var someItems = ['alpha', 'beta'];
         ko.applyBindings({ someItems: someItems }, testNode);
         value_of(testNode.childNodes[0]).should_contain_html('<span data-bind="text: item">alpha</span><span data-bind="text: item">beta</span>');
@@ -2147,21 +2147,21 @@ describe('Binding: Foreach', {
     },
 
     'Should be able to bind $data to an alias and use it within a nested loop': function() {
-        testNode.innerHTML = "<div data-bind='foreach: someItems, as: item'><span data-bind='foreach: sub'><span data-bind='text: item.name+$data'></span></span></div>";
+        testNode.innerHTML = "<div data-bind='foreach: someItems as item'><span data-bind='foreach: sub'><span data-bind='text: item.name+$data'></span></span></div>";
         var someItems = [{ name: 'alpha', sub: ['a', 'b'] }, { name: 'beta', sub: ['c'] }];
         ko.applyBindings({ someItems: someItems }, testNode);
         value_of(testNode.childNodes[0]).should_contain_html('<span data-bind="foreach: sub"><span data-bind="text: item.name+$data">alphaa</span><span data-bind="text: item.name+$data">alphab</span></span><span data-bind="foreach: sub"><span data-bind="text: item.name+$data">betac</span></span>');
     },
 
     'Should be able to use a $data alias from inside an \'if\' in a loop': function() {
-        testNode.innerHTML = "<div data-bind='foreach: someItems, as: item'><span data-bind='if: item.length'><span data-bind='text: item'></span></span></div>";
+        testNode.innerHTML = "<div data-bind='foreach: someItems as item'><span data-bind='if: item.length'><span data-bind='text: item'></span></span></div>";
         var someItems = ['alpha', 'beta'];
         ko.applyBindings({ someItems: someItems }, testNode);
         value_of(testNode.childNodes[0]).should_contain_html('<span data-bind="if: item.length"><span data-bind="text: item">alpha</span></span><span data-bind="if: item.length"><span data-bind="text: item">beta</span></span>');
     },
 
     'Should be able to use a $data alias from inside a containerless \'if\' in a loop': function() {
-        testNode.innerHTML = "<div data-bind='foreach: someItems, as: item'>x<!-- ko if: item.length --><span data-bind='text: item'></span>x<!-- /ko --></div>";
+        testNode.innerHTML = "<div data-bind='foreach: someItems as item'>x<!-- ko if: item.length --><span data-bind='text: item'></span>x<!-- /ko --></div>";
         var someItems = ['alpha', 'beta'];
         ko.applyBindings({ someItems: someItems }, testNode);
         value_of(testNode.childNodes[0]).should_contain_html('x<!-- ko if: item.length --><span data-bind="text: item">alpha</span>x<!-- /ko -->x<!-- ko if: item.length --><span data-bind="text: item">beta</span>x<!-- /ko -->');

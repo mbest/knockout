@@ -425,18 +425,20 @@ ko.bindingHandlers['attr'] = {
     }
 };
 
+function preprocessAs(val, key, addBinding) {
+    var match = val.match(/^([\s\S]+)\s+as\s+([$\w]+)\s*$/);
+    if (match)
+        addBinding('as', '"' + match[2] + '"');
+    return match ? match[1] : val;
+};
+
 ko.bindingHandlers['withlight'] = {
     'flags': bindingFlags_contentBind | bindingFlags_canUseVirtual,
-    'preprocess': function(val, key, addBinding) {
-        var match = val.match(/^\s*([$\w]+)\s*=\s*([^=][\s\S]*)$/);
-        if (match)
-            addBinding('withItemName', '"' + match[1] + '"');
-        return match ? match[2] : val;
-    },
+    'preprocess': preprocessAs,
     'init': function(element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
         var innerContext = bindingContext['createChildContext'](function() {
                 return ko.utils.unwrapObservable(valueAccessor());
-            }, allBindingsAccessor('withItemName') );
+            }, allBindingsAccessor('as') );
         ko.applyBindingsToDescendants(innerContext, element);
     }
 };
@@ -464,6 +466,7 @@ ko.bindingHandlers['hasfocus'] = {
 var withDomDataKey = ko.utils.domData.nextKey();
 ko.bindingHandlers['with'] = {
     'flags': bindingFlags_contentBind | bindingFlags_canUseVirtual,
+    'preprocess': preprocessAs,
     'init': function(element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
         var dataValue = ko.utils.unwrapObservable(valueAccessor()),
             nodesArray = ko.virtualElements.childNodes(element),
@@ -472,7 +475,7 @@ ko.bindingHandlers['with'] = {
         if (dataValue) {
             // When the data value is initially true, save a copy of the nodes (and bind to the originals)
             nodesArray = ko.utils.cloneNodes(nodesArray);
-            ko.applyBindingsToDescendants(bindingContext['createChildContext'](savedDataValue), element);
+            ko.applyBindingsToDescendants(bindingContext['createChildContext'](savedDataValue, allBindingsAccessor('as')), element);
         }
 
         ko.domDataSet(element, withDomDataKey, {
@@ -494,26 +497,27 @@ ko.bindingHandlers['with'] = {
             nodesArray = ko.utils.cloneNodes(withData.savedNodes.childNodes);
             ko.virtualElements.setDomNodeChildren(element, nodesArray);
             savedDataValue(dataValue);
-            ko.applyBindingsToDescendants(bindingContext['createChildContext'](savedDataValue), element);
+            ko.applyBindingsToDescendants(bindingContext['createChildContext'](savedDataValue, allBindingsAccessor('as')), element);
         }
     }
 };
 
-function templateBasedBinding(makeOptionsFunction) {
-    function makeTemplateValueAccessor(valueAccessor) {
+function templateBasedBinding(makeOptionsFunction, preprocess) {
+    function makeTemplateValueAccessor(valueAccessor, allBindingsAccessor) {
         return function() {
             var options = {'templateEngine': ko.nativeTemplateEngine.instance};
-            makeOptionsFunction(valueAccessor(), options);
+            makeOptionsFunction(valueAccessor(), options, allBindingsAccessor);
             return options;
         };
     }
     return {
         'flags': bindingFlags_contentBind | bindingFlags_canUseVirtual,
+        'preprocess': preprocess,
         'init': function(element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
-            return ko.bindingHandlers['template']['init'](element, makeTemplateValueAccessor(valueAccessor));
+            return ko.bindingHandlers['template']['init'](element, makeTemplateValueAccessor(valueAccessor, allBindingsAccessor));
         },
         'update': function(element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
-            return ko.bindingHandlers['template']['update'](element, makeTemplateValueAccessor(valueAccessor), allBindingsAccessor, viewModel, bindingContext);
+            return ko.bindingHandlers['template']['update'](element, makeTemplateValueAccessor(valueAccessor, allBindingsAccessor), allBindingsAccessor, viewModel, bindingContext);
         }
     };
 }
@@ -530,14 +534,15 @@ ko.bindingHandlers['ifnot'] = templateBasedBinding( function(value, options) { o
 // "foreach: someExpression" is equivalent to "template: { foreach: someExpression }"
 // "foreach: { data: someExpression, afterAdd: myfn }" is equivalent to "template: { foreach: someExpression, afterAdd: myfn }"
 ko.bindingHandlers['foreach'] = templateBasedBinding(
-    function(value, options) {
+    function(value, options, allBindingsAccessor) {
         if ((!value) || typeof value.length == "number") {
             // If bindingValue is the array, just pass it on its own
             options['foreach'] = value;
+            options['as'] = allBindingsAccessor('as');
         } else {
             // If bindingValue is a object with options, copy it and set foreach to the data value
             ko.utils.extendInternal(options, value);
             options['foreach'] = options['data'];
             delete options['name'];   // don't allow named templates
         }
-    });
+    }, preprocessAs);
