@@ -1,5 +1,5 @@
 
-ko.bindingExpressionRewriting = (function () {
+ko.expressionRewriting = (function () {
     var javaScriptAssignmentTarget = /^[\_$a-z][\_$a-z0-9]*(\[.*?\])*(\.[\_$a-z][\_$a-z0-9]*(\[.*?\])*)*$/i;
     var javaScriptReservedWords = ["true", "false", "null"];
 

@@ -136,7 +136,7 @@ ko.bindingHandlers['value'] = {
         var elemProperty = elementIsSelect ? "selectedIndex" : "value";
 
         function modelUpdater(newValue) {
-            ko.bindingExpressionRewriting.writeValueToProperty(valueAccessor(), allBindingsAccessor, 'value', newValue, /* checkIfDifferent: */ true);
+            ko.expressionRewriting.writeValueToProperty(valueAccessor(), allBindingsAccessor, 'value', newValue, /* checkIfDifferent: */ true);
         };
 
         var elemValue = ko.domObservable(element, elemProperty, 'change');  // Always catch "change" event
@@ -292,7 +292,7 @@ ko.bindingHandlers['selectedOptions'] = {
         }
 
         function modelUpdater(newValue) {
-            ko.bindingExpressionRewriting.writeValueToProperty(valueAccessor(), allBindingsAccessor, 'value', newValue);
+            ko.expressionRewriting.writeValueToProperty(valueAccessor(), allBindingsAccessor, 'value', newValue);
         };
 
         setUpTwoWayBinding(element,
@@ -384,7 +384,7 @@ ko.bindingHandlers['checked'] = {
                 setUpTwoWayBinding(element,
                     valueAccessor, elemChecked,
                     elemChecked, function(checkedValue) {
-                        ko.bindingExpressionRewriting.writeValueToProperty(valueAccessor(), allBindingsAccessor, 'checked', checkedValue, true);
+                        ko.expressionRewriting.writeValueToProperty(valueAccessor(), allBindingsAccessor, 'checked', checkedValue, true);
                     });
             }
         } else if (element.type == "radio") {
@@ -399,7 +399,7 @@ ko.bindingHandlers['checked'] = {
                     return elemChecked() ? elemValue : null;
                 }, function(newValue) {
                     if (newValue !== null)
-                        ko.bindingExpressionRewriting.writeValueToProperty(valueAccessor(), allBindingsAccessor, 'checked', newValue, true);
+                        ko.expressionRewriting.writeValueToProperty(valueAccessor(), allBindingsAccessor, 'checked', newValue, true);
                 });
         }
     }
@@ -447,7 +447,7 @@ ko.bindingHandlers['hasfocus'] = {
             elemFocusObservable();
             return element.ownerDocument.activeElement === element;
         }, function(newValue) {
-            ko.bindingExpressionRewriting.writeValueToProperty(valueAccessor(), allBindingsAccessor, 'hasfocus', newValue, true);
+            ko.expressionRewriting.writeValueToProperty(valueAccessor(), allBindingsAccessor, 'hasfocus', newValue, true);
         });
     }
 };

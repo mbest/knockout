@@ -16,7 +16,7 @@ knockoutDebugCallback([
     'src/subscribables/domObservable.js',
     'src/subscribables/mappingHelpers.js',
     'src/binding/selectExtensions.js',
-    'src/binding/bindingExpressionRewriting.js',
+    'src/binding/expressionRewriting.js',
     'src/virtualElements.js',
     'src/binding/bindingProvider.js',
     'src/binding/bindingAttributeSyntax.js',

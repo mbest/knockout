@@ -51,7 +51,7 @@
     }
 
     function createBindingsStringEvaluator(bindingsString, bindingOptions, scopesCount) {
-        var rewrittenBindings = " { " + ko.bindingExpressionRewriting.preProcessBindings(bindingsString, bindingOptions) + " } ";
+        var rewrittenBindings = " { " + ko.expressionRewriting.preProcessBindings(bindingsString, bindingOptions) + " } ";
         return ko.utils.buildEvalWithinScopeFunction(rewrittenBindings, scopesCount);
     }
 })();
