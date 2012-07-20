@@ -41,6 +41,7 @@
     ko.bindingContext = function(dataItemOrValueAccessor, parentContext, options, extendCallback) {
         var self = this,
             isFunc = typeof(dataItemOrValueAccessor) == "function",
+            rootModelName = options && options['rootModelName'] || '$root',
             subscribable;
         self._subscribable = subscribable = ko.utils.possiblyWrap(function() {
             var model = isFunc ? dataItemOrValueAccessor() : dataItemOrValueAccessor;
@@ -55,7 +56,7 @@
                 self['$options'] = ko.utils.extendInternal({}, parentContext['$options'], options);
             } else {
                 self['$parents'] = [];
-                self['$root'] = model;
+                self['$root'] = self[rootModelName] = model;
                 self['$options'] = ko.utils.extendInternal({}, options);
                 // Export 'ko' in the binding context so it will be available in bindings and templates
                 // even if 'ko' isn't exported as a global, such as when using an AMD loader.
