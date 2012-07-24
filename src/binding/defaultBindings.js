@@ -188,7 +188,7 @@ ko.bindingHandlers['value'] = {
 
 ko.bindingHandlers['options'] = {
     'flags': bindingFlags_contentBind | bindingFlags_contentSet,
-    'update': function (element, valueAccessor, allBindingsAccessor) {
+    'update': function (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
         if (ko.utils.tagNameLower(element) !== "select")
             throw new Error("options binding applies only to SELECT elements");
 
@@ -216,6 +216,7 @@ ko.bindingHandlers['options'] = {
 
             if (typeof value.length != "number")
                 value = [value];
+            var optionsBind = allBindings['optionsBind'];
             if (allBindings['optionsCaption']) {
                 var option = document.createElement("option");
                 ko.utils.setHtml(option, allBindings['optionsCaption']);
@@ -251,6 +252,13 @@ ko.bindingHandlers['options'] = {
                 option.appendChild(document.createTextNode((optionText == null) ? "" : optionText));
 
                 element.appendChild(option);
+
+                if (optionsBind) {
+                    var optionContext = bindingContext['createChildContext'](value[i]),
+                        optionsParseBindings = function() {
+                            return ko.bindingProvider['instance']['parseBindingsString'](optionsBind, optionContext) };
+                    ko.applyBindingsToNode(option, optionsParseBindings, optionContext);
+                }
             }
 
             // IE6 doesn't like us to assign selection to OPTION nodes before they're added to the document.
