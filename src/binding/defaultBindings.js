@@ -193,6 +193,8 @@ ko.bindingHandlers['options'] = {
             throw new Error("options binding applies only to SELECT elements");
 
         var selectWasPreviouslyEmpty = element.length == 0;
+        var countSelectionsRetained = 0;
+        var previousSelectedIndex = element.selectedIndex;
         var previousSelectedValues = ko.utils.arrayMap(ko.utils.arrayFilter(element.childNodes, function (node) {
             return node.tagName && (ko.utils.tagNameLower(node) === "option") && node.selected;
         }), function (node) {
@@ -264,7 +266,6 @@ ko.bindingHandlers['options'] = {
             // IE6 doesn't like us to assign selection to OPTION nodes before they're added to the document.
             // That's why we first added them without selection. Now it's time to set the selection.
             var newOptions = element.getElementsByTagName("option");
-            var countSelectionsRetained = 0;
             for (var i = 0, j = newOptions.length; i < j; i++) {
                 if (ko.utils.arrayIndexOf(previousSelectedValues, ko.selectExtensions.readValue(newOptions[i])) >= 0) {
                     ko.utils.setOptionNodeSelectionState(newOptions[i], true);
@@ -273,12 +274,12 @@ ko.bindingHandlers['options'] = {
             }
             element.scrollTop = previousScrollTop;
 
-            if (countSelectionsRetained < previousSelectedValues.length)
-                ko.utils.triggerEvent(element, "change");
-
             // Workaround for IE9 bug
             ko.utils.ensureSelectElementIsRenderedCorrectly(element);
         }
+
+        if (countSelectionsRetained < previousSelectedValues.length || (previousSelectedIndex === -1 && element.selectedIndex === 0))
+            ko.utils.triggerEvent(element, "change");
     }
 };
 ko.bindingHandlers['options'].optionValueDomDataKey = ko.utils.domData.nextKey();
