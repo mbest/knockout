@@ -44,11 +44,19 @@ ko.selectExtensions = (function () {
                     }
                     break;
                 case 'select':
+                    if (value == "")
+                        value = undefined;
+                    if (value === undefined)
+                        element.selectedIndex = -1;
                     for (var i = element.options.length - 1; i >= 0; i--) {
                         if (selectExtensions.readValue(element.options[i]) == value) {
                             ko.domObservable(element, 'selectedIndex')(i);
                             break;
                         }
+                    }
+                    // for drop-down select, ensure first is selected
+                    if (!(element.size > 1) && element.selectedIndex === -1) {
+                        element.selectedIndex = 0;
                     }
                     break;
                 default:

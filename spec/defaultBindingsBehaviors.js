@@ -325,6 +325,16 @@ describe('Binding: Value', {
         value_of(testNode.childNodes[0].selectedIndex).should_be(0);
     },
 
+    'For select boxes, should display the caption when the model value changes to blank': function() {
+        var observable = new ko.observable('B');
+        testNode.innerHTML = "<select data-bind='options:[\"A\", \"B\"], optionsCaption:\"Select...\", value:myObservable'></select>";
+        ko.applyBindings({ myObservable: observable }, testNode);
+        value_of(testNode.childNodes[0].selectedIndex).should_be(2);
+        observable('');
+        value_of(testNode.childNodes[0].selectedIndex).should_be(0);    	
+        value_of(observable()).should_be(undefined);        // value is updated to undefined           	
+    },
+    
     'For select boxes, should update the model value when the UI is changed (setting it to undefined when the caption is selected)': function () {
         var observable = new ko.observable('B');
         testNode.innerHTML = "<select data-bind='options:[\"A\", \"B\"], optionsCaption:\"Select...\", value:myObservable'></select>";
