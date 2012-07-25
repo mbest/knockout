@@ -1,5 +1,12 @@
+var savedHandlers;
+function resetBindingHandlers() {
+    if (savedHandlers)
+        ko.bindingHandlers = savedHandlers;
+    savedHandlers = ko.utils.extend({}, ko.bindingHandlers);
+}
 
 describe('Expression Rewriting', {
+    before_each: resetBindingHandlers,
 
     'Should be able to parse simple object literals': function() {
         var result = ko.expressionRewriting.parseObjectLiteral("a: 1, b: 2, \"quotedKey\": 3, 'aposQuotedKey': 4");
@@ -69,7 +76,6 @@ describe('Expression Rewriting', {
         var parsedRewritten = eval("({" + rewritten + "})");
         value_of(parsedRewritten.a).should_be(1);
         value_of(parsedRewritten.b).should_be(true);
-        delete ko.bindingHandlers.b;
     },
 
     'Should allow binding to modify value through "preprocess" method': function() {
@@ -83,7 +89,6 @@ describe('Expression Rewriting', {
         var parsedRewritten = eval("({" + rewritten + "})");
         value_of(parsedRewritten.a).should_be(1);
         value_of(parsedRewritten.b).should_be(false);
-        delete ko.bindingHandlers.b;
     },
 
     'Should allow binding to add/replace bindings through "preprocess" method\'s "addBinding" callback': function() {
@@ -97,7 +102,6 @@ describe('Expression Rewriting', {
         value_of(parsedRewritten.a).should_be(1);
         value_of(parsedRewritten.b).should_be(undefined);
         value_of(parsedRewritten.ab).should_be(2);
-        delete ko.bindingHandlers.b;
     },
 
     'Bindings added by "preprocess" should be at the root level': function() {
@@ -114,7 +118,6 @@ describe('Expression Rewriting', {
         value_of(parsedRewritten.b).should_be(undefined);
         value_of(parsedRewritten['b.a']).should_be(3);
         value_of(parsedRewritten['ab.a']).should_be(2);
-        delete ko.bindingHandlers.b;
     },
 
     'Should be able to chain "preprocess" calls when one adds a binding for another': function() {
@@ -136,9 +139,6 @@ describe('Expression Rewriting', {
         value_of(parsedRewritten.a).should_be(2);
         value_of(parsedRewritten.b).should_be(undefined);
         value_of(parsedRewritten['a.b']).should_be(3);
-
-        delete ko.bindingHandlers.a;
-        delete ko.bindingHandlers.b;
     },
 
     'Should convert values to property accessors': function () {
@@ -155,7 +155,6 @@ describe('Expression Rewriting', {
             parsedRewritten._ko_property_writers.b("bob2");
             value_of(model.firstName).should_be("bob2");
         }
-        delete ko.bindingHandlers.b;
     },
 
     'Should convert a variety of values to property accessors': function () {
@@ -185,7 +184,6 @@ describe('Expression Rewriting', {
             ko.expressionRewriting.writeValueToProperty(null, accessor, 'b.d', "smart");
             value_of(model.obj2.prop2).should_be("sloan");
         }
-        delete ko.bindingHandlers.b;
     },
 
     'Should be able to eval rewritten literals that contain unquoted keywords as keys': function() {
@@ -209,6 +207,5 @@ describe('Expression Rewriting', {
             parsedRewritten._ko_property_writers['a.f']("bob2");
             value_of(model.firstName).should_be("bob2");
         }
-        delete ko.bindingHandlers.a;
     }
 });

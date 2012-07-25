@@ -96,9 +96,9 @@ ko.expressionRewriting = (function () {
             eventHandlersUseObjectForThis = eventHandlersUseObjectForThis === false ? false : true;
             independentBindings = independentBindings === false ? false : true;
 
-            function processKeyValue(key, val, parentBinding) {
+            function processKeyValue(key, val) {
                 var quotedKey = ensureQuoted(key),
-                    binding = parentBinding || ko.getBindingHandler(key),
+                    binding = ko.getBindingHandler(key),
                     canWrap = binding || independentBindings,
                     flags = binding && binding['flags'];
 
@@ -106,12 +106,12 @@ ko.expressionRewriting = (function () {
                     // If the binding can used without a value set its value to 'true'
                     val = "true";
                 }
-                if (!parentBinding && flags & bindingFlags_twoLevel && val.charAt(0) === "{") {
+                if (flags & bindingFlags_twoLevel && val.charAt(0) === "{") {
                     // Handle two-level binding specified as "binding: {key: value}" by parsing inner
                     // object and converting to "binding.key: value"
                     var subBindings = parseObjectLiteral(val);
                     ko.utils.arrayForEach(subBindings, function(keyValue) {
-                        processKeyValue(key+'.'+keyValue[0], keyValue[1], binding);
+                        processKeyValue(key+'.'+keyValue[0], keyValue[1]);
                     });
                     return;
                 }

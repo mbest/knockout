@@ -37,6 +37,10 @@
 
     ko.bindingHandlers = {};
 
+    ko.getBindingHandler = function(bindingKey) {
+        return ko.bindingHandlers[bindingKey] || makeKeySubkeyBinding(bindingKey);
+    };
+
     // Accepts either a data value or a value accessor function; note that an observable qualifies as a value accessor function
     ko.bindingContext = function(dataItemOrValueAccessor, parentContext, options, extendCallback) {
         var self = this,
@@ -85,31 +89,6 @@
             });
         }
     });
-
-    function getTwoLevelBindingData(bindingKey, justHandler) {
-        var dotPos = bindingKey.indexOf(".");
-        if (dotPos > 0) {
-            var realKey = bindingKey.substring(0, dotPos), binding = ko.bindingHandlers[realKey];
-            if (binding) {
-                if (!(binding['flags'] & bindingFlags_twoLevel))
-                    throw new Error(realKey + " does not support two-level binding");
-                return justHandler
-                    ? binding
-                    : { key: realKey, subKey: bindingKey.substring(dotPos + 1), handler: binding };
-            }
-        }
-    }
-
-    function getBindingData(bindingKey) {
-        var handler = ko.bindingHandlers[bindingKey];
-        return handler
-            ? { handler: handler, key: bindingKey }
-            : getTwoLevelBindingData(bindingKey);
-    }
-
-    ko.getBindingHandler = function(bindingKey) {
-        return ko.bindingHandlers[bindingKey] || getTwoLevelBindingData(bindingKey, true /* justHandler */);
-    };
 
     ko.bindingValueWrap = function(valueFunction) {
         valueFunction.__ko_wraptest = ko.bindingValueWrap;
@@ -184,17 +163,11 @@
         }
 
         // These functions make values accessible to bindings.
-        function makeValueAccessor(fullKey, subKey) {
-            return subKey
-            ? function() {
+        function makeValueAccessor(bindingKey) {
+            return function () {
                 if (bindingUpdater)
                     bindingUpdater();
-                var _z = {}; _z[subKey] = unwrapBindingValue(parsedBindings[fullKey]); return _z;
-            }
-            : function () {
-                if (bindingUpdater)
-                    bindingUpdater();
-                return unwrapBindingValue(parsedBindings[fullKey]);
+                return unwrapBindingValue(parsedBindings[bindingKey]);
             };
         }
         function allBindingsAccessorIndependent(key) {
@@ -281,21 +254,21 @@
                     if (bindingKey in bindingIndexes)
                         return allBindings[bindingIndexes[bindingKey]];
 
-                    var binding = getBindingData(bindingKey);
-                    if (binding) {
-                        var handler = binding.handler,
+                    var handler = ko.getBindingHandler(bindingKey);
+                    if (handler) {
+                        var binding = { handler: handler, key: bindingKey },
                             dependentOrder;
 
                         binding.flags = handler['flags'];
                         validateThatBindingIsAllowedForVirtualElements(binding);
-                        binding.valueAccessor = makeValueAccessor(bindingKey, binding.subKey);
+                        binding.valueAccessor = makeValueAccessor(bindingKey);
 
                         if (!independentBindings && handler['init'])
                             initCaller(binding)();
 
                         if (binding.flags & bindingFlags_contentBind) {
                             if (bindings[contentBindBinding])
-                                multiContentBindError(bindings[contentBindBinding].key, binding.key);
+                                multiContentBindError(bindings[contentBindBinding].key, bindingKey);
                             bindings[binding.order = contentBindBinding] = binding;
                             dependentOrder = contentBindBinding - 1;
                         } else {
@@ -423,6 +396,7 @@
     };
 
     ko.exportSymbol('bindingHandlers', ko.bindingHandlers);
+    ko.exportSymbol('getBindingHandler', ko.getBindingHandler);
     ko.exportSymbol('bindingFlags', ko.bindingFlags);
     ko.exportSymbol('bindingValueWrap', ko.bindingValueWrap);       // must be exported because it's used in binding parser (which uses eval)
     ko.exportSymbol('applyBindings', ko.applyBindings);
