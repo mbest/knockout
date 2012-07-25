@@ -325,6 +325,16 @@ describe('Binding: Value', {
         value_of(testNode.childNodes[0].selectedIndex).should_be(0);
     },
 
+    'For select boxes, should display the caption when the model value changes to blank': function() {
+        var observable = new ko.observable('B');
+        testNode.innerHTML = "<select data-bind='options:[\"A\", \"B\"], optionsCaption:\"Select...\", value:myObservable'></select>";
+        ko.applyBindings({ myObservable: observable }, testNode);
+        value_of(testNode.childNodes[0].selectedIndex).should_be(2);
+        observable('');
+        value_of(testNode.childNodes[0].selectedIndex).should_be(0);
+        value_of(observable()).should_be(undefined);        // value is updated to undefined
+    },
+
     'For select boxes, should update the model value when the UI is changed (setting it to undefined when the caption is selected)': function () {
         var observable = new ko.observable('B');
         testNode.innerHTML = "<select data-bind='options:[\"A\", \"B\"], optionsCaption:\"Select...\", value:myObservable'></select>";
@@ -436,14 +446,26 @@ describe('Binding: Value', {
 
     'For select boxes, should clear value if select is cleared and no caption': function() {
         var observable = new ko.observable('B');
-        var observableArray = new ko.observableArray(["A", "B"]);
+        var observableArray = new ko.observable(["A", "B"]);
         testNode.innerHTML = "<select data-bind='options:myObservableArray, value:myObservable'></select>";
         ko.applyBindings({ myObservable: observable, myObservableArray: observableArray }, testNode);
         value_of(testNode.childNodes[0].selectedIndex).should_be(1);
 
-        observableArray([]);
+        observableArray(undefined);
         value_of(testNode.childNodes[0].selectedIndex).should_be(-1);
         value_of(observable()).should_be(undefined);
+    },
+
+    'For select boxes, should set value if select is filled and no caption': function() {
+        var observable = new ko.observable();
+        var observableArray = new ko.observable();
+        testNode.innerHTML = "<select data-bind='options:myObservableArray, value:myObservable'></select>";
+        ko.applyBindings({ myObservable: observable, myObservableArray: observableArray }, testNode);
+        value_of(testNode.childNodes[0].selectedIndex).should_be(-1);
+
+        observableArray(["A", "B"]);
+        value_of(testNode.childNodes[0].selectedIndex).should_be(0);
+        value_of(observable()).should_be("A");
     },
 
     'For select boxes, option values can be numerical, and are not implicitly converted to strings': function() {
