@@ -211,8 +211,8 @@ describe('Array to DOM node children mapping', {
             return [output];
         };
         var callback = function(arrayItem, nodes) {
+            value_of(mappingInvocations[countCallbackInvocations]).should_be(arrayItem);
             ++countCallbackInvocations;
-            value_of(mappingInvocations[mappingInvocations.length-1]).should_be(arrayItem);
         }
 
         ko.utils.setDomNodeChildrenFromArrayMapping(testNode, ["A"], mapping, null, callback);
