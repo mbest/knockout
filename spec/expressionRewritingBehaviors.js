@@ -142,7 +142,8 @@ describe('Expression Rewriting', {
     },
 
     'Should convert values to property accessors': function () {
-        ko.bindingHandlers.b = { flags: ko.bindingFlags.twoWay };
+        var h = ko.bindingHandlers;
+        h.a = h.b = h.c = h.d = h.e = h.f = h.g = h.h = h.i = h.j = { flags: ko.bindingFlags.twoWay };
         var rewritten = ko.expressionRewriting.preProcessBindings(
             'a : 1, b : firstName, c : function() { return "returnValue"; }, ' +
             'd: firstName+lastName, e: boss.firstName, f: boss . lastName, ' +
@@ -164,9 +165,9 @@ describe('Expression Rewriting', {
             value_of(parsed.d).should_be("bobsmith");
             value_of(parsed.e).should_be("rick");
             value_of(parsed.f).should_be("martin");
-            value_of(parsed.g).should_be(assistant);
-            value_of(parsed.h).should_be("john");
-            value_of(parsed.i).should_be("english");
+            value_of(parsed.g()).should_be(assistant);
+            value_of(parsed.h()).should_be("john");
+            value_of(parsed.i()).should_be("english");
 
             // test that only writable expressions are set up for writing
             // 'j' matches due to the simple checking for trailing property accessor

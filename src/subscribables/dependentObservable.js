@@ -192,7 +192,8 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
         'getDependenciesCount', dependentObservable.getDependenciesCount,
         'addDisposalNodes', dependentObservable.addDisposalNodes,
         'replaceDisposalNodes', dependentObservable.replaceDisposalNodes,
-        'getDisposalNodesCount', dependentObservable.getDisposalNodesCount
+        'getDisposalNodesCount', dependentObservable.getDisposalNodesCount,
+        'isActive', dependentObservable.isActive
     );
 };
 
