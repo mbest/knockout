@@ -543,7 +543,7 @@ ko.bindingHandlers['with'] = {
             savedDataValue(dataValue);
         } else if (dataValue) {
             // When the data value becomes non-false, copy the nodes into the document
-            nodesArray = ko.utils.cloneNodes(withData.savedNodes.childNodes);
+            var nodesArray = ko.utils.cloneNodes(withData.savedNodes.childNodes);
             ko.virtualElements.setDomNodeChildren(element, nodesArray);
             savedDataValue(dataValue);
             ko.applyBindingsToDescendants(bindingContext['createChildContext'](savedDataValue, allBindingsAccessor('as')), element);
