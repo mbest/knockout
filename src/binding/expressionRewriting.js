@@ -1,12 +1,16 @@
 
 ko.expressionRewriting = (function () {
-    var javaScriptAssignmentTarget = /^[\_$a-z][\_$a-z0-9]*(\[.*?\])*(\.[\_$a-z][\_$a-z0-9]*(\[.*?\])*)*$/i;
     var javaScriptReservedWords = ["true", "false", "null"];
 
-    function isWriteableValue(expression) {
+    // Matches something that can be assigned to--either an isolated identifier or something ending with a property accessor
+    // This is designed to be simple and avoid false negatives, but could produce false positives (e.g., a+b.c).
+    var javaScriptAssignmentTarget = /^(?:[$_a-z][$\w]*|(.+)(\.\s*[$_a-z][$\w]*|\[.+\]))$/i;
+
+    function getWriteableValue(expression) {
         if (ko.utils.arrayIndexOf(javaScriptReservedWords, expression) >= 0)
             return false;
-        return expression.match(javaScriptAssignmentTarget) !== null;
+        var match = expression.match(javaScriptAssignmentTarget);
+        return match === null ? false : match[1] ? ('Object(' + match[1] + ')' + match[2]) : expression;
     }
 
     function isFunctionLiteral(expression) {
@@ -100,7 +104,7 @@ ko.expressionRewriting = (function () {
                 var quotedKey = ensureQuoted(key),
                     binding = ko.getBindingHandler(key),
                     canWrap = binding || independentBindings,
-                    flags = binding && binding['flags'];
+                    flags = binding && binding['flags'], writeableVal;
 
                 if (val === undefined && flags & bindingFlags_noValue) {
                     // If the binding can used without a value set its value to 'true'
@@ -121,17 +125,17 @@ ko.expressionRewriting = (function () {
                         return;
                 }
                 if (!isFunctionLiteral(val)) {
-                    if (binding && isWriteableValue(val)) {
+                    if (binding && (writeableVal = getWriteableValue(val))) {
                         if (eventHandlersUseObjectForThis && flags & bindingFlags_eventHandler) {
                             // call function literal in an anonymous function so that it is called
                             // with appropriate "this" value
-                            val = 'function(_x,_y,_z){(' + val + ')(_x,_y,_z);}';
+                            val = 'function(_x,_y,_z){(' + writeableVal + ')(_x,_y,_z);}';
                             canWrap = false;
                         }
                         else if (flags & bindingFlags_twoWay) {
                             // for two-way bindings, provide a write method in case the value
                             // isn't a writable observable
-                            propertyAccessorResultStrings.push(quotedKey + ":function(_z){" + val + "=_z;}");
+                            propertyAccessorResultStrings.push(quotedKey + ":function(_z){" + writeableVal + "=_z;}");
                         }
                     }
                     if (canWrap && isPossiblyUnwrappedObservable(val)) {

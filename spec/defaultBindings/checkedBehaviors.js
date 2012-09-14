@@ -1,5 +1,5 @@
 describe('Binding: Checked', {
-    before_each: prepareTestNode,
+    before_each: JSSpec.prepareTestNode,
 
     'Triggering a click should toggle a checkbox\'s checked state before the event handler fires': function() {
         // This isn't strictly to do with the checked binding, but if this doesn't work, the rest of the specs aren't meaningful

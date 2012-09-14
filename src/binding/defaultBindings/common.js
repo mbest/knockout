@@ -38,6 +38,13 @@ function makeDefaultKeySubkeyHandler(baseKey, subKey) {
     return subHandler;
 }
 
+// For certain common events (currently just 'click'), allow a simplified data-binding syntax
+// e.g. click:handler instead of the usual full-length event:{click:handler}
+function makeEventHandlerShortcut(eventName) {
+    ko.bindingHandlers[eventName] = makeKeySubkeyBinding('event' + keySubkeyBindingDivider + eventName);
+}
+
+
 function setUpTwoWayBinding(element, modelValue, elemUpdater, elemValue, modelUpdater) {
     var isUpdating = false,
         shouldSet = false;

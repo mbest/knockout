@@ -1,5 +1,5 @@
 describe('Binding: Unique Name', {
-    before_each: prepareTestNode,
+    before_each: JSSpec.prepareTestNode,
 
     'Should apply a different name to each element': function () {
         testNode.innerHTML = "<div data-bind='uniqueName: true'></div><div data-bind='uniqueName: true'></div>";

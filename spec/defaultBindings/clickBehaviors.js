@@ -1,6 +1,6 @@
 describe('Binding: Click', {
     // This is just a special case of the "event" binding, so not necessary to respecify all its behaviours
-    before_each: prepareTestNode,
+    before_each: JSSpec.prepareTestNode,
 
     'Should invoke the supplied function on click, using model as \'this\' param and first arg, and event as second arg': function () {
         var model = {

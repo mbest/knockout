@@ -1,5 +1,5 @@
 describe('Binding: Options', {
-    before_each: prepareTestNode,
+    before_each: JSSpec.prepareTestNode,
 
     // Todo: when the options list is populated, this should trigger a change event so that observers are notified of the new value (i.e., the default selection)
 
@@ -29,7 +29,7 @@ describe('Binding: Options', {
         var displayedText = ko.utils.arrayMap(testNode.childNodes[0].childNodes, function (node) { return node.innerHTML; });
         var displayedValues = ko.utils.arrayMap(testNode.childNodes[0].childNodes, function (node) { return node.value; });
         value_of(displayedText).should_be(["bob", "frank"]);
-        value_of(displayedValues).should_be([6, 13]);
+        value_of(displayedValues).should_be(["6", "13"]);
     },
 
     'Should accept function in optionsText param to display subproperties of the model values': function() {
@@ -91,7 +91,7 @@ describe('Binding: Options', {
         var observable = new ko.observableArray(["A", "B", "C"]);
         testNode.innerHTML = "<select data-bind='options:myValues' multiple='multiple'><option>A</option><option selected='selected'>B</option><option selected='selected'>X</option></select>";
         ko.applyBindings({ myValues: observable }, testNode);
-        value_of(getSelectedValuesFromSelectNode(testNode.childNodes[0])).should_be(["B"]);
+        value_of(testNode.childNodes[0]).should_have_selected_values(["B"]);
     },
 
     'Should place a caption at the top of the options list and display it when the model value is undefined': function() {

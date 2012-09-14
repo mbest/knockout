@@ -1,5 +1,5 @@
 describe('Binding: Visible', {
-    before_each: prepareTestNode,
+    before_each: JSSpec.prepareTestNode,
 
     'Should display the node only when the value is true': function () {
         var observable = new ko.observable(false);

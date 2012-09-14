@@ -1,5 +1,5 @@
 describe('Binding: CSS style', {
-    before_each: prepareTestNode,
+    before_each: JSSpec.prepareTestNode,
 
     'Should give the element the specified CSS style value': function () {
         var myObservable = new ko.observable("red");

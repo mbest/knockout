@@ -21,7 +21,7 @@ sed -i 's/throw\( new\)* Error/ko_throw/' $OutDebugFile.all.temp
 
 cat fragments/extern-pre.js         > $OutDebugFile.temp
 cat fragments/amd-pre.js            >> $OutDebugFile.temp
-cat $OutDebugFile.all.temp          >> $OutDebugFile.temp
+cat $OutDebugFile.all.temp          >> $OutDebugFile.temp || handle_fail
 cat fragments/amd-post.js           >> $OutDebugFile.temp
 cat fragments/extern-post.js        >> $OutDebugFile.temp
 rm $OutDebugFile.all.temp

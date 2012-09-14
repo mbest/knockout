@@ -1,5 +1,5 @@
 describe('Binding: Let', {
-    before_each: prepareTestNode,
+    before_each: JSSpec.prepareTestNode,
 
     'Should be able to add custom properties that will be available to all child contexts': function() {
         testNode.innerHTML = "<div data-bind=\"let: { '$customProp': 'my value' }\"><div data-bind='with: true'><div data-bind='text: $customProp'></div></div></div>";

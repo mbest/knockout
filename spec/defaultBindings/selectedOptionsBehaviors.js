@@ -1,5 +1,5 @@
 describe('Binding: Selected Options', {
-    before_each: prepareTestNode,
+    before_each: JSSpec.prepareTestNode,
 
     'Should only be applicable to SELECT nodes': function () {
         var threw = false;
@@ -16,9 +16,9 @@ describe('Binding: Selected Options', {
         testNode.innerHTML = "<select multiple='multiple' data-bind='options:myValues, selectedOptions:mySelection'></select>";
         ko.applyBindings({ myValues: values, mySelection: selection }, testNode);
 
-        value_of(getSelectedValuesFromSelectNode(testNode.childNodes[0])).should_be([bObject]);
+        value_of(testNode.childNodes[0]).should_have_selected_values([bObject]);
         selection.push("C");
-        value_of(getSelectedValuesFromSelectNode(testNode.childNodes[0])).should_be([bObject, "C"]);
+        value_of(testNode.childNodes[0]).should_have_selected_values([bObject, "C"]);
     },
 
     'Should update the model when selection in the SELECT node changes': function () {
@@ -74,13 +74,13 @@ describe('Binding: Selected Options', {
         testNode.innerHTML = "<select multiple='multiple' data-bind='selectedOptions:mySelection'><optgroup label='group'><option value='a'>a-text</option><option value='b'>b-text</option><option value='c'>c-text</option></optgroup><optgroup label='group2'><option value='d'>d-text</option></optgroup></select>";
         ko.applyBindings({ mySelection: selection }, testNode);
 
-        value_of(getSelectedValuesFromSelectNode(testNode.childNodes[0].childNodes[0])).should_be(['a']);
-        value_of(getSelectedValuesFromSelectNode(testNode.childNodes[0].childNodes[1])).should_be([]);
+        value_of(testNode.childNodes[0].childNodes[0]).should_have_selected_values(['a']);
+        value_of(testNode.childNodes[0].childNodes[1]).should_have_selected_values([]);
         selection.push('c');
-        value_of(getSelectedValuesFromSelectNode(testNode.childNodes[0].childNodes[0])).should_be(['a', 'c']);
-        value_of(getSelectedValuesFromSelectNode(testNode.childNodes[0].childNodes[1])).should_be([]);
+        value_of(testNode.childNodes[0].childNodes[0]).should_have_selected_values(['a', 'c']);
+        value_of(testNode.childNodes[0].childNodes[1]).should_have_selected_values([]);
         selection.push('d');
-        value_of(getSelectedValuesFromSelectNode(testNode.childNodes[0].childNodes[0])).should_be(['a', 'c']);
-        value_of(getSelectedValuesFromSelectNode(testNode.childNodes[0].childNodes[1])).should_be(['d']);
+        value_of(testNode.childNodes[0].childNodes[0]).should_have_selected_values(['a', 'c']);
+        value_of(testNode.childNodes[0].childNodes[1]).should_have_selected_values(['d']);
     }
 });

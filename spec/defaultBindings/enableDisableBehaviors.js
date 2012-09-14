@@ -1,5 +1,5 @@
 describe('Binding: Enable/Disable', {
-    before_each: prepareTestNode,
+    before_each: JSSpec.prepareTestNode,
 
     'Enable means the node is enabled only when the value is true': function () {
         var observable = new ko.observable();

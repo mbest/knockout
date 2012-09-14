@@ -1,5 +1,5 @@
 describe('Binding: CSS class name', {
-    before_each: prepareTestNode,
+    before_each: JSSpec.prepareTestNode,
 
     'Should give the element the specific CSS class only when the specified value is true': function () {
         var observable1 = new ko.observable();

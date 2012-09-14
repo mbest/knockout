@@ -1,5 +1,5 @@
 describe('Binding: Submit', {
-    before_each: prepareTestNode,
+    before_each: JSSpec.prepareTestNode,
 
     'Should invoke the supplied function on submit and prevent default action, using model as \'this\' param and the form node as a param to the handler': function () {
         var firstParamStored;

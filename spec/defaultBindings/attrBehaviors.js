@@ -1,5 +1,5 @@
 describe('Binding: Attr', {
-    before_each: prepareTestNode,
+    before_each: JSSpec.prepareTestNode,
 
     'Should be able to set arbitrary attribute values': function() {
         var model = { myValue: "first value" };

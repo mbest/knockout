@@ -153,12 +153,12 @@
         }, targetNode);
     };
 
-    var templateSubscriptionDomDataKey = ko.utils.domData.nextKey();
-    function disposeOldSubscriptionAndStoreNewOne(element, newSubscription) {
-        var oldSubscription = ko.domDataGet(element, templateSubscriptionDomDataKey);
-        if (oldSubscription && (typeof(oldSubscription.dispose) == 'function'))
-            oldSubscription.dispose();
-        ko.domDataSet(element, templateSubscriptionDomDataKey, newSubscription);
+    var templateComputedDomDataKey = ko.utils.domData.nextKey();
+    function disposeOldComputedAndStoreNewOne(element, newComputed) {
+        var oldComputed = ko.domDataGet(element, templateComputedDomDataKey);
+        if (oldComputed && (typeof(oldComputed.dispose) == 'function'))
+            oldComputed.dispose();
+        ko.domDataSet(element, templateComputedDomDataKey, newComputed);
     }
 
     ko.bindingHandlers['template'] = {
@@ -192,26 +192,26 @@
             }
             var template = bindingValue['name'] || element;
 
-            var templateSubscription = null;
+            var templateComputed = null;
 
             if ('foreach' in bindingValue) {
                 // Render once for each data point (treating data set as empty if shouldDisplay==false)
                 var dataArray = (shouldDisplay && bindingValue['foreach']) || [];
-                templateSubscription = ko.renderTemplateForEach(template, dataArray, /* options: */ bindingValue, element, bindingContext, bindingValue['as']);
+                templateComputed = ko.renderTemplateForEach(template, dataArray, /* options: */ bindingValue, element, bindingContext, bindingValue['as']);
             } else {
                 if (shouldDisplay) {
                     // Render once for this single data point (or use the viewModel if no data was provided)
                     var innerBindingContext = ('data' in bindingValue)
                         ? bindingContext['createChildContext'](bindingValue['data'], bindingValue['as'])    // Given an explitit 'data' value, we create a child binding context for it
                         : bindingContext;                                                                       // Given no explicit 'data' value, we retain the same binding context
-                    templateSubscription = ko.renderTemplate(template, innerBindingContext, /* options: */ bindingValue, element);
+                    templateComputed = ko.renderTemplate(template, innerBindingContext, /* options: */ bindingValue, element);
                 } else
                     ko.virtualElements.emptyNode(element);
             }
 
-            // It only makes sense to have a single template subscription per element (otherwise which one should have its output displayed?)
-            disposeOldSubscriptionAndStoreNewOne(element, templateSubscription);
-            return templateSubscription;
+            // It only makes sense to have a single template computed per element (otherwise which one should have its output displayed?)
+            disposeOldComputedAndStoreNewOne(element, templateComputed);
+            return templateComputed;
         }
     };
 

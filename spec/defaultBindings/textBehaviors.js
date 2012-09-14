@@ -1,5 +1,5 @@
 describe('Binding: Text', {
-    before_each: prepareTestNode,
+    before_each: JSSpec.prepareTestNode,
 
     'Should assign the value to the node, HTML-encoding the value': function () {
         var model = { textProp: "'Val <with> \"special\" <i>characters</i>'" };

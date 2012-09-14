@@ -1,5 +1,5 @@
 describe('Binding: With', {
-    before_each: prepareTestNode,
+    before_each: JSSpec.prepareTestNode,
 
     'Should remove descendant nodes from the document (and not bind them) if the value is falsey': function() {
         testNode.innerHTML = "<div data-bind='with: someItem'><span data-bind='text: someItem.nonExistentChildProp'></span></div>";

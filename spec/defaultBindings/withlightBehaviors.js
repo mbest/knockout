@@ -1,5 +1,5 @@
 describe('Binding: With Light', {
-    before_each: prepareTestNode,
+    before_each: JSSpec.prepareTestNode,
 
     'Should leave descendant nodes in the document (and bind them in the context of the supplied value) if the value is truey': function() {
         testNode.innerHTML = "<div data-bind='withlight: someItem'><span data-bind='text: existentChildProp'></span></div>";

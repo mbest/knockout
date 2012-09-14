@@ -1,5 +1,5 @@
 describe('Binding: Hasfocus', {
-    before_each: prepareTestNode,
+    before_each: JSSpec.prepareTestNode,
 
     'Should respond to changes on an observable value by blurring or focusing the element': function() {
         var currentState;
