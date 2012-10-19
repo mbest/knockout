@@ -81,7 +81,7 @@ ko.domObservable = function(element, propertyName, eventsToWatch) {
 
     function notifyChange() {
         if (!disposer.disposeIfShould())
-            observable["notifySubscribers"](element[propertyName]);
+            observable.notifySubscribers(element[propertyName]);
     }
 
     var watchedEvents = {};

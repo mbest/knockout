@@ -71,19 +71,37 @@ ko.utils.compareArrays = (function () {
             var limitFailedCompares = smlIndexMax * 10, failedCompares,
                 a, d, notInSmlItem, notInBigItem;
             // Go through the items that have been added and deleted and try to find matches between them.
-            for (failedCompares = a = 0; (dontLimitMoves || failedCompares < limitFailedCompares) && (notInSmlItem = notInSml[a]); a++) {
-                for (d = 0; notInBigItem = notInBig[d]; d++) {
+            outer: for (failedCompares = a = 0; (dontLimitMoves || failedCompares < limitFailedCompares) && (notInSmlItem = notInSml[a]); ++a) {
+                for (d = 0; notInBigItem = notInBig[d]; ) {
                     if (notInSmlItem['value'] === notInBigItem['value']) {
+                        // Mark the item as moved in the edit script
                         notInSmlItem['moved'] = notInBigItem['index'];
                         notInBigItem['moved'] = notInSmlItem['index'];
-                        notInBig.splice(d,1);       // This item is marked as moved; so remove it from notInBig list
-                        failedCompares = d = 0;     // Reset failed compares count because we're checking for consecutive failures
-                        break;
+                        // Remove the item from the added/deleted lists
+                        notInBig.splice(d,1);
+                        notInSml.splice(a,1);
+                        // Check if there any more items to compare in notInSml
+                        if (!(notInSmlItem = notInSml[a]))
+                            break outer;
+                        // Reset d since we're starting over with a new item and
+                        // reset failed compares count because we're only checking for consecutive failures
+                        failedCompares = d = 0;
+                    } else {
+                        ++d;
                     }
                 }
                 failedCompares += d;
             }
         }
+
+        function getValues(script) {
+            return ko.utils.arrayMap(script.reverse(), function (s) {
+                return s['value'];
+            });
+        }
+        editScript[statusNotInSml] = getValues(notInSml);
+        editScript[statusNotInBig] = getValues(notInBig);
+
         return editScript.reverse();
     }
 

@@ -254,10 +254,32 @@ describe('Observable Array', {
 
         // Verify that we haven't caused a subscription
         value_of(timesEvaluated).should_be(1);
-        value_of(newArray.getSubscriptionsCount()).should_be(0);
+        value_of(computed.getDependenciesCount()).should_be(0);
 
         // Don't just trust getSubscriptionsCount - directly verify that mutating newArray doesn't cause a re-eval
         newArray.push("Another");
         value_of(timesEvaluated).should_be(1);
+    },
+
+    'Should notify of added or deleted items': function() {
+        testObservableArray(["Alpha", "Beta", "Gamma"]);
+
+        var addedValues, deletedValues;
+        testObservableArray.subscribe(function(a) { addedValues = a; }, null, 'added');
+        testObservableArray.subscribe(function(d) { deletedValues = d; }, null, 'deleted');
+
+        testObservableArray.push("Delta");
+        value_of(addedValues).should_be(["Delta"]);
+        value_of(deletedValues).should_be(undefined);
+
+        addedValues = deletedValues = undefined;
+        testObservableArray.remove("Beta");
+        value_of(addedValues).should_be(undefined);
+        value_of(deletedValues).should_be(["Beta"]);
+
+        addedValues = deletedValues = undefined;
+        testObservableArray(["Alpha", "B", "C"]);
+        value_of(addedValues).should_be(["B", "C"]);
+        value_of(deletedValues).should_be(["Gamma", "Delta"]);
     }
 })

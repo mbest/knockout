@@ -29,6 +29,8 @@ describe('Compare Arrays', {
             { status: "retained", value: "B" },
             { status: "added", value: "B2", index: 4 }
         ]);
+        value_of(compareResult.added).should_be(["A2","A3","B2"]);
+        value_of(compareResult.deleted).should_be([]);
     },
 
     'Should recognize deleted items': function () {
@@ -42,6 +44,8 @@ describe('Compare Arrays', {
             { status: "deleted", value: "D", index: 3 },
             { status: "retained", value: "E" }
         ]);
+        value_of(compareResult.added).should_be([]);
+        value_of(compareResult.deleted).should_be(["A","D"]);
     },
 
     'Should recognize mixed edits': function () {
@@ -57,6 +61,8 @@ describe('Compare Arrays', {
             { status: "retained", value: "D" },
             { status: "deleted", value: "E", index: 4, moved: 2 }
         ]);
+        value_of(compareResult.added).should_be([123]);
+        value_of(compareResult.deleted).should_be(["B"]);
     },
 
     'Should recognize replaced array': function () {
@@ -78,6 +84,8 @@ describe('Compare Arrays', {
             { status: "added", value: "I", index: 3},
             { status: "added", value: "J", index: 4}
         ]);
+        value_of(compareResult.added).should_be(["F","G","H","I","J"]);
+        value_of(compareResult.deleted).should_be(["A","B","C","D","E"]);
     }
 });
 

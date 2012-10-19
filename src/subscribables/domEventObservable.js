@@ -12,7 +12,7 @@ ko.domEventObservable = function(element, eventsToWatch) {
     ko.utils.arrayForEach(eventsToWatch, function(eventName) {
         ko.utils.registerEventHandler(element, eventName, function() {
             lastEventTriggered = eventName;
-            observable["notifySubscribers"](eventName);
+            observable.notifySubscribers(eventName);
         });
     });
 

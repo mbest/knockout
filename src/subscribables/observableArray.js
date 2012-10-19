@@ -1,3 +1,4 @@
+var observableArrayChangeEvents = {'changes':true, 'deleted':true, 'added':true};
 ko.observableArray = function (initialValues) {
     if (arguments.length == 0) {
         // Zero-parameter constructor initializes to empty array
@@ -6,9 +7,57 @@ ko.observableArray = function (initialValues) {
     if ((initialValues !== null) && (initialValues !== undefined) && !('length' in initialValues))
         throw new Error("The argument passed when initializing an observable array must be an array, or null, or undefined.");
 
-    var result = ko.observable(initialValues);
-    ko.utils.extendInternal(result, ko.observableArray['fn']);
-    return result;
+    var observable = ko.observable(initialValues),
+        trackingChanges = false,
+        savedArray = [],
+        lastEditScript,
+        baseValueHasMutated = observable.valueHasMutated,
+        baseSubscribe = observable.subscribe;
+
+    function doCompare() {
+        var value = observable.peek();
+        lastEditScript = ko.utils.compareArrays(savedArray, value);
+        lastEditScript['changes'] = lastEditScript;
+        savedArray = value.slice(0);
+    }
+
+    function trackChanges() {
+        if (!trackingChanges) {
+            doCompare();
+            trackingChanges = true;
+        }
+    }
+
+    observable.subscribe(function() {
+        if (trackingChanges) {
+            doCompare();
+            for (var e in observableArrayChangeEvents) {
+                if (observable._subscriptions[e] && lastEditScript[e].length)
+                    observable.notifySubscribers(lastEditScript[e], e);
+            }
+        };
+    })
+
+    ko.utils.extendInternal(observable, {
+        subscribe: function(callback, callbackTarget, event) {
+            if (event && event in observableArrayChangeEvents) {
+                trackChanges();
+            }
+            return baseSubscribe.call(this, callback, callbackTarget, event);
+        },
+
+        getEditScript: function() {
+            trackChanges();
+            return lastEditScript;
+        }
+    });
+
+    ko.utils.extendInternal(observable, ko.observableArray['fn']);
+
+    return ko.exportProperties(observable,
+        "subscribe", observable.subscribe,
+        "getEditScript", observable.getEditScript
+    );
 }
 
 ko.observableArray['fn'] = {
