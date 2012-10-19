@@ -1,12 +1,65 @@
+var observableArrayChangeEvents = {'changes':true, 'deleted':true, 'added':true};
 ko.observableArray = function (initialValues) {
     initialValues = initialValues || [];
 
     if (typeof initialValues != 'object' || !('length' in initialValues))
         throw new Error("The argument passed when initializing an observable array must be an array, or null, or undefined.");
 
-    var result = ko.observable(initialValues);
-    ko.utils.extend(result, ko.observableArray['fn']);
-    return result;
+    var observable = ko.observable(initialValues),
+        trackingChanges = false,
+        savedArray = [],
+        lastEditScript,
+        baseValueHasMutated = observable.valueHasMutated,
+        baseSubscribe = observable.subscribe;
+
+    // Compare the old array to the current array, and then save the current array
+    function doCompare() {
+        var value = observable.peek();
+        lastEditScript = ko.utils.compareArrays(savedArray, value);
+        lastEditScript['changes'] = lastEditScript;
+        savedArray = value.slice(0);
+    }
+
+    // Begin tracking changes by doing an initial comparison (to an empty array)
+    function trackChanges() {
+        if (!trackingChanges) {
+            doCompare();
+            trackingChanges = true;
+        }
+    }
+
+    // Whenever the array changes, run the comparison and send out notifications
+    observable.subscribe(function() {
+        if (trackingChanges) {
+            doCompare();
+            for (var e in observableArrayChangeEvents) {
+                if (observable._subscriptions[e] && lastEditScript[e].length)
+                    observable.notifySubscribers(lastEditScript[e], e);
+            }
+        };
+    });
+
+    // Intercept subscriptions to the observableArray so we can start tracking changes
+    // if the user subscribes to our events
+    observable.subscribe = function(callback, callbackTarget, event) {
+        if (event && event in observableArrayChangeEvents) {
+            trackChanges();
+        }
+        return baseSubscribe.call(this, callback, callbackTarget, event);
+    };
+
+    // Provide a function that can be used to retrieve the edit script from the most recent change.
+    // The first time this is called, it will return a script showing only additions.
+    observable.getEditScript = function() {
+        trackChanges();
+        return lastEditScript;
+    };
+
+    ko.utils.extend(observable, ko.observableArray['fn']);
+    
+    ko.exportProperty(observable, 'subscribe', observable.subscribe);
+    ko.exportProperty(observable, 'getEditScript', observable.getEditScript);
+    return observable;
 };
 
 ko.observableArray['fn'] = {

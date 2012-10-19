@@ -254,10 +254,32 @@ describe('Observable Array', function() {
 
         // Verify that we haven't caused a subscription
         expect(timesEvaluated).toEqual(1);
-        expect(newArray.getSubscriptionsCount()).toEqual(0);
+        expect(computed.getDependenciesCount()).toEqual(0);
 
         // Don't just trust getSubscriptionsCount - directly verify that mutating newArray doesn't cause a re-eval
         newArray.push("Another");
         expect(timesEvaluated).toEqual(1);
+    });
+
+    it('Should notify of added or deleted items', function() {
+        testObservableArray(["Alpha", "Beta", "Gamma"]);
+
+        var addedValues, deletedValues;
+        testObservableArray.subscribe(function(a) { addedValues = a; }, null, 'added');
+        testObservableArray.subscribe(function(d) { deletedValues = d; }, null, 'deleted');
+
+        testObservableArray.push("Delta");
+        expect(addedValues).toEqual(["Delta"]);
+        expect(deletedValues).toEqual(undefined);
+
+        addedValues = deletedValues = undefined;
+        testObservableArray.remove("Beta");
+        expect(addedValues).toEqual(undefined);
+        expect(deletedValues).toEqual(["Beta"]);
+
+        addedValues = deletedValues = undefined;
+        testObservableArray(["Alpha", "B", "C"]);
+        expect(addedValues).toEqual(["B", "C"]);
+        expect(deletedValues).toEqual(["Gamma", "Delta"]);
     });
 })
