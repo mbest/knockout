@@ -17,7 +17,7 @@ ko.bindingHandlers['selectedOptions'] = {
             return ko.domObservable(option, 'selected')();
         }
 
-        var elemChangeObservable = ko.domObservable(element, '__ko_options', 'change');
+        var elemChangeObservable = ko.domEventObservable(element, ['change']);
         function getSelectedValuesFromSelectNode() {
             elemChangeObservable();   // update on change events
             return ko.utils.arrayMap(ko.utils.arrayFilter(options, isOptionSelected), ko.selectExtensions.readValue);
