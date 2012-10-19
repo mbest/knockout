@@ -66,21 +66,9 @@ var dummyTemplateEngine = function (templates) {
             }
         }
 
-        if (options.bypassDomNodeTransform)
-            return ko.utils.parseHtmlFragment(result);
-        else {
-            var node = document.createElement("div");
-
-            // Annoyingly, IE strips out comment nodes unless they are contained between other nodes, so put some dummy nodes around the HTML, then remove them after parsing.
-            node.innerHTML = "<div>a</div>" + result + "<div>a</div>";
-            node.removeChild(node.firstChild);
-            node.removeChild(node.lastChild);
-
-            // Convert the nodelist to an array to mimic what the default templating engine does, so we see the effects of not being able to remove dead memo comment nodes.
-            var renderedNodesArray = ko.utils.arrayPushAll([], node.childNodes);
-
-            return renderedNodesArray;
-        }
+        // Use same HTML parsing code as real template engine so as to trigger same combination of IE weirdnesses
+        // Also ensure resulting nodelist is an array to mimic what the default templating engine does, so we see the effects of not being able to remove dead memo comment nodes.
+        return ko.utils.arrayPushAll([], ko.utils.parseHtmlFragment(result));
     };
 
     this.rewriteTemplate = function (template, rewriterCallback) {
@@ -107,7 +95,7 @@ describe('Templating', {
 
     'Template engines can return an array of DOM nodes': function () {
         ko.setTemplateEngine(new dummyTemplateEngine({ x: [document.createElement("div"), document.createElement("span")] }));
-        ko.renderTemplate("x", null, { bypassDomNodeTransform: true });
+        ko.renderTemplate("x", null);
     },
 
     'Should not be able to render a template until a template engine is provided': function () {
@@ -155,6 +143,24 @@ describe('Templating', {
         value_of(testNode.innerHTML).should_be("Value = B");
     },
 
+    'Should not rerender DOM element if observable accessed in \'afterRender\' callaback is changed': function () {
+        var observable = new ko.observable("A"), count = 0;
+        var myCallback = function(elementsArray, dataItem) {
+            observable();   // access observable in callback
+        };
+        var myTemplate = function() {
+            return "Value = " + (++count);
+        };
+        ko.setTemplateEngine(new dummyTemplateEngine({ someTemplate: myTemplate }));
+        ko.renderTemplate("someTemplate", {}, { afterRender: myCallback }, testNode);
+        value_of(testNode.childNodes.length).should_be(1);
+        value_of(testNode.innerHTML).should_be("Value = 1");
+
+        observable("B");
+        value_of(testNode.childNodes.length).should_be(1);
+        value_of(testNode.innerHTML).should_be("Value = 1");
+    },
+
     'If the supplied data item is observable, evaluates it and has subscription on it': function () {
         var observable = new ko.observable("A");
         ko.setTemplateEngine(new dummyTemplateEngine({ someTemplate: function (data) {
@@ -197,6 +203,20 @@ describe('Templating', {
         value_of(testNode.childNodes[0].innerHTML).should_be("result = 123");
     },
 
+    'Should re-render a named template when its data item notifies about mutation': function () {
+        ko.setTemplateEngine(new dummyTemplateEngine({ someTemplate: "result = [js: childProp]" }));
+        testNode.innerHTML = "<div data-bind='template: { name: \"someTemplate\", data: someProp }'></div>";
+
+        var myData = ko.observable({ childProp: 123 });
+        ko.applyBindings({ someProp: myData }, testNode);
+        value_of(testNode.childNodes[0].innerHTML).should_be("result = 123");
+
+        // Now mutate and notify
+        myData().childProp = 456;
+        myData.valueHasMutated();
+        value_of(testNode.childNodes[0].innerHTML).should_be("result = 456");
+    },
+
     'Should stop tracking inner observables immediately when the container node is removed from the document': function() {
         var innerObservable = ko.observable("some value");
         ko.setTemplateEngine(new dummyTemplateEngine({ someTemplate: "result = [js: childProp()]" }));
@@ -206,6 +226,21 @@ describe('Templating', {
         value_of(innerObservable.getSubscriptionsCount()).should_be(1);
         ko.cleanAndRemoveNode(testNode.childNodes[0]);
         value_of(innerObservable.getSubscriptionsCount()).should_be(0);
+    },
+
+    'Should be able to pick template via an observable model property': function () {
+        ko.setTemplateEngine(new dummyTemplateEngine({
+            firstTemplate: "First template output",
+            secondTemplate: "Second template output"
+        }));
+
+        var chosenTemplate = ko.observable("firstTemplate");
+        testNode.innerHTML = "<div data-bind='template: chosenTemplate'></div>";
+        ko.applyBindings({ chosenTemplate: chosenTemplate }, testNode);
+        value_of(testNode.childNodes[0].innerHTML).should_be("First template output");
+
+        chosenTemplate("secondTemplate");
+        value_of(testNode.childNodes[0].innerHTML).should_be("Second template output");
     },
 
     'Should be able to pick template as a function of the data item using data-bind syntax, with the binding context available as a second parameter': function () {
@@ -286,6 +321,12 @@ describe('Templating', {
         ko.setTemplateEngine(new dummyTemplateEngine({ someTemplate: "<div data-bind='text: $element.tagName'></div>" }));
         ko.renderTemplate("someTemplate", null, null, testNode);
         value_of(testNode.childNodes[0]).should_contain_text("DIV");
+    },
+
+    'Data binding syntax should be able to use $context in binding value to refer to the context object': function() {
+        ko.setTemplateEngine(new dummyTemplateEngine({ someTemplate: "<div data-bind='text: $context.$data === $data'></div>" }));
+        ko.renderTemplate("someTemplate", {}, null, testNode);
+        value_of(testNode.childNodes[0]).should_contain_text("true");
     },
 
     'Data binding syntax should defer evaluation of variables until the end of template rendering (so bindings can take independent subscriptions to them)': function () {
@@ -649,24 +690,26 @@ describe('Templating', {
     },
 
     'If the template binding is updated, should dispose any template subscriptions previously associated with the element': function() {
-        var myModel = {
-            myObservable: ko.observable("some value"),
-            unrelatedObservable: ko.observable()
+        var myObservable = ko.observable("some value"),
+            myModel = {
+                subModel: ko.observable({ myObservable: myObservable })
         };
-        ko.setTemplateEngine(new dummyTemplateEngine({myTemplate: "The value is [js:myObservable()]"}));
-        testNode.innerHTML = "<div data-bind='template: \"myTemplate\", unrelatedBindingHandler: unrelatedObservable()'></div>";
+        ko.setTemplateEngine(new dummyTemplateEngine({myTemplate: "<span>The value is [js:myObservable()]</span>"}));
+        testNode.innerHTML = "<div data-bind='template: {name: \"myTemplate\", data: subModel}'></div>";
         ko.applyBindings(myModel, testNode);
 
         // Right now the template references myObservable, so there should be exactly one subscription on it
-        value_of(testNode.childNodes[0].innerHTML).should_be("The value is some value");
-        value_of(myModel.myObservable.getSubscriptionsCount()).should_be(1);
+        value_of(testNode.childNodes[0]).should_contain_text("The value is some value");
+        value_of(myObservable.getSubscriptionsCount()).should_be(1);
+        var renderedNode1 = testNode.childNodes[0].childNodes[0];
 
-        // By changing unrelatedObservable, we force the data-bind value to be re-evaluated, setting up a new template subscription,
-        // so there have now existed two subscriptions on myObservable...
-        myModel.unrelatedObservable("any value");
+        // By changing the object for subModel, we force the data-bind value to be re-evaluated and the template to be re-rendered,
+        // setting up a new template subscription, so there have now existed two subscriptions on myObservable...
+        myModel.subModel({ myObservable: myObservable });
+        value_of(testNode.childNodes[0].childNodes[0]).should_not_be(renderedNode1);
 
         // ...but, because the old subscription should have been disposed automatically, there should only be one left
-        value_of(myModel.myObservable.getSubscriptionsCount()).should_be(1);
+        value_of(myObservable.getSubscriptionsCount()).should_be(1);
     },
 
     'Should be able to specify a template engine instance using data-bind syntax': function() {
@@ -798,5 +841,22 @@ describe('Templating', {
         testNode.innerHTML = "<div data-bind='template: {}'><!-- ko nonexistentHandler: true --><span data-bind='countInits: true'></span><!-- /ko --></div>";
         ko.applyBindings(null, testNode);
         value_of(initCalls).should_be(1);
-    }
+    }/*,
+
+    'Should not throw errors if trying to apply text to a non-rendered node': function() {
+        // Represents https://github.com/SteveSanderson/knockout/issues/660
+        // A <span> can't go directly into a <tr>, so modern browsers will silently strip it. We need to verify this doesn't
+        // throw errors during unmemoization (when unmemoizing, it will try to apply the text to the following text node
+        // instead of the node you intended to bind to).
+        // Note that IE < 9 won't strip the <tr>; instead it has much stranger behaviors regarding unexpected DOM structures.
+        // It just happens not to give an error in this particular case, though it would throw errors in many other cases
+        // of malformed template DOM.
+        ko.setTemplateEngine(new dummyTemplateEngine({
+            myTemplate: "<tr><span data-bind=\"text: 'Some text'\"></span> </tr>" // The whitespace after the closing span is what triggers the strange HTML parsing
+        }));
+        testNode.innerHTML = "<div data-bind='template: \"myTemplate\"'></div>";
+        ko.applyBindings(null, testNode);
+        // Since the actual template markup was invalid, we don't really care what the
+        // resulting DOM looks like. We are only verifying there were no exceptions.
+    }*/
 })

@@ -15,7 +15,9 @@ ko.utils = (function () {
     }
     var eventsThatMustBeRegisteredUsingAttachEvent = { 'propertychange': true }; // Workaround for an IE9 issue - https://github.com/SteveSanderson/knockout/issues/406
 
-    // Detect IE versions for bug workarounds (uses IE conditionals, not UA string, for robustness)
+    // Note that, since IE 10 does not support conditional comments, the following logic only detects IE < 10.
+    // Currently this is by design, since IE 10+ behaves correctly when treated as a standard browser.
+    // If there is a future need to detect specific versions of IE10+, we will amend this.
     var ieVersion = (function() {
         var version = 3, div = document.createElement('div'), iElems = div.getElementsByTagName('i');
 
@@ -147,15 +149,15 @@ ko.utils = (function () {
 
             var container = document.createElement('div');
             for (var i = 0, j = nodesArray.length; i < j; i++) {
-                ko.cleanNode(nodesArray[i]);
-                container.appendChild(nodesArray[i]);
+                container.appendChild(ko.cleanNode(nodesArray[i]));
             }
             return container;
         },
 
-        cloneNodes: function(nodesArray) {
+        cloneNodes: function (nodesArray, shouldCleanNodes) {
             for (var i = 0, j = nodesArray.length, newNodesArray = []; i < j; i++) {
-                newNodesArray.push(nodesArray[i].cloneNode(true));
+                var clonedNode = nodesArray[i].cloneNode(true);
+                newNodesArray.push(shouldCleanNodes ? ko.cleanNode(clonedNode) : clonedNode);
             }
             return newNodesArray;
         },
@@ -304,6 +306,10 @@ ko.utils = (function () {
                     disposeWhen: disposeWhen });
         },
 
+        peekObservable: function (value) {
+            return ko.isObservable(value) ? value.peek() : value;
+        },
+
         toggleDomNodeCssClass: function (node, classNames, shouldHaveClass) {
             if (classNames) {
                 var cssClassNameRegex = /[\w-]+/g,
@@ -430,6 +436,7 @@ ko.utils = (function () {
         'extend', utils.extendInternal,
         'fieldsIncludedWithJsonPost', utils.fieldsIncludedWithJsonPost,
         'getFormFields', utils.getFormFields,
+        'peekObservable', utils.peekObservable,
         'possiblyWrap', utils.possiblyWrap,
         'postJson', utils.postJson,
         'parseJson', utils.parseJson,

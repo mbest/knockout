@@ -144,7 +144,7 @@
             ko.bindingHandlers[needsName] = needsBinding;
 
             // Use evaluatedBindings if given, otherwise fall back on asking the bindings provider to give us some bindings
-            var evaluatedBindings = (typeof bindingsToApply == "function") ? bindingsToApply(node) : bindingsToApply;
+            var evaluatedBindings = (typeof bindingsToApply == "function") ? bindingsToApply(bindingContext, node) : bindingsToApply;
             parsedBindings = evaluatedBindings || ko.bindingProvider['instance']['getBindings'](node, bindingContext);
 
             // update extraBindings from parsedBindings (only if init already done)

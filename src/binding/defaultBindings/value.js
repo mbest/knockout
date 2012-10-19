@@ -1,11 +1,13 @@
 ko.bindingHandlers['value'] = {
     'flags': bindingFlags_twoWay | bindingFlags_contentUpdate,
     'init': function (element, valueAccessor, allBindingsAccessor) {
-        var elementIsSelect = ko.utils.tagNameLower(element) == "select";
-        var elemProperty = elementIsSelect ? "selectedIndex" : "value";
+        var elementIsSelect = ko.utils.tagNameLower(element) == "select",
+            elemProperty = elementIsSelect ? "selectedIndex" : "value",
+            propertyChangedFired = false;
 
         function modelUpdater(newValue) {
-            ko.expressionRewriting.writeValueToProperty(valueAccessor(), allBindingsAccessor, 'value', newValue, /* checkIfDifferent: */ true);
+            propertyChangedFired = false;
+            ko.expressionRewriting.writeValueToProperty(valueAccessor(), allBindingsAccessor, 'value', newValue);
         };
 
         var elemValue = ko.domObservable(element, elemProperty, 'change');  // Always catch "change" event
@@ -17,11 +19,9 @@ ko.bindingHandlers['value'] = {
         var ieAutoCompleteHackNeeded = ko.utils.ieVersion && element.tagName.toLowerCase() == "input" && element.type == "text"
                                        && element.autocomplete != "off" && (!element.form || element.form.autocomplete != "off");
         if (ieAutoCompleteHackNeeded && !elemValue.isEventWatched("propertychange")) {
-            var propertyChangedFired = false;
             ko.utils.registerEventHandler(element, "propertychange", function () { propertyChangedFired = true });
             ko.utils.registerEventHandler(element, "blur", function() {
                 if (propertyChangedFired) {
-                    propertyChangedFired = false;
                     elemValue.notifyChange();
                 }
             });

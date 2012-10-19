@@ -32,9 +32,8 @@
         // It's not part of the interface definition for a general binding provider.
         'parseBindingsString': function(bindingsString, bindingContext, node) {
             try {
-                var viewModel = bindingContext['$data'] || {},
-                    bindingFunction = createBindingsStringEvaluatorViaCache(bindingsString, bindingContext['$options'], this.bindingCache);
-                return bindingFunction(viewModel, bindingContext, node);
+                var bindingFunction = createBindingsStringEvaluatorViaCache(bindingsString, bindingContext['$options'], this.bindingCache);
+                return bindingFunction(bindingContext, node);
             } catch (ex) {
                 throw new Error("Unable to parse bindings.\nMessage: " + ex + ";\nBindings value: " + bindingsString);
             }
@@ -54,8 +53,8 @@
         // For each scope variable, add an extra level of "with" nesting
         // Example result: with(sc1) { with(sc0) { return (expression) } }
         var rewrittenBindings = ko.expressionRewriting.preProcessBindings(bindingsString, bindingOptions),
-            functionBody = "with(sc1){with(sc0){return{" + rewrittenBindings + "} } }";
-        return new Function("sc0", "sc1", "$element", functionBody);
+            functionBody = "with($context){with($data||{}){return{" + rewrittenBindings + "}}}";
+        return new Function("$context", "$element", functionBody);
     }
 })();
 

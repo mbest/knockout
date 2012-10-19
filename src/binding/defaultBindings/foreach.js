@@ -2,14 +2,16 @@
 // "foreach: { data: someExpression, afterAdd: myfn }" is equivalent to "template: { foreach: someExpression, afterAdd: myfn }"
 ko.bindingHandlers['foreach'] = templateBasedBinding(
     function(value, options, allBindingsAccessor) {
-        if ((!value) || typeof value.length == "number") {
+        if ((!value) || typeof value.splice == "function") {
             // If bindingValue is the array, just pass it on its own
             options['foreach'] = value;
             options['as'] = allBindingsAccessor('as');
         } else {
-            // If bindingValue is a object with options, copy it and set foreach to the data value
-            ko.utils.extendInternal(options, value);
-            options['foreach'] = options['data'];
-            delete options['name'];   // don't allow named templates
+            // If bindingValue is an object with options, copy it and set foreach to the data value
+            value = ko.utils.unwrapObservable(value);
+            ko.utils.arrayForEach(['as', 'includeDestroyed', 'afterAdd', 'beforeRemove', 'afterRender', 'beforeMove' ,'afterMove'], function(option) {
+                options[option] = value[option];
+            });
+            options['foreach'] = value['data'];
         }
     }, preprocessAs);

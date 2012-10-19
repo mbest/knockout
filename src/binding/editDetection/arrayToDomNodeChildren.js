@@ -73,7 +73,7 @@
                 // On subsequent evaluations, just replace the previously-inserted DOM nodes
                 dependentObservable.replaceDisposalNodes();    // must clear before calling replaceDomNodes
                 ko.utils.replaceDomNodes(fixUpNodesToBeMovedOrRemoved(mappedNodes), newMappedNodes);
-                callbackAfterAddingNodes(valueToMap, newMappedNodes, index, dependentObservable);
+                ko.dependencyDetection.ignore(callbackAfterAddingNodes, null, [valueToMap, newMappedNodes, index, dependentObservable]);
 
                 // Replace the contents of the mappedNodes array, thereby updating the record
                 // of which nodes would be deleted if valueToMap was itself later removed
@@ -173,9 +173,8 @@
         // Call beforeMove first before any changes have been made to the DOM
         callCallback(options['beforeMove'], itemsForMoveCallbacks);
 
-        // Next remove nodes for deleted items; or call beforeRemove, which will remove them
+        // Next remove nodes for deleted items (or just clean if there's a beforeRemove callback)
         ko.utils.arrayForEach(nodesToDelete, options['beforeRemove'] ? ko.cleanNode : ko.cleanAndRemoveNode);
-        callCallback(options['beforeRemove'], itemsForBeforeRemoveCallbacks);
 
         // Next add/reorder the remaining items (will include deleted items if there's a beforeRemove callback)
         for (var i = 0, nextNode = ko.virtualElements.firstChild(domNode), lastNode, node; mapData = itemsToProcess[i]; i++) {
@@ -195,6 +194,13 @@
                 mapData.initialized = true;
             }
         }
+
+        // If there's a beforeRemove callback, call it after reordering.
+        // Note that we assume that the beforeRemove callback will usually be used to remove the nodes using
+        // some sort of animation, which is why we first reorder the nodes that will be removed. If the
+        // callback instead removes the nodes right away, it would be more efficient to skip reordering them.
+        // Perhaps we'll make that change in the future if this scenario becomes more common.
+        callCallback(options['beforeRemove'], itemsForBeforeRemoveCallbacks);
 
         // Finally call afterMove and afterAdd callbacks
         callCallback(options['afterMove'], itemsForMoveCallbacks);
