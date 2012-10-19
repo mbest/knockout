@@ -26,11 +26,19 @@ ko.domObservable = function(element, propertyName, eventsToWatch) {
             if (isPropertyDifferent(newValue)) {
                 // Set property and notify of change; for string properties, convert *null* and *undefined* to an empty string
                 element[propertyName] = (elemType == "string" && newValue == null) ? "" : newValue;
-                // Workaround IE 6/7 issue
-                // - https://github.com/SteveSanderson/knockout/issues/197
+
+                // Treat "name" specially - although you can think of it as an attribute, it also needs
+                // special handling on older versions of IE (6/7).
+                // Deliberately being case-sensitive here because XHTML would regard "Name" as a different thing
+                // entirely, and there's no strong reason to allow for such casing in HTML.
+                // - https://github.com/SteveSanderson/knockout/issues/197, https://github.com/SteveSanderson/knockout/issues/333
                 // - http://www.matts411.com/post/setting_the_name_attribute_in_ie_dom/
-                if (ko.utils.ieVersion <= 7 && propertyName == "name")
-                    element.mergeAttributes(document.createElement("<input name='" + element.name + "'/>"), false);
+                if (ko.utils.ieVersion <= 7 && propertyName == "name") {
+                    try {
+                        element.mergeAttributes(document.createElement("<input name='" + element.name + "'/>"), false);
+                    }
+                    catch(e) {} // For IE9 with doc mode "IE9 Standards" and browser mode "IE9 Compatibility View"
+                }
                 notifyChange();
             }
         }

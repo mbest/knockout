@@ -16,7 +16,7 @@ describe('Binding: With', {
         value_of(testNode.childNodes[0].childNodes[0]).should_contain_text("Child prop value");
     },
 
-    'Should leave descendant nodes unchanged if the value is truthy': function() {
+    'Should leave descendant nodes unchanged if the value is truthy and remains truthy': function() {
         var someItem = ko.observable({ childProp: 'child prop value' });
         testNode.innerHTML = "<div data-bind='with: someItem'><span data-bind='text: childProp'></span></div>";
         var originalNode = testNode.childNodes[0].childNodes[0];
@@ -24,6 +24,12 @@ describe('Binding: With', {
         // Value is initially true, so nodes are retained
         ko.applyBindings({ someItem: someItem }, testNode);
         value_of(testNode.childNodes[0].childNodes[0]).should_contain_text("child prop value");
+        value_of(testNode.childNodes[0].childNodes[0]).should_be(originalNode);
+
+        // Cause the binding to update by changing the observable
+        // It shouldn't re-render or update the descendent nodes because the value remains truthy
+        someItem({ childProp: 'new prop value' })
+        value_of(testNode.childNodes[0].childNodes[0]).should_contain_text("new prop value");
         value_of(testNode.childNodes[0].childNodes[0]).should_be(originalNode);
     },
 
