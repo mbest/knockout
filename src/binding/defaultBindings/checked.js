@@ -4,7 +4,7 @@ ko.bindingHandlers['checked'] = {
         var elemValue = ko.domObservable(element, 'value'),
             elemChecked = ko.domObservable(element, 'checked', 'click');
         if (element.type == "checkbox") {
-            if (ko.utils.unwrapObservable(valueAccessor()) instanceof Array) {
+            if (ko.utils.peekObservable(valueAccessor()) instanceof Array) {
                 // When bound to an array, the checkbox being checked represents its value being present in that array
                 setUpTwoWayBinding(element,
                     function() {

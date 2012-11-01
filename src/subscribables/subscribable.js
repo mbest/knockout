@@ -38,6 +38,10 @@ ko.subscribable['fn'] = {
         return subscription;
     },
 
+    notifySubscribers: function(valueToNotify, event) {
+        this['notifySubscribers'](valueToNotify, event);
+    },
+
     "notifySubscribers": function (valueToNotify, event) {
         event = event || defaultEvent;
         if (this._subscriptions[event]) {

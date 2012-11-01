@@ -43,6 +43,43 @@ describe('Binding: Value', {
         value_of(myobservable()).should_be("some user-entered value");
     },
 
+    'For writeable observable values, should always write when triggered, even when value is the same': function () {
+        var validValue = ko.observable(123);
+        var isValid = ko.observable(true);
+        var valueForEditing = ko.computed({
+            read: validValue,
+            write: function(newValue) {
+                if (!isNaN(newValue)) {
+                    isValid(true);
+                    validValue(newValue);
+                } else {
+                    isValid(false);
+                }
+            }
+        });
+
+        testNode.innerHTML = "<input data-bind='value: valueForEditing' />";
+        ko.applyBindings({ valueForEditing: valueForEditing}, testNode);
+
+        //set initial valid value
+        testNode.childNodes[0].value = "1234";
+        ko.utils.triggerEvent(testNode.childNodes[0], "change");
+        value_of(validValue()).should_be("1234");
+        value_of(isValid()).should_be(true);
+
+        //set to an invalid value
+        testNode.childNodes[0].value = "1234a";
+        ko.utils.triggerEvent(testNode.childNodes[0], "change");
+        value_of(validValue()).should_be("1234");
+        value_of(isValid()).should_be(false);
+
+        //set to a valid value where the current value of the writeable computed is the same as the written value
+        testNode.childNodes[0].value = "1234";
+        ko.utils.triggerEvent(testNode.childNodes[0], "change");
+        value_of(validValue()).should_be("1234");
+        value_of(isValid()).should_be(true);
+    },
+
     'For non-observable property values, should catch the node\'s onchange and write values back to the property': function () {
         var model = { modelProperty123: 456 };
         testNode.innerHTML = "<input data-bind='value: modelProperty123' />";
@@ -364,17 +401,24 @@ describe('Binding: Value', {
         value_of(dropdown.selectedIndex).should_be(2);
     },
 
-    'On IE, should respond exactly once to "propertychange" followed by "blur" or "change" or both': function() {
-        var isIE = navigator.userAgent.indexOf("MSIE") >= 0;
+    'On IE < 10, should handle autofill selection by treating "propertychange" followed by "blur" as a change event': function() {
+        // This spec describes the awkward choreography of events needed to detect changes to text boxes on IE < 10,
+        // because it doesn't fire regular "change" events when the user selects an autofill entry. It isn't applicable
+        // on IE 10+ or other browsers, because they don't have that problem with autofill.
+        var isOldIE = JSSpec.Browser.IEVersion && JSSpec.Browser.IEVersion < 10;
 
-        if (isIE) {
+        if (isOldIE) {
             var myobservable = new ko.observable(123).extend({ notify: 'always' });
             var numUpdates = 0;
             myobservable.subscribe(function() { numUpdates++ });
             testNode.innerHTML = "<input data-bind='value:someProp' />";
             ko.applyBindings({ someProp: myobservable }, testNode);
 
-            // First try change then blur
+            // Simulate:
+            // 1. Select from autofill
+            // 2. Modify the textbox further
+            // 3. Tab out of the textbox
+            // --- should be treated as a single change
             testNode.childNodes[0].value = "some user-entered value";
             ko.utils.triggerEvent(testNode.childNodes[0], "propertychange");
             ko.utils.triggerEvent(testNode.childNodes[0], "change");
@@ -383,14 +427,18 @@ describe('Binding: Value', {
             ko.utils.triggerEvent(testNode.childNodes[0], "blur");
             value_of(numUpdates).should_be(1);
 
-            // Now try blur then change
+            // Simulate:
+            // 1. Select from autofill
+            // 2. Tab out of the textbox
+            // 3. Reselect, edit, then tab out of the textbox
+            // --- should be treated as two changes (one after step 2, one after step 3)
             testNode.childNodes[0].value = "different user-entered value";
             ko.utils.triggerEvent(testNode.childNodes[0], "propertychange");
             ko.utils.triggerEvent(testNode.childNodes[0], "blur");
             value_of(myobservable()).should_be("different user-entered value");
             value_of(numUpdates).should_be(2);
             ko.utils.triggerEvent(testNode.childNodes[0], "change");
-            value_of(numUpdates).should_be(2);
+            value_of(numUpdates).should_be(3);
         }
     }
 });

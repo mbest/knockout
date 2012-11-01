@@ -72,7 +72,7 @@
         if (haveAddedNodesToParent) {
             activateBindingsOnContinuousNodeArray(renderedNodesArray, bindingContext);
             if (options['afterRender'])
-                options['afterRender'](renderedNodesArray, bindingContext['$data']);
+                ko.dependencyDetection.ignore(options['afterRender'], null, [renderedNodesArray, bindingContext['$data']]);
         }
 
         return renderedNodesArray;
@@ -148,7 +148,9 @@
                 return options['includeDestroyed'] || item == null || !ko.utils.unwrapObservable(item['_destroy']);
             });
 
-            ko.utils.setDomNodeChildrenFromArrayMapping(targetNode, filteredArray, executeTemplateForArrayItem, options, activateBindingsCallback);
+            // Call setDomNodeChildrenFromArrayMapping, ignoring any observables unwrapped within (most likely from a callback function).
+            // If the array items are observables, though, they will be unwrapped in executeTemplateForArrayItem and managed within setDomNodeChildrenFromArrayMapping.
+            ko.dependencyDetection.ignore(ko.utils.setDomNodeChildrenFromArrayMapping, null, [targetNode, filteredArray, executeTemplateForArrayItem, options, activateBindingsCallback]);
 
         }, targetNode);
     };
@@ -178,35 +180,39 @@
             }
         },
         'update': function (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
-            var bindingValue = ko.utils.unwrapObservable(valueAccessor());
-            var shouldDisplay = true;
+            var templateName = ko.utils.unwrapObservable(valueAccessor()),
+                options = {},
+                shouldDisplay = true,
+                dataValue,
+                template,
+                templateComputed = null;
 
-            if (typeof bindingValue == "string") {
-                bindingValue = {'name': bindingValue};
-            } else {
+            if (typeof templateName != "string") {
+                options = templateName;
+                templateName = options['name'];
+
                 // Support "if"/"ifnot" conditions
-                if ('if' in bindingValue)
-                    shouldDisplay = shouldDisplay && ko.utils.unwrapObservable(bindingValue['if']);
-                if ('ifnot' in bindingValue)
-                    shouldDisplay = shouldDisplay && !ko.utils.unwrapObservable(bindingValue['ifnot']);
+                if ('if' in options)
+                    shouldDisplay = ko.utils.unwrapObservable(options['if']);
+                if (shouldDisplay && 'ifnot' in options)
+                    shouldDisplay = !ko.utils.unwrapObservable(options['ifnot']);
+
+                dataValue = ko.utils.unwrapObservable(options['data']);
             }
-            var template = bindingValue['name'] || element;
+            template = templateName || element;
 
-            var templateComputed = null;
-
-            if ('foreach' in bindingValue) {
+            if ('foreach' in options) {
                 // Render once for each data point (treating data set as empty if shouldDisplay==false)
-                var dataArray = (shouldDisplay && bindingValue['foreach']) || [];
-                templateComputed = ko.renderTemplateForEach(template, dataArray, /* options: */ bindingValue, element, bindingContext, bindingValue['as']);
+                var dataArray = (shouldDisplay && options['foreach']) || [];
+                templateComputed = ko.renderTemplateForEach(template, dataArray, options, element, bindingContext, options['as']);
+            } else if (!shouldDisplay) {
+                ko.virtualElements.emptyNode(element);
             } else {
-                if (shouldDisplay) {
                     // Render once for this single data point (or use the viewModel if no data was provided)
-                    var innerBindingContext = ('data' in bindingValue)
-                        ? bindingContext['createChildContext'](bindingValue['data'], bindingValue['as'])    // Given an explitit 'data' value, we create a child binding context for it
-                        : bindingContext;                                                                       // Given no explicit 'data' value, we retain the same binding context
-                    templateComputed = ko.renderTemplate(template, innerBindingContext, /* options: */ bindingValue, element);
-                } else
-                    ko.virtualElements.emptyNode(element);
+                var innerBindingContext = ('data' in options) ?
+                    bindingContext['createChildContext'](dataValue, options['as']) :  // Given an explitit 'data' value, we create a child binding context for it
+                    bindingContext;                                                        // Given no explicit 'data' value, we retain the same binding context
+                templateComputed = ko.renderTemplate(template, innerBindingContext, options, element);
             }
 
             // It only makes sense to have a single template computed per element (otherwise which one should have its output displayed?)

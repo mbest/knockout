@@ -153,6 +153,7 @@ ko.utils.domNodeDisposal = new (function () {
                     cleanSingleNode(descendants[i], onlyDispose);
             }
         }
+        return node;
     }
 
     function disposeNode(node) {
