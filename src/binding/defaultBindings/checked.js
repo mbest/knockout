@@ -16,9 +16,9 @@ ko.bindingHandlers['checked'] = {
                         ko.utils.addOrRemoveItem(valueAccessor(), elemValue(), checkedValue);
                     });
             } else {
-                // When bound to anything other value (not an array), the checkbox being checked represents the value being trueish
+                // When bound to any other value (not an array), the checkbox being checked represents the value being trueish
                 setUpTwoWayBinding(element,
-                    valueAccessor, elemChecked,
+                    makeUnwrappedValueAccessor(valueAccessor), elemChecked,
                     elemChecked, function(checkedValue) {
                         ko.expressionRewriting.writeValueToProperty(valueAccessor(), allBindingsAccessor, 'checked', checkedValue, true);
                     });
@@ -28,11 +28,11 @@ ko.bindingHandlers['checked'] = {
             if (!element.name)
                 ko.bindingHandlers['uniqueName']['init'](element, function() { return true });
             setUpTwoWayBinding(element,
-                valueAccessor, function(newValue) {
+                makeUnwrappedValueAccessor(valueAccessor), function(newValue) {
                     elemChecked(elemValue() == newValue);
                 },
                 function() {
-                    return elemChecked() ? elemValue : null;
+                    return elemChecked() ? elemValue() : null;
                 }, function(newValue) {
                     if (newValue !== null)
                         ko.expressionRewriting.writeValueToProperty(valueAccessor(), allBindingsAccessor, 'checked', newValue, true);

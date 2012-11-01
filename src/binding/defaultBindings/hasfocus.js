@@ -3,7 +3,7 @@ ko.bindingHandlers['hasfocus'] = {
     'init': function(element, valueAccessor, allBindingsAccessor) {
         var elemFocusObservable = ko.domObservable(element, '__ko_focus', ['focus', 'blur', 'focusin', 'focusout']);
 
-        setUpTwoWayBinding(element, valueAccessor, function(newValue) {
+        setUpTwoWayBinding(element, makeUnwrappedValueAccessor(valueAccessor), function(newValue) {
             newValue ? element.focus() : element.blur();
             // For IE, which doesn't reliably fire "focus" or "blur" events synchronously
             ko.utils.triggerEvent(element, newValue ? "focusin" : "focusout");

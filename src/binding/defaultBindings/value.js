@@ -38,7 +38,7 @@ ko.bindingHandlers['value'] = {
             : modelUpdater;
 
         setUpTwoWayBinding(element,
-            valueAccessor, function(newValue) {
+            makeUnwrappedValueAccessor(valueAccessor), function(newValue) {
                 ko.selectExtensions.writeValue(element, newValue);
 
                 // If you try to set a model value that can't be represented in an already-populated dropdown, reject that change,

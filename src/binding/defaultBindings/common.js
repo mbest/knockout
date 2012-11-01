@@ -44,28 +44,27 @@ function makeEventHandlerShortcut(eventName) {
     ko.bindingHandlers[eventName] = makeKeySubkeyBinding('event' + keySubkeyBindingDivider + eventName);
 }
 
+function makeUnwrappedValueAccessor(valueAccessor) {
+    return function() {
+        return ko.utils.unwrapObservable(valueAccessor());
+    };
+}
 
 function setUpTwoWayBinding(element, modelValue, elemUpdater, elemValue, modelUpdater) {
-    var isUpdating = false,
-        shouldSet = false;
-
-    function updateOnChange(source, callback) {
+    function updateOnChange(source, callback, other) {
         ko.utils.possiblyWrap(function() {
-            var value = ko.utils.unwrapObservable(source());
-            if (shouldSet && !isUpdating) {
-                isUpdating = true;
-                ko.ignoreDependencies(callback, null, [value]);
-                isUpdating = false;
-            }
+            var value = source();
+            ko.ignoreDependencies(function() {
+                if (value !== other()) {
+                    callback(value);
+                }
+            });
         }, element);
-    };
-
-    // Update model from view when changed (but not updated initially)
-    updateOnChange(elemValue, modelUpdater);
-
-    // Update view from model initially and when changed
-    shouldSet = true;
-    updateOnChange(modelValue, elemUpdater);
+    }
+    // Update view from model
+    updateOnChange(modelValue, elemUpdater, elemValue);
+    // Update model from view
+    updateOnChange(elemValue, modelUpdater, modelValue);
 }
 
 function preprocessAs(val, key, addBinding) {

@@ -108,7 +108,7 @@ describe('Binding: Value', {
 
     'Should only register one single onchange handler': function () {
         var notifiedValues = [];
-        var myobservable = new ko.observable(123);
+        var myobservable = new ko.observable('123');
         myobservable.subscribe(function (value) { notifiedValues.push(value); });
         value_of(notifiedValues.length).should_be(0);
 
