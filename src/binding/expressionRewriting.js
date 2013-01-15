@@ -129,7 +129,7 @@ ko.expressionRewriting = (function () {
                         if (eventHandlersUseObjectForThis && flags & bindingFlags_eventHandler) {
                             // call function literal in an anonymous function so that it is called
                             // with appropriate "this" value
-                            val = 'function(_x,_y,_z){(' + writeableVal + ')(_x,_y,_z);}';
+                            val = 'function(_x,_y,_z){return (' + writeableVal + ')(_x,_y,_z);}';
                             canWrap = false;
                         }
                         else if (flags & bindingFlags_twoWay) {
