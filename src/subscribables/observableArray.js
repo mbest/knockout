@@ -14,6 +14,7 @@ ko.observableArray = function (initialValues) {
         baseValueHasMutated = observable.valueHasMutated,
         baseSubscribe = observable.subscribe;
 
+    // Compare the old array to the current array, and then save the current array
     function doCompare() {
         var value = observable.peek();
         lastEditScript = ko.utils.compareArrays(savedArray, value);
@@ -21,6 +22,7 @@ ko.observableArray = function (initialValues) {
         savedArray = value.slice(0);
     }
 
+    // Begin tracking changes by doing an initial comparison (to an empty array)
     function trackChanges() {
         if (!trackingChanges) {
             doCompare();
@@ -28,6 +30,7 @@ ko.observableArray = function (initialValues) {
         }
     }
 
+    // Whenever the array changes, run the comparison and send out notifications
     observable.subscribe(function() {
         if (trackingChanges) {
             doCompare();
@@ -36,21 +39,24 @@ ko.observableArray = function (initialValues) {
                     observable.notifySubscribers(lastEditScript[e], e);
             }
         };
-    })
+    });
 
-    ko.utils.extendInternal(observable, {
-        subscribe: function(callback, callbackTarget, event) {
-            if (event && event in observableArrayChangeEvents) {
-                trackChanges();
-            }
-            return baseSubscribe.call(this, callback, callbackTarget, event);
-        },
+    // Intercept subscriptions to the observableArray so we can start tracking changes
+    // if the user subscribes to our events
+    observable.subscribe = function(callback, callbackTarget, event) {
+        if (event && event in observableArrayChangeEvents) {
+            trackChanges();
+        }
+        return baseSubscribe.call(this, callback, callbackTarget, event);
+    };
 
-        getEditScript: function() {
+    // Provide a function that can be used to retrieve the edit script from the most recent change.
+    // The first time this is called, it will return a script showing only additions.
+    observable.getEditScript = function() {
             trackChanges();
             return lastEditScript;
         }
-    });
+    };
 
     ko.utils.extendInternal(observable, ko.observableArray['fn']);
 
