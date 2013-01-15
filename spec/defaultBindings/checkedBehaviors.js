@@ -42,7 +42,7 @@ describe('Binding: Checked', {
     },
 
     'Should only notify observable properties on the underlying model *once* even if the checkbox change events fire multiple times': function () {
-        var myobservable = new ko.observable();
+        var myobservable = new ko.observable(false);
         var timesNotified = 0;
         myobservable.subscribe(function() { timesNotified++ });
         testNode.innerHTML = "<input type='checkbox' data-bind='checked:someProp' />";

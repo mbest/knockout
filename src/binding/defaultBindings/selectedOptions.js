@@ -28,7 +28,7 @@ ko.bindingHandlers['selectedOptions'] = {
         };
 
         setUpTwoWayBinding(element,
-            valueAccessor, elementUpdater,
+            makeUnwrappedValueAccessor(valueAccessor), elementUpdater,
             getSelectedValuesFromSelectNode, modelUpdater);
     }
 };
