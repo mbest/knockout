@@ -53,9 +53,8 @@ ko.observableArray = function (initialValues) {
     // Provide a function that can be used to retrieve the edit script from the most recent change.
     // The first time this is called, it will return a script showing only additions.
     observable.getEditScript = function() {
-            trackChanges();
-            return lastEditScript;
-        }
+        trackChanges();
+        return lastEditScript;
     };
 
     ko.utils.extendInternal(observable, ko.observableArray['fn']);
