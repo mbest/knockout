@@ -51,20 +51,26 @@ function makeUnwrappedValueAccessor(valueAccessor) {
 }
 
 function setUpTwoWayBinding(element, modelValue, elemUpdater, elemValue, modelUpdater) {
-    function updateOnChange(source, callback, other) {
+    var isUpdating = false,
+        shouldSet = false;
+
+    function updateOnChange(source, callback) {
         ko.utils.possiblyWrap(function() {
             var value = source();
-            ko.ignoreDependencies(function() {
-                if (value !== other()) {
-                    callback(value);
-                }
-            });
+            if (shouldSet && !isUpdating) {
+                isUpdating = true;
+                ko.ignoreDependencies(callback, null, [value]);
+                isUpdating = false;
+            }
         }, element);
-    }
-    // Update view from model
-    updateOnChange(modelValue, elemUpdater, elemValue);
-    // Update model from view
-    updateOnChange(elemValue, modelUpdater, modelValue);
+    };
+
+    // Update model from view when changed (but not updated initially)
+    updateOnChange(elemValue, modelUpdater);
+
+    // Update view from model initially and when changed
+    shouldSet = true;
+    updateOnChange(modelValue, elemUpdater);
 }
 
 function preprocessAs(val, key, addBinding) {
