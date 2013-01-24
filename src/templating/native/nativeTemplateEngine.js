@@ -3,7 +3,7 @@ ko.nativeTemplateEngine = function () {
 }
 
 ko.nativeTemplateEngine.prototype = ko.utils.extendInternal(new ko.templateEngine(), {
-
+'constructor': ko.nativeTemplateEngine,
 'renderTemplateSource': function (templateSource, bindingContext, options) {
     var useNodesIfAvailable = !(ko.utils.ieVersion < 9), // IE<9 cloneNode doesn't work properly
         templateNodesFunc = useNodesIfAvailable ? templateSource['nodes'] : null,

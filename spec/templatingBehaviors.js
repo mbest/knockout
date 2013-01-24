@@ -108,6 +108,12 @@ describe('Templating', function() {
         expect(testNode.innerHTML).toEqual("ABC");
     });
 
+    it('Should be able to render an empty template', function() {
+        ko.setTemplateEngine(new dummyTemplateEngine({ emptyTemplate: "" }));
+        ko.renderTemplate("emptyTemplate", null, null, testNode);
+        expect(testNode.childNodes.length).toEqual(0);
+    });
+
     it('Should be able to access newly rendered/inserted elements in \'afterRender\' callaback', function () {
         var passedElement, passedDataItem;
         var myCallback = function(elementsArray, dataItem) {
@@ -420,7 +426,7 @@ describe('Templating', function() {
 
         // Bind against initial array containing one entry. UI just shows "original"
         var myArray = ko.observableArray(["original"]);
-        ko.applyBindings({ items: myArray });
+        ko.applyBindings({ items: myArray }, testNode);
         expect(testNode.childNodes[0]).toContainHtml("<div>original</div>");
 
         // Now replace the entire array contents with one different entry.
@@ -439,12 +445,30 @@ describe('Templating', function() {
 
         // Bind against initial array containing one entry.
         var myArray = ko.observableArray(["original"]);
-        ko.applyBindings({ items: myArray });
+        ko.applyBindings({ items: myArray }, testNode);
         expect(testNode.childNodes[0]).toContainHtml("<div>original</div>inner <span>123</span>x");
 
         // Now replace the entire array contents with one different entry.
         myArray(["new"]);
         expect(testNode.childNodes[0]).toContainHtml("<div>new</div>inner <span>123</span>x");
+    });
+
+    it('Data binding \'foreach\' should handle templates in which the very first node has a binding but it does not reference any observables', function() {
+        // Represents https://github.com/SteveSanderson/knockout/issues/739
+        // Previously, the rewriting (which introduces a comment node before the bound node) was interfering
+        // with the array-to-DOM-node mapping state tracking
+        ko.setTemplateEngine(new dummyTemplateEngine({ mytemplate: "<div data-bind='attr: {}'>[js:name()]</div>" }));
+        testNode.innerHTML = "<div data-bind=\"template: { name: 'mytemplate', foreach: items }\"></div>";
+
+        // Bind against array, referencing an observable property
+        var myItem = { name: ko.observable("a") };
+        ko.applyBindings({ items: [myItem] }, testNode);
+        expect(testNode.childNodes[0]).toContainHtml("<div>a</div>");
+
+        // Modify the observable property and check that UI is updated
+        // Previously with the bug, it wasn't updated because the removal of the memo comment caused the array-to-DOM-node computed to be disposed
+        myItem.name("b");
+        expect(testNode.childNodes[0]).toContainHtml("<div>b</div>");
     });
 
     it('Data binding \'foreach\' option should apply bindings with an $index in the context', function () {
@@ -790,6 +814,7 @@ describe('Templating', function() {
             testNode.innerHTML = "<div data-bind='template: { name: \"myTemplate\" }'></div>";
 
             var didThrow = false;
+            ko.utils.domData.clear(testNode);
             try { ko.applyBindings({ someData: { childProp: 'abc' } }, testNode) }
             catch (ex) {
                 didThrow = true;

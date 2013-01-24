@@ -109,6 +109,7 @@
     }
 
     var needsName = 'needs', needsBinding = { 'flags': bindingFlags_builtIn };
+    var boundElementDomDataKey = ko.utils.domData.nextKey();
     function applyBindingsToNodeAndDescendantsInternal (bindingContext, node, bindingContextsMayDifferFromDomParentElement, bindingsToApply, dontBindDescendants) {
         var isElement = (node.nodeType === 1),
             hasBindings = bindingsToApply || ko.bindingProvider['instance']['nodeHasBindings'](node),
@@ -135,6 +136,15 @@
                 applyBindingsToDescendantsInternal(bindingContext, node, /* bindingContextsMayDifferFromDomParentElement: */ !isElement);
             }
             return;
+        }
+
+        // Prevent multiple applyBindings calls for the same node, except when a binding value is specified
+        var alreadyBound = ko.domDataGet(node, boundElementDomDataKey);
+        if (!bindingsToApply) {
+            if (alreadyBound) {
+                throw Error("You cannot apply bindings multiple times to the same element.");
+            }
+            ko.domDataSet(node, boundElementDomDataKey, true);
         }
 
         // Parse bindings; track observables so that the bindings are reparsed if needed
