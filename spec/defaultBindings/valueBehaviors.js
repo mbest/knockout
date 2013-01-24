@@ -103,24 +103,24 @@ describe('Binding: Value', function() {
             "<input data-bind='value: getSetter()[\"set\"]' />" +
             "<input data-bind=\"value: getSetter()['set']\" />";
         ko.applyBindings(model, testNode);
-        expect(testNode.childNodes[0].value).toEqual(666);
-        expect(testNode.childNodes[1].value).toEqual(666);
-        expect(testNode.childNodes[2].value).toEqual(666);
+        expect(testNode.childNodes[0].value).toEqual('666');
+        expect(testNode.childNodes[1].value).toEqual('666');
+        expect(testNode.childNodes[2].value).toEqual('666');
 
         // .property
         testNode.childNodes[0].value = 667;
         ko.utils.triggerEvent(testNode.childNodes[0], "change");
-        expect(mySetter.set).toEqual(667);
+        expect(mySetter.set).toEqual('667');
 
         // ["property"]
         testNode.childNodes[1].value = 668;
         ko.utils.triggerEvent(testNode.childNodes[1], "change");
-        expect(mySetter.set).toEqual(668);
+        expect(mySetter.set).toEqual('668');
 
         // ['property']
         testNode.childNodes[0].value = 669;
         ko.utils.triggerEvent(testNode.childNodes[0], "change");
-        expect(mySetter.set).toEqual(669);
+        expect(mySetter.set).toEqual('669');
     });
 
     it('Should be able to write to observable subproperties of an observable, even after the parent observable has changed', function () {
@@ -216,7 +216,7 @@ describe('Binding: Value', function() {
         expect(testNode.childNodes[0].selectedIndex).toEqual(0);
     });
 
-    it('For select boxes, should display the caption when the model value changes to blank': function() {
+    it('For select boxes, should display the caption when the model value changes to blank', function() {
         var observable = new ko.observable('B');
         testNode.innerHTML = "<select data-bind='options:[\"A\", \"B\"], optionsCaption:\"Select...\", value:myObservable'></select>";
         ko.applyBindings({ myObservable: observable }, testNode);
@@ -226,7 +226,7 @@ describe('Binding: Value', function() {
         expect(observable()).toEqual(undefined);        // value is updated to undefined
     });
 
-    it('For select boxes, should update the model value when the UI is changed (setting it to undefined when the caption is selected)': function () {
+    it('For select boxes, should update the model value when the UI is changed (setting it to undefined when the caption is selected)', function () {
         var observable = new ko.observable('B');
         testNode.innerHTML = "<select data-bind='options:[\"A\", \"B\"], optionsCaption:\"Select...\", value:myObservable'></select>";
         ko.applyBindings({ myObservable: observable }, testNode);
@@ -291,7 +291,7 @@ describe('Binding: Value', function() {
         expect(observable()).not.toEqual('D');
     });
 
-    it('For empty select boxes, should reject model values that don\'t match any option value, resetting the model value to undefined': function() {
+    it('For empty select boxes, should reject model values that don\'t match any option value, resetting the model value to undefined', function() {
         var observable = new ko.observable('B');
         testNode.innerHTML = "<select data-bind='options:[], value:myObservable'></select>";
         ko.applyBindings({ myObservable: observable }, testNode);
@@ -301,7 +301,7 @@ describe('Binding: Value', function() {
         expect(observable()).toEqual(undefined);
     });
 
-    it('For empty select boxes, should reject model values that don\'t match any option value (value before options [also with no options])': function() {
+    it('For empty select boxes, should reject model values that don\'t match any option value (value before options [also with no options])', function() {
         var observable = new ko.observable('B');
         testNode.innerHTML = "<select data-bind='value:myObservable', options:[]></select>";
         ko.applyBindings({ myObservable: observable }, testNode);
@@ -311,7 +311,7 @@ describe('Binding: Value', function() {
         expect(observable()).toEqual(undefined);
     });
 
-    it('For select boxes, should clear value if selected item is deleted': function() {
+    it('For select boxes, should clear value if selected item is deleted', function() {
         var observable = new ko.observable('B');
         var observableArray = new ko.observableArray(["A", "B"]);
         testNode.innerHTML = "<select data-bind='value:myObservable, options:myObservableArray, optionsCaption:\"Select...\"'></select>";
@@ -323,7 +323,7 @@ describe('Binding: Value', function() {
         expect(observable()).toEqual(undefined);
     });
 
-    it('For select boxes, should set value to first in list if selected item is deleted and no caption': function() {
+    it('For select boxes, should set value to first in list if selected item is deleted and no caption', function() {
         var observable = new ko.observable('B');
         var observableArray = new ko.observableArray(["A", "B"]);
         testNode.innerHTML = "<select data-bind='value:myObservable, options:myObservableArray'></select>";
@@ -335,7 +335,7 @@ describe('Binding: Value', function() {
         expect(observable()).toEqual("A");
     });
 
-    it('For select boxes, should clear value if select is cleared and no caption': function() {
+    it('For select boxes, should clear value if select is cleared and no caption', function() {
         var observable = new ko.observable('B');
         var observableArray = new ko.observable(["A", "B"]);
         testNode.innerHTML = "<select data-bind='options:myObservableArray, value:myObservable'></select>";
@@ -347,7 +347,7 @@ describe('Binding: Value', function() {
         expect(observable()).toEqual(undefined);
     });
 
-    it('For select boxes, should set value if select is filled and no caption': function() {
+    it('For select boxes, should set value if select is filled and no caption', function() {
         var observable = new ko.observable();
         var observableArray = new ko.observable();
         testNode.innerHTML = "<select data-bind='options:myObservableArray, value:myObservable'></select>";
@@ -359,7 +359,7 @@ describe('Binding: Value', function() {
         expect(observable()).toEqual("A");
     });
 
-    it('For select boxes, option values can be numerical, and are not implicitly converted to strings': function() {
+    it('For select boxes, option values can be numerical, and are not implicitly converted to strings', function() {
         var observable = new ko.observable(30);
         testNode.innerHTML = "<select data-bind='options:[10,20,30,40], value:myObservable'></select>";
         ko.applyBindings({ myObservable: observable }, testNode);

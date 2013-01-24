@@ -144,7 +144,7 @@ describe('Dependent Observable', function() {
 
         observable(50);
         expect(computed()).toEqual(2);    // value wasn't changed
-    },
+    });
 
     it('Should unsubscribe from previous dependencies each time a dependency changes', function () {
         var observableA = new ko.observable("A");

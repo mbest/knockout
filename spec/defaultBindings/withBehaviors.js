@@ -29,7 +29,7 @@ describe('Binding: With', function() {
         // Cause the binding to update by changing the observable
         // It shouldn't re-render or update the descendent nodes because the value remains truthy
         someItem({ childProp: 'new prop value' })
-        expect(testNode.childNodes[0].childNodes[0]).toContainText(new prop value");
+        expect(testNode.childNodes[0].childNodes[0]).toContainText("new prop value");
         expect(testNode.childNodes[0].childNodes[0]).toEqual(originalNode);
     });
 

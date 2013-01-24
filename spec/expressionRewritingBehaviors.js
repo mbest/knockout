@@ -9,30 +9,30 @@ describe('Expression Rewriting', function() {
     it('Should be able to parse simple object literals', function() {
         var result = ko.expressionRewriting.parseObjectLiteral("a: 1, b: 2, \"quotedKey\": 3, 'aposQuotedKey': 4");
         expect(result.length).toEqual(4);
-        expect(result[0].key).toEqual("a");
-        expect(result[0].value).toEqual("1");
-        expect(result[1].key).toEqual("b");
-        expect(result[1].value).toEqual("2");
-        expect(result[2].key).toEqual("quotedKey");
-        expect(result[2].value).toEqual("3");
-        expect(result[3].key).toEqual("aposQuotedKey");
-        expect(result[3].value).toEqual("4");
+        expect(result[0][0]).toEqual("a");
+        expect(result[0][1]).toEqual("1");
+        expect(result[1][0]).toEqual("b");
+        expect(result[1][1]).toEqual("2");
+        expect(result[2][0]).toEqual("quotedKey");
+        expect(result[2][1]).toEqual("3");
+        expect(result[3][0]).toEqual("aposQuotedKey");
+        expect(result[3][1]).toEqual("4");
     });
 
     it('Should ignore any outer braces', function() {
         var result = ko.expressionRewriting.parseObjectLiteral("{a: 1}");
         expect(result.length).toEqual(1);
-        expect(result[0].key).toEqual("a");
-        expect(result[0].value).toEqual("1");
+        expect(result[0][0]).toEqual("a");
+        expect(result[0][1]).toEqual("1");
     });
 
     it('Should be able to parse object literals containing string literals', function() {
         var result = ko.expressionRewriting.parseObjectLiteral("a: \"comma, colon: brace{ bracket[ apos' escapedQuot\\\" end\", b: 'escapedApos\\\' brace} bracket] quot\"'");
         expect(result.length).toEqual(2);
-        expect(result[0].key).toEqual("a");
-        expect(result[0].value).toEqual("\"comma, colon: brace{ bracket[ apos' escapedQuot\\\" end\"");
-        expect(result[1].key).toEqual("b");
-        expect(result[1].value).toEqual("'escapedApos\\\' brace} bracket] quot\"'");
+        expect(result[0][0]).toEqual("a");
+        expect(result[0][1]).toEqual("\"comma, colon: brace{ bracket[ apos' escapedQuot\\\" end\"");
+        expect(result[1][0]).toEqual("b");
+        expect(result[1][1]).toEqual("'escapedApos\\\' brace} bracket] quot\"'");
     });
 
     it('Should be able to parse object literals containing child objects, arrays, function literals, and newlines', function() {
@@ -76,7 +76,7 @@ describe('Expression Rewriting', function() {
         expect(parsedRewritten.b).toEqual(true);
     });
 
-    'Should allow binding to modify value through "preprocess" method', function() {
+    it('Should allow binding to modify value through "preprocess" method', function() {
         // create binding that has a default value of false
         ko.bindingHandlers.b = {
             preprocess: function(value) {
@@ -102,7 +102,7 @@ describe('Expression Rewriting', function() {
         expect(parsedRewritten.ab).toEqual(2);
     });
 
-    'Bindings added by "preprocess" should be at the root level', function() {
+    it('Bindings added by "preprocess" should be at the root level', function() {
         ko.bindingHandlers.b = {
             flags: ko.bindingFlags.twoLevel,
             preprocess: function(value, key, addBinding) {

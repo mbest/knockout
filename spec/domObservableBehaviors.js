@@ -1,62 +1,53 @@
-function prepareTestNode() {
-    ko.bindingProvider.instance.clearCache();
-    var existingNode = document.getElementById("testNode");
-    if (existingNode != null)
-        ko.cleanAndRemoveNode(existingNode);
-    testNode = document.createElement("div");
-    testNode.id = "testNode";
-    document.body.appendChild(testNode);
-}
 
-describe('DOM Observable', {
-    before_each: prepareTestNode,
+describe('DOM node disposal', function() {
+    beforeEach(jasmine.prepareTestNode);
 
-    'Should be able to set arbitrary property values': function() {
+    it('Should be able to set arbitrary property values', function() {
         var obs1 = ko.domObservable(testNode, 'firstAttribute');
         obs1("first value");
-        value_of(testNode["firstAttribute"]).should_be("first value");
-        value_of(obs1()).should_be("first value");
+        expect(testNode["firstAttribute"]).toEqual("first value");
+        expect(obs1()).toEqual("first value");
 
         var obs2 = ko.domObservable(testNode, 'second-attribute');
         obs2(true);
-        value_of(testNode["second-attribute"]).should_be(true);
-        value_of(obs2()).should_be(true);
-    },
+        expect(testNode["second-attribute"]).toEqual(true);
+        expect(obs2()).toEqual(true);
+    });
 
-    'Should be able to create multiple observable for the same property that update in sync': function() {
+    it('Should be able to create multiple observable for the same property that update in sync', function() {
         var obs1 = ko.domObservable(testNode, 'firstAttribute');
         obs1("first value");
-        value_of(testNode["firstAttribute"]).should_be("first value");
-        value_of(obs1()).should_be("first value");
+        expect(testNode["firstAttribute"]).toEqual("first value");
+        expect(obs1()).toEqual("first value");
 
         var obs2 = ko.domObservable(testNode, 'firstAttribute');
-        value_of(obs2()).should_be("first value");
+        expect(obs2()).toEqual("first value");
 
         obs2(true);
-        value_of(testNode["firstAttribute"]).should_be(true);
-        value_of(obs1()).should_be(true);
-    },
+        expect(testNode["firstAttribute"]).toEqual(true);
+        expect(obs1()).toEqual(true);
+    });
 
-    'Should be able to control a checkbox\'s checked state': function () {
+    it('Should be able to control a checkbox\'s checked state', function () {
         testNode.innerHTML = "<input type='checkbox' />";
         var checkBox = testNode.childNodes[0];
         var myobservable = ko.domObservable(checkBox, 'checked');
-        value_of(checkBox.checked).should_be(false);
+        expect(checkBox.checked).toEqual(false);
 
         myobservable(true);
-        value_of(checkBox.checked).should_be(true);
-    },
+        expect(checkBox.checked).toEqual(true);
+    });
 
-    'Should update observable when the checkbox click event fires': function () {
+    it('Should update observable when the checkbox click event fires', function () {
         testNode.innerHTML = "<input type='checkbox' />";
         var checkBox = testNode.childNodes[0];
         var myobservable = ko.domObservable(checkBox, 'checked', 'click');
 
         ko.utils.triggerEvent(testNode.childNodes[0], "click");
-        value_of(myobservable()).should_be(true);
-    },
+        expect(myobservable()).toEqual(true);
+    });
 
-    'Should be able to change watched events for a dom observable': function () {
+    it('Should be able to change watched events for a dom observable', function () {
         testNode.innerHTML = "<input type='checkbox' />";
         var checkBox = testNode.childNodes[0],
             myobservable = ko.domObservable(checkBox, 'checked'),
@@ -65,36 +56,33 @@ describe('DOM Observable', {
 
         // initially it doesn't listen for changes; so the value stays the same
         ko.utils.triggerEvent(testNode.childNodes[0], "click");
-        value_of(latestNotifiedValue()).should_be(false);
+        expect(latestNotifiedValue()).toEqual(false);
 
         // now modify it to listen for the click event
         myobservable(false);
         ko.domObservable(checkBox, 'checked', 'click');
         ko.utils.triggerEvent(testNode.childNodes[0], "click");
-        value_of(latestNotifiedValue()).should_be(true);
-    },
+        expect(latestNotifiedValue()).toEqual(true);
+    });
 
-    'Should catch the text input\'s onchange and update value observable': function () {
+    it('Should catch the text input\'s onchange and update value observable', function () {
         testNode.innerHTML = "<input />";
         var textBox = testNode.childNodes[0];
         var myobservable = ko.domObservable(textBox, 'value', ['change']);
 
         textBox.value = "some user-entered value";
         ko.utils.triggerEvent(textBox, "change");
-        value_of(myobservable()).should_be("some user-entered value");
-    },
+        expect(myobservable()).toEqual("some user-entered value");
+    });
 
-    'Should assign an empty string as value if the observable value is null or undefined': function () {
+    it('Should assign an empty string as value if the observable value is null or undefined', function () {
         testNode.innerHTML = "<input />";
         var textBox = testNode.childNodes[0];
         var myobservable = ko.domObservable(textBox, 'value');
-        value_of(textBox.value).should_be("");
+        expect(textBox.value).toEqual("");
         myobservable(null);
-        value_of(textBox.value).should_be("");
+        expect(textBox.value).toEqual("");
         myobservable(undefined);
-        value_of(textBox.value).should_be("");
-    },
-
-    'dummy': function() {
-    }
+        expect(textBox.value).toEqual("");
+    });
 });

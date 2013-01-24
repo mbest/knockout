@@ -17,7 +17,7 @@ describe('Binding: Click', function() {
         expect(model.wasCalled).toEqual(true);
     });
 
-    'Should be able to specifiy click binding using object literal (bypass parsing)': function() {
+    it('Should be able to specifiy click binding using object literal (bypass parsing)', function() {
         var model = {
             wasCalled: false,
             doCall: function (arg1, arg2) {
