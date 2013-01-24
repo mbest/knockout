@@ -26,6 +26,15 @@ describe('Expression Rewriting', function() {
         expect(result[0][1]).toEqual("1");
     });
 
+    it('Should ignore trailing commas', function() {
+        var result = ko.expressionRewriting.parseObjectLiteral("a: 1, b: 2,");
+        expect(result.length).toEqual(2);
+        expect(result[0][0]).toEqual("a");
+        expect(result[0][1]).toEqual("1");
+        expect(result[1][0]).toEqual("b");
+        expect(result[1][1]).toEqual("2");
+    });
+
     it('Should be able to parse object literals containing string literals', function() {
         var result = ko.expressionRewriting.parseObjectLiteral("a: \"comma, colon: brace{ bracket[ apos' escapedQuot\\\" end\", b: 'escapedApos\\\' brace} bracket] quot\"'");
         expect(result.length).toEqual(2);

@@ -22,13 +22,13 @@ describe('Compare Arrays', function() {
         var oldArray = ["A", "B"];
         var newArray = ["A", "A2", "A3", "B", "B2"];
         var compareResult = ko.utils.compareArrays(oldArray, newArray);
-        /*expect(compareResult).toEqual([
+        expect(compareResult.slice(0)).toEqual([
             { status: "retained", value: "A" },
             { status: "added", value: "A2", index: 1 },
             { status: "added", value: "A3", index: 2 },
             { status: "retained", value: "B" },
             { status: "added", value: "B2", index: 4 }
-        ]);*/
+        ]);
         expect(compareResult.added).toEqual(["A2","A3","B2"]);
         expect(compareResult.deleted).toEqual([]);
     });
@@ -37,13 +37,13 @@ describe('Compare Arrays', function() {
         var oldArray = ["A", "B", "C", "D", "E"];
         var newArray = ["B", "C", "E"];
         var compareResult = ko.utils.compareArrays(oldArray, newArray);
-        /*expect(compareResult).toEqual([
+        expect(compareResult.slice(0)).toEqual([
             { status: "deleted", value: "A", index: 0 },
             { status: "retained", value: "B" },
             { status: "retained", value: "C" },
             { status: "deleted", value: "D", index: 3 },
             { status: "retained", value: "E" }
-        ]);*/
+        ]);
         expect(compareResult.added).toEqual([]);
         expect(compareResult.deleted).toEqual(["A","D"]);
     });
@@ -52,7 +52,7 @@ describe('Compare Arrays', function() {
         var oldArray = ["A", "B", "C", "D", "E"];
         var newArray = [123, "A", "E", "C", "D"];
         var compareResult = ko.utils.compareArrays(oldArray, newArray);
-        /*expect(compareResult).toEqual([
+        expect(compareResult.slice(0)).toEqual([
             { status: "added", value: 123, index: 0 },
             { status: "retained", value: "A" },
             { status: "deleted", value: "B", index: 1 },
@@ -60,7 +60,7 @@ describe('Compare Arrays', function() {
             { status: "retained", value: "C" },
             { status: "retained", value: "D" },
             { status: "deleted", value: "E", index: 4, moved: 2 }
-        ]);*/
+        ]);
         expect(compareResult.added).toEqual([123]);
         expect(compareResult.deleted).toEqual(["B"]);
     });
@@ -72,7 +72,7 @@ describe('Compare Arrays', function() {
         // The order of added and deleted doesn't really matter. We sort by a property that
         // contains unique values to ensure the results are in a known order for verification.
         compareResult.sort(function(a, b) { return a.value.localeCompare(b.value) });
-        /*expect(compareResult).toEqual([
+        expect(compareResult.slice(0)).toEqual([
             { status: "deleted", value: "A", index: 0},
             { status: "deleted", value: "B", index: 1},
             { status: "deleted", value: "C", index: 2},
@@ -83,7 +83,7 @@ describe('Compare Arrays', function() {
             { status: "added", value: "H", index: 2},
             { status: "added", value: "I", index: 3},
             { status: "added", value: "J", index: 4}
-        ]);*/
+        ]);
         expect(compareResult.added).toEqual(["F","G","H","I","J"]);
         expect(compareResult.deleted).toEqual(["A","B","C","D","E"]);
     });
