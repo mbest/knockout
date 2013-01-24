@@ -79,7 +79,7 @@ page.onInitialized = function() {
     page.evaluate(function() { window.koFilename = '../build/output/knockout-latest.js'; });
 };
 
-page.open(system.args[1] || 'spec/runner.html', function(status){
+page.open(system.args[1] || 'spec/runner-min.html', function(status){
     if (status !== "success") {
         console.log("Unable to access network");
         phantom.exit();
