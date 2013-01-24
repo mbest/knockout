@@ -1,19 +1,17 @@
 
-describe('DOM node disposal', {
-    before_each: function () {
-        testNode = document.createElement("div");
-    },
+describe('DOM node disposal', function() {
+    beforeEach(jasmine.prepareTestNode);
 
-    'Should run registered disposal callbacks when a node is cleaned': function () {
+    it('Should run registered disposal callbacks when a node is cleaned', function () {
         var didRun = false;
         ko.utils.domNodeDisposal.addDisposeCallback(testNode, function() { didRun = true });
 
-        value_of(didRun).should_be(false);
+        expect(didRun).toEqual(false);
         ko.cleanNode(testNode);
-        value_of(didRun).should_be(true);
-    },
+        expect(didRun).toEqual(true);
+    });
 
-    'Should run registered disposal callbacks on descendants when a node is cleaned': function () {
+    it('Should run registered disposal callbacks on descendants when a node is cleaned', function () {
         var didRun = false;
         var childNode = document.createElement("DIV");
         var grandChildNode = document.createElement("DIV");
@@ -21,36 +19,36 @@ describe('DOM node disposal', {
         childNode.appendChild(grandChildNode);
         ko.utils.domNodeDisposal.addDisposeCallback(grandChildNode, function() { didRun = true });
 
-        value_of(didRun).should_be(false);
+        expect(didRun).toEqual(false);
         ko.cleanNode(testNode);
-        value_of(didRun).should_be(true);
-    },
+        expect(didRun).toEqual(true);
+    });
 
-    'Should run registered disposal callbacks and detach from DOM when a node is removed': function () {
+    it('Should run registered disposal callbacks and detach from DOM when a node is removed', function () {
         var didRun = false;
         var childNode = document.createElement("DIV");
         testNode.appendChild(childNode);
         ko.utils.domNodeDisposal.addDisposeCallback(childNode, function() { didRun = true });
 
-        value_of(didRun).should_be(false);
-        value_of(testNode.childNodes.length).should_be(1);
+        expect(didRun).toEqual(false);
+        expect(testNode.childNodes.length).toEqual(1);
         ko.cleanAndRemoveNode(childNode);
-        value_of(didRun).should_be(true);
-        value_of(testNode.childNodes.length).should_be(0);
-    },
+        expect(didRun).toEqual(true);
+        expect(testNode.childNodes.length).toEqual(0);
+    });
 
-    'Should be able to remove previously-registered disposal callbacks': function() {
+    it('Should be able to remove previously-registered disposal callbacks', function() {
         var didRun = false;
         var callback = function() { didRun = true };
         ko.utils.domNodeDisposal.addDisposeCallback(testNode, callback);
 
-        value_of(didRun).should_be(false);
+        expect(didRun).toEqual(false);
         ko.utils.domNodeDisposal.removeDisposeCallback(testNode, callback);
         ko.cleanNode(testNode);
-        value_of(didRun).should_be(false); // Didn't run only because we removed it
-    },
+        expect(didRun).toEqual(false); // Didn't run only because we removed it
+    });
 
-    'Should be able to attach disposal callback to a node that has been cloned': function() {
+    it('Should be able to attach disposal callback to a node that has been cloned', function() {
         // This represents bug https://github.com/SteveSanderson/knockout/issues/324
         // IE < 9 copies expando properties when cloning nodes, so if the node already has some DOM data associated with it,
         // the DOM data key will be copied too. This causes a problem for disposal, because if the original node gets disposed,
@@ -66,22 +64,22 @@ describe('DOM node disposal', {
         var cloneNode = originalNode.cloneNode(true);
         ko.cleanNode(originalNode);
         ko.utils.domNodeDisposal.addDisposeCallback(cloneNode, function() { });
-    },
+    });
 
-    'Should be able to remove nodes from disposal callbacks': function() {
+    it('Should be able to remove nodes from disposal callbacks', function() {
         var didRun1 = false, didRun2 = false;
         var callback1 = function() { didRun1 = true }, callback2 = function() { didRun2 = true };
         var disposer1 = ko.utils.domNodeDisposal.addDisposeCallback(testNode, callback1);
         var disposer2 = ko.utils.domNodeDisposal.addDisposeCallback(testNode, callback2);
 
-        value_of(didRun1).should_be(false);
-        value_of(didRun2).should_be(false);
+        expect(didRun1).toEqual(false);
+        expect(didRun2).toEqual(false);
 
         if (disposer1.deleteNode) {     // interface insn't currently exported
             disposer1.deleteNode(testNode);
             ko.cleanNode(testNode);
-            value_of(didRun1).should_be(false);
-            value_of(didRun2).should_be(true);
+            expect(didRun1).toEqual(false);
+            expect(didRun2).toEqual(true);
         }
-    }
+    });
 });
