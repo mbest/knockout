@@ -911,7 +911,7 @@ describe('Binding attribute syntax', function() {
     });
 
     // TODO - This is a spec that succeeds in base Knockout, but fails with this update
-    /*it('Should access latest value from extra binding when normal binding is updated', function() {
+    xit('Should access latest value from extra binding when normal binding is updated', function() {
         delete ko.bindingHandlers.nonexistentHandler;
         var observable = ko.observable(), updateValue;
         var vm = {myObservable: observable, myNonObservable: "first value"};
@@ -928,7 +928,7 @@ describe('Binding attribute syntax', function() {
         vm.myNonObservable = "second value";
         observable.notifySubscribers();
         expect(updateValue).toEqual("second value");
-    });*/
+    });
 
     it('Should process bindings in a certain order based on their type and dependencies', function() {
         var lastBindingIndex = 0;

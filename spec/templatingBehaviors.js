@@ -863,11 +863,11 @@ describe('Templating', function() {
         expect(initCalls).toEqual(1);
     });
 
-    xit('Should not throw errors if trying to apply text to a non-rendered node', function() {
+    it('Should not allow applying text to a non-rendered node', function() {
         // Represents https://github.com/SteveSanderson/knockout/issues/660
         // A <span> can't go directly into a <tr>, so modern browsers will silently strip it. We need to verify this doesn't
-        // throw errors during unmemoization (when unmemoizing, it will try to apply the text to the following text node
-        // instead of the node you intended to bind to).
+        // throw a browser error and instead caught by Knockout during unmemoization (when unmemoizing, it will try to apply
+        // the text to the following text node instead of the node you intended to bind to).
         // Note that IE < 9 won't strip the <tr>; instead it has much stranger behaviors regarding unexpected DOM structures.
         // It just happens not to give an error in this particular case, though it would throw errors in many other cases
         // of malformed template DOM.
@@ -875,8 +875,13 @@ describe('Templating', function() {
             myTemplate: "<tr><span data-bind=\"text: 'Some text'\"></span> </tr>" // The whitespace after the closing span is what triggers the strange HTML parsing
         }));
         testNode.innerHTML = "<div data-bind='template: \"myTemplate\"'></div>";
-        ko.applyBindings(null, testNode);
-        // Since the actual template markup was invalid, we don't really care what the
-        // resulting DOM looks like. We are only verifying there were no exceptions.
+        var didThrow = false;
+        try {
+            ko.applyBindings(null, testNode);
+        } catch(ex) {
+            didThrow = true;
+            expect(ex.message).toEqual("Cannot bind to span node - it has been stripped from the document. Malformed template.");
+        }
+        expect(didThrow).toEqual(true);
     });
 });
