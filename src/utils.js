@@ -96,6 +96,12 @@ ko.utils = (function () {
             return result;
         },
 
+        arrayReduce: function (array, value, action) {
+            for (var i = 0, j = array.length; i < j; i++)
+                value = action(array[i], value);
+            return value;
+        },
+
         arrayPushAll: function (array, valuesToPush) {
             if (valuesToPush instanceof Array)
                 array.push.apply(array, valuesToPush);
