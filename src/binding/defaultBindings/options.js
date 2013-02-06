@@ -14,7 +14,6 @@ function ensureDropdownSelectionIsConsistentWithModelValue(element, modelValue, 
 ko.bindingHandlers['options'] = {
     'init': function(element) {
         // Remove all existing <option>s.
-        // Need to use .remove() rather than .removeChild() for <option>s otherwise IE behaves oddly (https://github.com/SteveSanderson/knockout/issues/134)
         while (element.length > 0) {
             element.remove(0);
         }
@@ -24,8 +23,9 @@ ko.bindingHandlers['options'] = {
             throw new Error("options binding applies only to SELECT elements");
 
         var selectWasPreviouslyEmpty = element.length == 0;
+        var previousScrollTop = element.scrollTop;
+
         var unwrappedArray = ko.utils.unwrapObservable(valueAccessor()) || [];
-        var selectedValue = element.value;
         var allBindings = allBindingsAccessor();
         var includeDestroyed = allBindings['optionsIncludeDestroyed'];
         var caption = {};
@@ -43,22 +43,22 @@ ko.bindingHandlers['options'] = {
             filteredArray.unshift(caption);
         }
 
+        function applyToObject(object, predicate, defaultValue) {
+            var predicateType = typeof predicate;
+            if (predicateType == "function")    // Given a function; run it against the data value
+                return predicate(object);
+            else if (predicateType == "string") // Given a string; treat it as a property name on the data value
+                return object[predicate];
+            else                                // Given no optionsText arg; use the data value itself
+                return defaultValue;
+        }
+
         function optionForArrayItem(arrayEntry, index) {
             var option = document.createElement("option");
             if (arrayEntry === caption) {
                 ko.utils.setHtml(option, allBindings['optionsCaption']);
                 ko.selectExtensions.writeValue(option, undefined);
             } else {
-                function applyToObject(object, predicate, defaultValue) {
-                    var predicateType = typeof predicate;
-                    if (predicateType == "function")    // Given a function; run it against the data value
-                        return predicate(object);
-                    else if (predicateType == "string") // Given a string; treat it as a property name on the data value
-                        return object[predicate];
-                    else                                // Given no optionsText arg; use the data value itself
-                        return defaultValue;
-                }
-
                 // Apply a value to the option element
                 var optionValue = applyToObject(arrayEntry, allBindings['optionsValue'], arrayEntry);
                 ko.selectExtensions.writeValue(option, ko.utils.unwrapObservable(optionValue));
@@ -70,11 +70,7 @@ ko.bindingHandlers['options'] = {
             return [option];
         }
 
-        function removeOption(option) {
-            element.remove(option.index);
-        }
-
-        ko.utils.setDomNodeChildrenFromArrayMapping(element, filteredArray, optionForArrayItem, {'beforeRemove': removeOption}, null);
+        ko.utils.setDomNodeChildrenFromArrayMapping(element, filteredArray, optionForArrayItem, {'dontLimitMoves':true}, null);
 
         if (selectWasPreviouslyEmpty && ('value' in allBindings)) {
             // Ensure consistency between model value and selected option.
@@ -85,6 +81,9 @@ ko.bindingHandlers['options'] = {
 
         // Workaround for IE9 bug
         ko.utils.ensureSelectElementIsRenderedCorrectly(element);
+
+        if (Math.abs(previousScrollTop - element.scrollTop) > 20)
+            element.scrollTop = previousScrollTop;
     }
 };
 ko.bindingHandlers['options'].optionValueDomDataKey = '__ko.optionValueDomData__';
