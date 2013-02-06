@@ -99,3 +99,5 @@ function templateBasedBinding(makeOptionsFunction, preprocess) {
         }
     };
 }
+
+ko.exportSymbol('setUpTwoWayBinding', setUpTwoWayBinding);

@@ -94,7 +94,7 @@
         var isFirstExecution = ko.domDataGet(domNode, lastMappingResultDomDataKey) === undefined;
         var lastMappingResult = ko.domDataGet(domNode, lastMappingResultDomDataKey) || [];
         var lastArray = ko.utils.arrayMap(lastMappingResult, function (x) { return x.arrayEntry; });
-        var editScript = ko.utils.compareArrays(lastArray, array);
+        var editScript = ko.utils.compareArrays(lastArray, array, options['dontLimitMoves']);
 
         // Build the new mapping result
         var newMappingResult = [];

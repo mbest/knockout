@@ -2,7 +2,8 @@
 // "foreach: { data: someExpression, afterAdd: myfn }" is equivalent to "template: { foreach: someExpression, afterAdd: myfn }"
 ko.bindingHandlers['foreach'] = templateBasedBinding(
     function(value, options, allBindingsAccessor) {
-        if ((!value) || typeof value.splice == "function") {
+        var unwrappedValue = ko.utils.peekObservable(value);    // Unwrap without setting a dependency here
+        if ((!unwrappedValue) || typeof unwrappedValue.length == "number") {
             // If bindingValue is the array, just pass it on its own
             options['foreach'] = value;
             options['as'] = allBindingsAccessor('as');

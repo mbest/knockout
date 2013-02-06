@@ -71,8 +71,10 @@
 
         if (haveAddedNodesToParent) {
             activateBindingsOnContinuousNodeArray(renderedNodesArray, bindingContext);
-            if (options['afterRender'])
-                ko.dependencyDetection.ignore(options['afterRender'], null, [renderedNodesArray, bindingContext['$data']]);
+            if (options['afterRender']) {
+                var toBind = options['data'] ? bindingContext['$parent'] : bindingContext['$data'];
+                ko.dependencyDetection.ignore(options['afterRender'], toBind, [renderedNodesArray, bindingContext['$data']]);
+            }
         }
 
         return renderedNodesArray;
@@ -134,8 +136,10 @@
             var arrayItemContext = arrayItemContexts[indexValue];
             arrayItemContexts[indexValue] = undefined;
             activateBindingsOnContinuousNodeArray(addedNodesArray, arrayItemContext);
-            if (options['afterRender'])
-                options['afterRender'](addedNodesArray, arrayValue);
+            if (options['afterRender']) {
+                var toBind = options['data'] ? arrayItemContext['$parent'] : arrayItemContext['$data'];
+                options['afterRender'].call(toBind, addedNodesArray, arrayValue);
+            }
         };
 
         return ko.utils.possiblyWrap(function () {

@@ -2,7 +2,6 @@ ko.bindingHandlers['options'] = {
     'flags': bindingFlags_contentBind | bindingFlags_contentSet,
     'init': function(element) {
         // Remove all existing <option>s.
-        // Need to use .remove() rather than .removeChild() for <option>s otherwise IE behaves oddly (https://github.com/SteveSanderson/knockout/issues/134)
         while (element.length > 0) {
             element.remove(0);
         }
@@ -84,11 +83,7 @@ ko.bindingHandlers['options'] = {
             return [option];
         }
 
-        function removeOption(option) {
-            element.remove(option.index);
-        }
-
-        ko.utils.setDomNodeChildrenFromArrayMapping(element, filteredArray, optionForArrayItem, null/*{'beforeRemove': removeOption}*/, activateBindingsCallback);
+        ko.utils.setDomNodeChildrenFromArrayMapping(element, filteredArray, optionForArrayItem, {'dontLimitMoves':true}, activateBindingsCallback);
 
         // Workaround for IE9 bug
         ko.utils.ensureSelectElementIsRenderedCorrectly(element);
