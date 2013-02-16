@@ -98,7 +98,7 @@ ko.utils = (function () {
 
         arrayReduce: function (array, value, action) {
             for (var i = 0, j = array.length; i < j; i++)
-                value = action(array[i], value);
+                value = action(value, array[i], i);
             return value;
         },
 

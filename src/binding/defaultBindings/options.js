@@ -1,21 +1,21 @@
 ko.bindingHandlers['options'] = {
     'flags': bindingFlags_contentBind | bindingFlags_contentSet,
     'init': function(element) {
+        if (ko.utils.tagNameLower(element) !== "select")
+            throw new Error("options binding applies only to SELECT elements");
+
         // Remove all existing <option>s.
         while (element.length > 0) {
             element.remove(0);
         }
     },
     'update': function (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
-        if (ko.utils.tagNameLower(element) !== "select")
-            throw new Error("options binding applies only to SELECT elements");
-
         function selectedOption() {
             if (element.multiple) {
                 if (element.selectedOptions) {
                     return element.selectedOptions.length;
                 } else {
-                    return ko.utils.arrayReduce(element.options, 0, function(option, count) {
+                    return ko.utils.arrayReduce(element.options, 0, function(count, option) {
                         return option.selected ? count + 1 : count;
                     });
                 }
@@ -41,17 +41,19 @@ ko.bindingHandlers['options'] = {
             return includeDestroyed || item === undefined || item === null || !ko.utils.unwrapObservable(item['_destroy']);
         });
 
-        // If caption is included, add it to the array
+        // If caption is included, add it to the copied array
         if (allBindings['optionsCaption']) {
             filteredArray.unshift(caption);
         }
 
         if (optionsBind) {
             var activateBindingsCallback = function(arrayEntry, addedNodesArray, index) {
-                var optionContext = bindingContext['createChildContext'](arrayEntry),
-                    optionsParseBindings = function() {
-                        return ko.bindingProvider['instance']['parseBindingsString'](optionsBind, optionContext) };
-                ko.applyBindingsToNode(addedNodesArray[0], optionsParseBindings, optionContext);
+                if (arrayEntry !== caption) {
+                    var optionContext = bindingContext['createChildContext'](arrayEntry),
+                        optionsParseBindings = function() {
+                            return ko.bindingProvider['instance']['parseBindingsString'](optionsBind, optionContext) };
+                    ko.applyBindingsToNode(addedNodesArray[0], optionsParseBindings, optionContext);
+                }
             };
         }
 

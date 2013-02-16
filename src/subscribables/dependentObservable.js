@@ -1,9 +1,10 @@
 ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunctionTarget, options) {
     var _latestValue,
         _needsEvaluation = true,
-        _isBeingEvaluated = false,
+        _dontEvaluate = false,
         readFunction = evaluatorFunctionOrOptions,
-        _subscriptionsToDependencies = [];
+        _subscriptionsToDependencies = [],
+        othersToDispose = [];
 
     if (readFunction && typeof readFunction == "object") {
         // Single-parameter syntax - everything is on this "options" param
@@ -30,6 +31,9 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
         ko.utils.arrayForEach(_subscriptionsToDependencies, function (subscription) {
             subscription.dispose();
         });
+        ko.utils.arrayForEach(othersToDispose, function (subscription) {
+            subscription.dispose();
+        });
         _subscriptionsToDependencies = [];
         _needsEvaluation = false;
     }
@@ -45,7 +49,7 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
     }
 
     function evaluateImmediate() {
-        if (_isBeingEvaluated || !_needsEvaluation) {
+        if (_dontEvaluate || !_needsEvaluation) {
             // If the evaluation of a ko.computed causes side effects, it's possible that it will trigger its own re-evaluation.
             // This is not desirable (it's hard for a developer to realise a chain of dependencies might cause this, and they almost
             // certainly didn't intend infinite re-evaluations). So, for predictability, we simply prevent ko.computeds from causing
@@ -59,7 +63,7 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
             return;
         }
 
-        _isBeingEvaluated = true;
+        _dontEvaluate = true;
         try {
             // Initially, we assume that none of the subscriptions are still being used (i.e., all are candidates for disposal).
             // Then, during evaluation, we cross off any that are in fact still being used.
@@ -90,14 +94,14 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
         }
 
         dependentObservable.notifySubscribers(_latestValue);
-        _isBeingEvaluated = false;
+        _dontEvaluate = false;
 
         if (!_subscriptionsToDependencies.length)
             dependentObservable.dispose();
     }
 
     function evaluateInitial() {
-        _isBeingEvaluated = true;
+        _dontEvaluate = true;
         try {
             ko.dependencyDetection.begin(addSubscriptionToDependency);
             _latestValue = readFunction.call(evaluatorFunctionTarget);
@@ -105,7 +109,7 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
         } finally {
             ko.dependencyDetection.end();
         }
-        _needsEvaluation = _isBeingEvaluated = false;
+        _needsEvaluation = _dontEvaluate = false;
     }
 
     function dependentObservable() {
@@ -144,6 +148,19 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
         return _needsEvaluation || _subscriptionsToDependencies.length > 0;
     }
 
+    var activeWhenComputed;
+    function activeWhen(obsToWatch) {
+        if (!activeWhenComputed) {
+            activeWhenComputed = ko.dependentObservable(function() {
+                _dontEvaluate = !obsToWatch();
+                if (!_dontEvaluate && _needsEvaluation) {
+                    evaluatePossiblyAsync(undefined, 'change');
+                }
+            });
+            othersToDispose.push(activeWhenComputed);
+        }
+    }
+
     function addDisposalNodes(nodeOrNodes) {
         if (nodeOrNodes) {
             if (!disposer)
@@ -174,7 +191,8 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
         replaceDisposalNodes:   replaceDisposalNodes,
         getDisposalNodesCount:  function() { return disposalNodes.length; },
         dispose:                disposeAllSubscriptionsToDependencies,
-        isActive:               isActive
+        isActive:               isActive,
+        activeWhen:             activeWhen
     });
 
     // addDisposalNodes might replace the disposeWhen and dependentObservable.dispose functions
@@ -193,7 +211,8 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
         'addDisposalNodes', dependentObservable.addDisposalNodes,
         'replaceDisposalNodes', dependentObservable.replaceDisposalNodes,
         'getDisposalNodesCount', dependentObservable.getDisposalNodesCount,
-        'isActive', dependentObservable.isActive
+        'isActive', dependentObservable.isActive,
+        'activeWhen', dependentObservable.activeWhen
     );
 };
 

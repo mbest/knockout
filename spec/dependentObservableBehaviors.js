@@ -432,4 +432,25 @@ describe('Dependent Observable', function() {
         expect(computedInner.getDependenciesCount()).toEqual(1);
         expect(computedOuter.getDependenciesCount()).toEqual(1);
     });
+
+    it('Should be able to pause/resume a computed using activeWhen', function() {
+        var observable = ko.observable("A");
+        var isActive = ko.observable(true);
+        var computed = ko.computed(function () {
+            return observable();
+        });
+        computed.activeWhen(isActive);   // intially active
+
+        // When not paused, computed is updated normally
+        expect(computed()).toEqual("A");
+        observable("B");
+        expect(computed()).toEqual("B");
+
+        // When paused, computed value stays the same until unpaused
+        isActive(false);
+        observable("C");
+        expect(computed()).toEqual("B");
+        isActive(true);
+        expect(computed()).toEqual("C");
+    });
 });
