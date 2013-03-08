@@ -173,4 +173,39 @@ describe('Binding: Checked', function() {
         model.myObservableArray.remove("My value");
         expect(testNode.childNodes[0].checked).toEqual(false);
     });
+
+    it('Should be able to use observables as value of checkboxes using \'attr.value\'', function() {
+        var object1 = {id:ko.observable('1')},
+            object2 = {id:ko.observable('2')},
+            model = { values: ['1'], choices: [object1, object2] };
+        testNode.innerHTML = "<div data-bind='foreach: choices'><input type='checkbox' data-bind='attr.value:id, checked:$parent.values' /></div>";
+        ko.applyBindings(model, testNode);
+
+        expect(model.values).toEqual(['1']);
+        expect(testNode.childNodes[0].childNodes[0].checked).toEqual(true);
+        expect(testNode.childNodes[0].childNodes[1].checked).toEqual(false);
+
+        // Update the value observable; should update the selected values
+        object1.id('3');
+        expect(testNode.childNodes[0].childNodes[0].checked).toEqual(true);
+        expect(model.values).toEqual(['3']);
+    });
+
+    it('Should be able to use observables as value of radio buttons using \'attr.value\'', function () {
+        var object1 = {id:ko.observable('1')},
+            object2 = {id:ko.observable('2')},
+            model = { value: '1', choices: [object1, object2] };
+        var myobservable = new ko.observable(false);
+        testNode.innerHTML = "<div data-bind='foreach: choices'><input type='radio' data-bind='attr.value:id, checked:$parent.value' /></div>";
+        ko.applyBindings(model, testNode);
+
+        expect(model.value).toEqual('1');
+        expect(testNode.childNodes[0].childNodes[0].checked).toEqual(true);
+        expect(testNode.childNodes[0].childNodes[1].checked).toEqual(false);
+
+        // Update the value observable; should update the selected value
+        object1.id('3');
+        expect(testNode.childNodes[0].childNodes[0].checked).toEqual(true);
+        expect(model.value).toEqual('3');
+    });
 });

@@ -79,9 +79,11 @@ ko.domObservable = function(element, propertyName, eventsToWatch) {
         }
     }
 
+    var previousValue;
     function notifyChange() {
         if (!disposer.disposeIfShould())
-            observable.notifySubscribers(element[propertyName]);
+            observable.notifySubscribers(previousValue, 'beforeChange');
+            observable.notifySubscribers(previousValue = element[propertyName]);
     }
 
     var watchedEvents = {};

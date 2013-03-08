@@ -5,15 +5,25 @@ ko.bindingHandlers['checked'] = {
             elemChecked = ko.domObservable(element, 'checked', 'click');
         if (element.type == "checkbox") {
             if (ko.utils.peekObservable(valueAccessor()) instanceof Array) {
+                var oldValue = elemValue.peek();
                 // When bound to an array, the checkbox being checked represents its value being present in that array
                 setUpTwoWayBinding(element,
                     function() {
-                        return (ko.utils.arrayIndexOf(ko.utils.unwrapObservable(valueAccessor()), elemValue()) >= 0);
+                        return (ko.utils.arrayIndexOf(ko.utils.unwrapObservable(valueAccessor()), elemValue.peek()) >= 0);
                     }, elemChecked,
-                    elemChecked, function(checkedValue) {
+                    function() {
+                        return { _value: elemValue(), _checked: elemChecked() };  // dependent on both the value and checked state
+                    }, function(options) {
+                        var array = valueAccessor(),
+                            newValue = options._value,
+                            checkedValue = options._checked;
                         // For checkboxes bound to an array, we add/remove the checkbox value to that array
                         // This works for both observable and non-observable arrays
-                        ko.utils.addOrRemoveItem(valueAccessor(), elemValue(), checkedValue);
+                        // Remove the old value if it's different
+                        if (checkedValue && oldValue !== newValue)
+                            ko.utils.addOrRemoveItem(array, oldValue, false);
+                        ko.utils.addOrRemoveItem(array, newValue, checkedValue);
+                        oldValue = newValue;
                     });
             } else {
                 // When bound to any other value (not an array), the checkbox being checked represents the value being trueish
