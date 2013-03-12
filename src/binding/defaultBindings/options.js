@@ -10,44 +10,46 @@ ko.bindingHandlers['options'] = {
         }
     },
     'update': function (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
-        function selectedOption() {
-            if (element.multiple) {
-                if (element.selectedOptions) {
-                    return element.selectedOptions.length;
-                } else {
-                    return ko.utils.arrayReduce(element.options, 0, function(count, option) {
-                        return option.selected ? count + 1 : count;
-                    });
-                }
-            } else {
-                return element.selectedIndex === -1 ? null : element.options[element.selectedIndex];
-            }
-        }
-
-        var previousSelection = selectedOption();
         var previousScrollTop = element.scrollTop;
 
-        var unwrappedArray = ko.utils.unwrapObservable(valueAccessor()) || [];
-        var allBindings = allBindingsAccessor();
-        var includeDestroyed = allBindings['optionsIncludeDestroyed'];
-        var optionsBind = allBindings['optionsBind'];
+        var unwrappedArray = ko.utils.unwrapObservable(valueAccessor());
+        var includeDestroyed = allBindingsAccessor('optionsIncludeDestroyed');
+        var optionsBind = allBindingsAccessor('optionsBind');
         var caption = {};
 
-        if (typeof unwrappedArray.length == "undefined") // Coerce single value into array
-            unwrappedArray = [unwrappedArray];
+        var countSelectionsRetained = 0;
+        var previousSelectedIndex = element.selectedIndex;
+        var previousSelectedValues;
+        if (element.multiple) {
+            previousSelectedValues = ko.utils.arrayMap(element.selectedOptions || ko.utils.arrayFilter(element.childNodes, function (node) {
+                    return node.tagName && (ko.utils.tagNameLower(node) === "option") && node.selected;
+                }), function (node) {
+                    return ko.selectExtensions.readValue(node);
+                });
+        } else if (element.selectedIndex >= 0) {
+            previousSelectedValues = [ ko.selectExtensions.readValue(element.options[element.selectedIndex]) ];
+        }
 
-        // Filter out any entries marked as destroyed
-        var filteredArray = ko.utils.arrayFilter(unwrappedArray, function(item) {
-            return includeDestroyed || item === undefined || item === null || !ko.utils.unwrapObservable(item['_destroy']);
-        });
+        if (unwrappedArray) {
+            if (typeof unwrappedArray.length == "undefined") // Coerce single value into array
+                unwrappedArray = [unwrappedArray];
 
-        // If caption is included, add it to the copied array
-        if (allBindings['optionsCaption']) {
-            filteredArray.unshift(caption);
+            // Filter out any entries marked as destroyed
+            var filteredArray = ko.utils.arrayFilter(unwrappedArray, function(item) {
+                return includeDestroyed || item === undefined || item === null || !ko.utils.unwrapObservable(item['_destroy']);
+            });
+
+            // If caption is included, add it to the copied array
+            if (allBindingsAccessor('optionsCaption')) {
+                filteredArray.unshift(caption);
+            }
+        } else {
+            // If a falsy value is provided (e.g. null), we'll simply empty the select element
+            unwrappedArray = [];
         }
 
         if (optionsBind) {
-            var activateBindingsCallback = function(arrayEntry, addedNodesArray, index) {
+            var activateBindingsCallback = function(arrayEntry, addedNodesArray) {
                 if (arrayEntry !== caption) {
                     var optionContext = bindingContext['createChildContext'](arrayEntry),
                         optionsParseBindings = function() {
@@ -67,25 +69,51 @@ ko.bindingHandlers['options'] = {
                 return defaultValue;
         }
 
-        function optionForArrayItem(arrayEntry, index) {
+        // The following functions can run at two different times:
+        // The first is when the whole array is being updated directly from this binding handler.
+        // The second is when an observable value for a specific array entry is updated.
+        // oldOptions will be empty in the first case, but will be filled with the previously generated option in the second.
+        var secondaryUpdate = false;
+        function optionForArrayItem(arrayEntry, index, oldOptions) {
+            if (oldOptions.length) {
+                secondaryUpdate = true;
+                previousSelectedValues = oldOptions[0].selected && [ ko.selectExtensions.readValue(oldOptions[0]) ];
+            }
             var option = document.createElement("option");
             if (arrayEntry === caption) {
-                ko.utils.setHtml(option, allBindings['optionsCaption']);
+                ko.utils.setHtml(option, allBindingsAccessor('optionsCaption'));
                 ko.selectExtensions.writeValue(option, undefined);
             } else {
                 // Apply a value to the option element
-                var optionValue = applyToObject(arrayEntry, allBindings['optionsValue'], arrayEntry);
+                var optionValue = applyToObject(arrayEntry, allBindingsAccessor('optionsValue'), arrayEntry);
                 ko.selectExtensions.writeValue(option, ko.utils.unwrapObservable(optionValue));
 
                 // Apply some text to the option element
-                var optionText = applyToObject(arrayEntry, allBindings['optionsText'], optionValue);
+                var optionText = applyToObject(arrayEntry, allBindingsAccessor('optionsText'), optionValue);
                 optionText = ko.utils.unwrapObservable(optionText);
                 option.appendChild(document.createTextNode((optionText == null) ? "" : optionText));
             }
             return [option];
         }
 
-        ko.utils.setDomNodeChildrenFromArrayMapping(element, filteredArray, optionForArrayItem, {'dontLimitMoves':true}, activateBindingsCallback);
+        function setSelectionCallback(arrayEntry, newOptions) {
+            if (activateBindingsCallback)
+                activateBindingsCallback(arrayEntry, newOptions);
+
+            // IE6 doesn't like us to assign selection to OPTION nodes before they're added to the document.
+            // That's why we first added them without selection. Now it's time to set the selection.
+            if (previousSelectedValues) {
+                var isSelected = ko.utils.arrayIndexOf(previousSelectedValues, ko.selectExtensions.readValue(newOptions[0])) >= 0;
+                ko.utils.setOptionNodeSelectionState(newOptions[0], isSelected);
+                if (isSelected) {
+                    countSelectionsRetained++;
+                } else if (secondaryUpdate) {
+                    ko.utils.triggerEvent(element, "change");
+                }
+            }
+        }
+
+        ko.utils.setDomNodeChildrenFromArrayMapping(element, filteredArray, optionForArrayItem, null, setSelectionCallback);
 
         // Workaround for IE9 bug
         ko.utils.ensureSelectElementIsRenderedCorrectly(element);
@@ -93,8 +121,11 @@ ko.bindingHandlers['options'] = {
         if (Math.abs(previousScrollTop - element.scrollTop) > 20)
             element.scrollTop = previousScrollTop;
 
-        if (selectedOption() !== previousSelection)
+        if ((previousSelectedValues && countSelectionsRetained < previousSelectedValues.length) || (previousSelectedIndex === -1 && element.selectedIndex === 0))
             ko.utils.triggerEvent(element, "change");
+
+        // Clear previousSelectedValues so that future updates to individual objects don't get stale data
+        previousSelectedValues = null;
     }
 };
 ko.bindingHandlers['options'].optionValueDomDataKey = ko.utils.domData.nextKey();
