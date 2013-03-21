@@ -65,14 +65,14 @@
         // Map this array value inside a dependentObservable so we re-map when any dependency changes
         var mappedNodes;
         var dependentObservable = ko.utils.possiblyWrap(function() {
-            var newMappedNodes = mapping(valueToMap, index) || [];
+            var newMappedNodes = mapping(valueToMap, index, mappedNodes ? fixUpNodesToBeMovedOrRemoved(mappedNodes) : []) || [];
             if (!mappedNodes) {
                 // On first evaluation, we'll just return the DOM nodes
                 mappedNodes = newMappedNodes;
             } else {
                 // On subsequent evaluations, just replace the previously-inserted DOM nodes
                 dependentObservable.replaceDisposalNodes();    // must clear before calling replaceDomNodes
-                ko.utils.replaceDomNodes(fixUpNodesToBeMovedOrRemoved(mappedNodes), newMappedNodes);
+                ko.utils.replaceDomNodes(mappedNodes, newMappedNodes);
                 ko.dependencyDetection.ignore(callbackAfterAddingNodes, null, [valueToMap, newMappedNodes, index, dependentObservable]);
 
                 // Replace the contents of the mappedNodes array, thereby updating the record
