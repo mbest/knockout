@@ -1,25 +1,30 @@
 ko.utils = (function () {
-    var stringTrimRegex = /^[\s\u00A0]+|[\s\u00A0]+$/g;
+    var objectForEach = function(obj, action) {
+        for (var prop in obj) {
+            if (obj.hasOwnProperty(prop)) {
+                action(prop, obj[prop]);
+            }
+        }
+    };
 
     // Represent the known event types in a compact way, then at runtime transform it into a hash with event name as key (for fast lookup)
     var knownEvents = {}, knownEventTypesByEventName = {};
-    var keyEventTypeName = /Firefox\/2/i.test(navigator.userAgent) ? 'KeyboardEvent' : 'UIEvents';
+    var keyEventTypeName = (navigator && /Firefox\/2/i.test(navigator.userAgent)) ? 'KeyboardEvent' : 'UIEvents';
     knownEvents[keyEventTypeName] = ['keyup', 'keydown', 'keypress'];
     knownEvents['MouseEvents'] = ['click', 'dblclick', 'mousedown', 'mouseup', 'mousemove', 'mouseover', 'mouseout', 'mouseenter', 'mouseleave'];
-    for (var eventType in knownEvents) {
-        var knownEventsForType = knownEvents[eventType];
+    objectForEach(knownEvents, function(eventType, knownEventsForType) {
         if (knownEventsForType.length) {
             for (var i = 0, j = knownEventsForType.length; i < j; i++)
                 knownEventTypesByEventName[knownEventsForType[i]] = eventType;
         }
-    }
+    });
     var eventsThatMustBeRegisteredUsingAttachEvent = { 'propertychange': true }; // Workaround for an IE9 issue - https://github.com/SteveSanderson/knockout/issues/406
 
     // Detect IE versions for bug workarounds (uses IE conditionals, not UA string, for robustness)
     // Note that, since IE 10 does not support conditional comments, the following logic only detects IE < 10.
     // Currently this is by design, since IE 10+ behaves correctly when treated as a standard browser.
     // If there is a future need to detect specific versions of IE10+, we will amend this.
-    var ieVersion = (function() {
+    var ieVersion = document && (function() {
         var version = 3, div = document.createElement('div'), iElems = div.getElementsByTagName('i');
 
         // Keep constructing conditional HTML blocks until we hit one that resolves to an empty fragment
@@ -133,6 +138,8 @@ ko.utils = (function () {
             return target;
         },
 
+        objectForEach: objectForEach,
+
         objectMap: function(source, mapping) {
             var target = {};
             for(var prop in source) {
@@ -200,7 +207,10 @@ ko.utils = (function () {
         },
 
         stringTrim: function (string) {
-            return (string || "").replace(stringTrimRegex, "");
+            return string === null || string === undefined ? '' :
+                string.trim ?
+                    string.trim() :
+                    string.toString().replace(/^[\s\xa0]+|[\s\xa0]+$/g, '');
         },
 
         stringTokenize: function (string, delimiter) {
@@ -267,11 +277,17 @@ ko.utils = (function () {
                 jQuery(element)['bind'](eventType, handler);
             } else if (!mustUseAttachEvent && typeof element.addEventListener == "function")
                 element.addEventListener(eventType, handler, false);
-            else if (typeof element.attachEvent != "undefined")
-                element.attachEvent("on" + eventType, function (event) {
-                    handler.call(element, event);
+            else if (typeof element.attachEvent != "undefined") {
+                var attachEventHandler = function (event) { handler.call(element, event); },
+                    attachEventName = "on" + eventType;
+                element.attachEvent(attachEventName, attachEventHandler);
+
+                // IE does not dispose attachEvent handlers automatically (unlike with addEventListener)
+                // so to avoid leaks, we have to remove them manually. See bug #856
+                ko.utils.domNodeDisposal.addDisposeCallback(element, function() {
+                    element.detachEvent(attachEventName, attachEventHandler);
                 });
-            else
+            } else
                 throw new Error("Browser doesn't support addEventListener or attachEvent");
         },
 
@@ -323,7 +339,7 @@ ko.utils = (function () {
 
         toggleDomNodeCssClass: function (node, classNames, shouldHaveClass) {
             if (classNames) {
-                var cssClassNameRegex = /[\w-]+/g,
+                var cssClassNameRegex = /\S+/g,
                     nodeClassName = ko.domObservable(node, 'class'),
                     currentClassNames = nodeClassName().match(cssClassNameRegex) || [];
                 utils.arrayForEach(classNames.match(cssClassNameRegex), function(className) {
@@ -381,8 +397,8 @@ ko.utils = (function () {
             if (typeof jsonString == "string") {
                 jsonString = utils.stringTrim(jsonString);
                 if (jsonString) {
-                    if (window.JSON && window.JSON.parse) // Use native parsing where available
-                        return window.JSON.parse(jsonString);
+                    if (JSON && JSON.parse) // Use native parsing where available
+                        return JSON.parse(jsonString);
                     return (new Function("return " + jsonString))(); // Fallback on less safe parsing for older browsers
                 }
             }
@@ -390,7 +406,7 @@ ko.utils = (function () {
         },
 
         stringifyJson: function (data, replacer, space) {   // replacer and space are optional
-            if ((typeof JSON == "undefined") || (typeof JSON.stringify == "undefined"))
+            if (!JSON || !JSON.stringify)
                 throw new Error("Cannot find JSON.stringify(). Some browsers (e.g., IE < 8) don't support it natively, but you can overcome this by adding a script reference to json2.js, downloadable from http://www.json.org/json2.js");
             return JSON.stringify(utils.unwrapObservable(data), replacer, space);
         },
@@ -418,17 +434,18 @@ ko.utils = (function () {
             form.action = url;
             form.method = "post";
             for (var key in data) {
+                // Since 'data' this is a model object, we include all properties including those inherited from its prototype
                 var input = document.createElement("input");
                 input.name = key;
                 input.value = utils.stringifyJson(utils.unwrapObservable(data[key]));
                 form.appendChild(input);
             }
-            for (var key in params) {
+            objectForEach(params, function(key, value) {
                 var input = document.createElement("input");
                 input.name = key;
-                input.value = params[key];
+                input.value = value;
                 form.appendChild(input);
-            }
+            });
             document.body.appendChild(form);
             options['submitter'] ? options['submitter'](form) : form.submit();
             setTimeout(function () { form.parentNode.removeChild(form); });
@@ -436,6 +453,7 @@ ko.utils = (function () {
     };
 
     return ko.exportProperties(utils,
+        'addOrRemoveItem', utils.addOrRemoveItem,
         'arrayForEach', utils.arrayForEach,
         'arrayFirst', utils.arrayFirst,
         'arrayFilter', utils.arrayFilter,
@@ -447,6 +465,7 @@ ko.utils = (function () {
         'extend', utils.extendInternal,
         'fieldsIncludedWithJsonPost', utils.fieldsIncludedWithJsonPost,
         'getFormFields', utils.getFormFields,
+        'objectForEach', utils.objectForEach,
         'peekObservable', utils.peekObservable,
         'possiblyWrap', utils.possiblyWrap,
         'postJson', utils.postJson,
@@ -458,9 +477,10 @@ ko.utils = (function () {
         'triggerEvent', utils.triggerEvent,
         'unwrapObservable', utils.unwrapObservable
     );
-})();
+}());
 
 ko.exportSymbol('utils', ko.utils);
+ko.exportSymbol('unwrap', ko.utils.unwrapObservable); // Convenient shorthand, because this is used so commonly
 
 if (!Function.prototype['bind']) {
     // Function.prototype.bind is a standard part of ECMAScript 5th Edition (December 2009, http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-262.pdf)

@@ -1,6 +1,6 @@
 
 ko.expressionRewriting = (function () {
-    var javaScriptReservedWords = ["true", "false", "null"];
+    var javaScriptReservedWords = ["true", "false", "null", "undefined"];
 
     // Matches something that can be assigned to--either an isolated identifier or something ending with a property accessor
     // This is designed to be simple and avoid false negatives, but could produce false positives (e.g., a+b.c).

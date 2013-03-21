@@ -58,10 +58,9 @@ ko.subscribable['fn'] = {
 
     getSubscriptionsCount: function () {
         var total = 0;
-        for (var eventName in this._subscriptions) {
-            if (this._subscriptions.hasOwnProperty(eventName))
-                total += this._subscriptions[eventName].length;
-        }
+        ko.utils.objectForEach(this._subscriptions, function(eventName, subscriptions) {
+            total += subscriptions.length;
+        });
         return total;
     },
 
@@ -70,7 +69,7 @@ ko.subscribable['fn'] = {
 
 
 ko.isSubscribable = function (instance) {
-    return typeof instance.subscribe == "function" && typeof instance["notifySubscribers"] == "function";
+    return instance != null && typeof instance.subscribe == "function" && typeof instance["notifySubscribers"] == "function";
 };
 
 ko.exportSymbol('subscribable', ko.subscribable);

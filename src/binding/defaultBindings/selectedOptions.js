@@ -24,7 +24,7 @@ ko.bindingHandlers['selectedOptions'] = {
         }
 
         function modelUpdater(newValue) {
-            ko.expressionRewriting.writeValueToProperty(valueAccessor(), allBindingsAccessor, 'value', newValue);
+            ko.expressionRewriting.writeValueToProperty(valueAccessor(), allBindingsAccessor, 'selectedOptions', newValue);
         };
 
         setUpTwoWayBinding(element,

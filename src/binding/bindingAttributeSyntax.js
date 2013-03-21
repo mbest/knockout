@@ -159,8 +159,9 @@
 
             // update extraBindings from parsedBindings (only if init already done)
             if (independentBindings && !runInits) {
-                for (var bindingKey in extraBindings)
+                ko.utils.objectForEach(extraBindings, function(bindingKey) {
                     extraBindings[bindingKey] = parsedBindings[bindingKey];
+                });
             }
 
             if (parsedBindings && bindingContext._subscribable)
@@ -185,6 +186,9 @@
         }
         function allBindingsAccessorDependent(key) {
             return key ? parsedBindings[key] : parsedBindings;
+        }
+        function hasBinding(key) {
+            return key in parsedBindings;
         }
 
         // These functions let the user know something is wrong
@@ -253,6 +257,7 @@
         /** @const */ var contentSetBindings = 1;
         /** @const */ var contentBindBinding = 2;
         /** @const */ var contentUpdateBindings = 3;
+        allBindingsAccessor.has = hasBinding;
 
         ko.utils.possiblyWrap(function() {
             if (runInits) {
@@ -314,9 +319,7 @@
                         extraBindings[bindingKey] = parsedBindings[bindingKey];
                 }
 
-                for (var bindingKey in parsedBindings) {
-                    pushBinding(bindingKey);
-                }
+                ko.utils.objectForEach(parsedBindings, pushBinding);
 
                 // Organize bindings by run order
                 for (var i=0, binding; binding = allBindings[i]; i++) {

@@ -3,16 +3,23 @@ ko.bindingHandlers['checked'] = {
     'init': function (element, valueAccessor, allBindingsAccessor) {
         var elemValue = ko.domObservable(element, 'value'),
             elemChecked = ko.domObservable(element, 'checked', 'click');
+
+        function checkedValue() {
+            return allBindingsAccessor.has('checkedValue')
+                ? ko.utils.unwrapObservable(allBindingsAccessor('checkedValue'))
+                : elemValue();
+        }
+
         if (element.type == "checkbox") {
             if (ko.utils.peekObservable(valueAccessor()) instanceof Array) {
-                var oldValue = elemValue.peek();
+                var oldValue = checkedValue();
                 // When bound to an array, the checkbox being checked represents its value being present in that array
                 setUpTwoWayBinding(element,
                     function() {
-                        return (ko.utils.arrayIndexOf(ko.utils.unwrapObservable(valueAccessor()), elemValue.peek()) >= 0);
+                        return (ko.utils.arrayIndexOf(ko.utils.unwrapObservable(valueAccessor()), ko.ignoreDependencies(checkedValue)) >= 0);
                     }, elemChecked,
                     function() {
-                        return { _value: elemValue(), _checked: elemChecked() };  // dependent on both the value and checked state
+                        return { _value: checkedValue(), _checked: elemChecked() };  // dependent on both the value and checked state
                     }, function(options) {
                         var array = valueAccessor(),
                             newValue = options._value,
@@ -39,10 +46,10 @@ ko.bindingHandlers['checked'] = {
                 ko.bindingHandlers['uniqueName']['init'](element, function() { return true });
             setUpTwoWayBinding(element,
                 makeUnwrappedValueAccessor(valueAccessor), function(newValue) {
-                    elemChecked(elemValue() == newValue);
+                    elemChecked(checkedValue() == newValue);
                 },
                 function() {
-                    return elemChecked() ? elemValue() : null;
+                    return elemChecked() ? checkedValue() : null;
                 }, function(newValue) {
                     if (newValue !== null)
                         ko.expressionRewriting.writeValueToProperty(valueAccessor(), allBindingsAccessor, 'checked', newValue, true);
@@ -50,3 +57,11 @@ ko.bindingHandlers['checked'] = {
         }
     }
 };
+
+ko.bindingHandlers['checkedValue'] = {
+    'update': function (element, valueAccessor) {
+        ko.domObservable(element, 'value')(ko.utils.unwrapObservable(valueAccessor()));
+    }
+};
+
+})();

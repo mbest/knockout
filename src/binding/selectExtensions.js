@@ -12,7 +12,7 @@ ko.selectExtensions = (function () {
                         return ko.domDataGet(element, ko.bindingHandlers.options.optionValueDomDataKey);
                     var elemValue = ko.domObservable(element, 'value')();
                     return ko.utils.ieVersion <= 7
-                        ? (element.getAttributeNode('value').specified ? elemValue : element.text)
+                        ? (element.getAttributeNode('value') && element.getAttributeNode('value').specified ? elemValue : element.text)
                         : elemValue;
                 case 'select':
                     var elemSelIndex = ko.domObservable(element, 'selectedIndex')();
@@ -44,9 +44,9 @@ ko.selectExtensions = (function () {
                     }
                     break;
                 case 'select':
-                    if (value == "")
+                    if (value === "")
                         value = undefined;
-                    if (value === undefined)
+                    if (value === null || value === undefined)
                         element.selectedIndex = -1;
                     for (var i = element.options.length - 1; i >= 0; i--) {
                         if (selectExtensions.readValue(element.options[i]) == value) {
