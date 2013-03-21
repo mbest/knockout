@@ -63,5 +63,3 @@ ko.bindingHandlers['checkedValue'] = {
         ko.domObservable(element, 'value')(ko.utils.unwrapObservable(valueAccessor()));
     }
 };
-
-})();

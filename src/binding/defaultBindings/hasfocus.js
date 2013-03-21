@@ -27,6 +27,7 @@ ko.bindingHandlers['hasfocus'] = {
                 try {
                     isFocused = (ownerDoc.activeElement === element);
                 } catch(e) { }
+            }
             return element[hasfocusLastValue] = isFocused;
         }, function(newValue) {
             ko.expressionRewriting.writeValueToProperty(valueAccessor(), allBindingsAccessor, 'hasfocus', newValue, true);
