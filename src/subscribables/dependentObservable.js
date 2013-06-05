@@ -87,14 +87,15 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
             _needsEvaluation = false;
 
             dependentObservable.notifySubscribers(_latestValue, "beforeChange");
+
             _latestValue = newValue;
             if (DEBUG) dependentObservable._latestValue = _latestValue;
+            dependentObservable.notifySubscribers(_latestValue);
+
         } finally {
             ko.dependencyDetection.end();
+            _dontEvaluate = false;
         }
-
-        dependentObservable.notifySubscribers(_latestValue);
-        _dontEvaluate = false;
 
         if (!_subscriptionsToDependencies.length)
             dependentObservable.dispose();
@@ -108,8 +109,9 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
             if (DEBUG) dependentObservable._latestValue = _latestValue;
         } finally {
             ko.dependencyDetection.end();
+            _dontEvaluate = false;
         }
-        _needsEvaluation = _dontEvaluate = false;
+        _needsEvaluation = false;
     }
 
     function dependentObservable() {

@@ -257,7 +257,7 @@
         /** @const */ var contentSetBindings = 1;
         /** @const */ var contentBindBinding = 2;
         /** @const */ var contentUpdateBindings = 3;
-        allBindingsAccessor.has = hasBinding;
+        allBindingsAccessor['has'] = hasBinding;
 
         ko.utils.possiblyWrap(function() {
             if (runInits) {

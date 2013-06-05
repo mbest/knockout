@@ -5,7 +5,7 @@ ko.bindingHandlers['checked'] = {
             elemChecked = ko.domObservable(element, 'checked', 'click');
 
         function checkedValue() {
-            return allBindingsAccessor.has('checkedValue')
+            return allBindingsAccessor['has']('checkedValue')
                 ? ko.utils.unwrapObservable(allBindingsAccessor('checkedValue'))
                 : elemValue();
         }

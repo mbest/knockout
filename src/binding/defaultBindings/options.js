@@ -10,7 +10,8 @@ ko.bindingHandlers['options'] = {
         }
     },
     'update': function (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
-        var previousScrollTop = element.scrollTop;
+        var selectWasPreviouslyEmpty = element.length == 0;
+        var previousScrollTop = (!selectWasPreviouslyEmpty && element.multiple) ? element.scrollTop : null;
 
         var unwrappedArray = ko.utils.unwrapObservable(valueAccessor());
         var includeDestroyed = allBindingsAccessor('optionsIncludeDestroyed');
@@ -40,7 +41,7 @@ ko.bindingHandlers['options'] = {
             });
 
             // If caption is included, add it to the copied array
-            if (allBindingsAccessor('optionsCaption')) {
+            if (allBindingsAccessor['has']('optionsCaption')) {
                 filteredArray.unshift(caption);
             }
         } else {
@@ -113,16 +114,27 @@ ko.bindingHandlers['options'] = {
             }
         }
 
-        ko.utils.setDomNodeChildrenFromArrayMapping(element, filteredArray, optionForArrayItem, null, setSelectionCallback);
+        var callback = setSelectionCallback;
+        if (allBindingsAccessor['has']('optionsAfterRender')) {
+            callback = function(arrayEntry, newOptions) {
+                setSelectionCallback(arrayEntry, newOptions);
+                ko.dependencyDetection.ignore(allBindingsAccessor('optionsAfterRender'), null, [newOptions[0], arrayEntry !== caption ? arrayEntry : undefined]);
+            }
+        }
 
-        // Workaround for IE9 bug
-        ko.utils.ensureSelectElementIsRenderedCorrectly(element);
+        ko.utils.setDomNodeChildrenFromArrayMapping(element, filteredArray, optionForArrayItem, null, callback);
 
-        if (Math.abs(previousScrollTop - element.scrollTop) > 20)
-            element.scrollTop = previousScrollTop;
-
+        // Ensure consistency between model value and selected option.
+        // If the dropdown was changed so that selection is no longer the same,
+        // notify the value or selectedOptions binding.
         if ((previousSelectedValues && countSelectionsRetained < previousSelectedValues.length) || (previousSelectedIndex === -1 && element.selectedIndex === 0))
             ko.utils.triggerEvent(element, "change");
+
+        // Workaround for IE bug
+        ko.utils.ensureSelectElementIsRenderedCorrectly(element);
+
+        if (previousScrollTop && Math.abs(previousScrollTop - element.scrollTop) > 20)
+            element.scrollTop = previousScrollTop;
 
         // Clear previousSelectedValues so that future updates to individual objects don't get stale data
         previousSelectedValues = null;

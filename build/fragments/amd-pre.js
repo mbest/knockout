@@ -11,4 +11,4 @@
         // [3] No module loader (plain <script> tag) - put directly in global namespace
         factory(window['ko'] = {});
     }
-})(function(koExports){
+}(function(koExports){

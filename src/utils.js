@@ -31,7 +31,7 @@ ko.utils = (function () {
         while (
             div.innerHTML = '<!--[if gt IE ' + (++version) + ']><i></i><![endif]-->',
             iElems[0]
-        ) {};
+        ) {}
         return version > 4 ? version : undefined;
     }());
     var isIe6 = ieVersion === 6,
@@ -352,7 +352,8 @@ ko.utils = (function () {
         ensureSelectElementIsRenderedCorrectly: function(selectElement) {
             // Workaround for IE9 rendering bug - it doesn't reliably display all the text in dynamically-added select boxes unless you force it to re-render by updating the width.
             // (See https://github.com/SteveSanderson/knockout/issues/312, http://stackoverflow.com/questions/5908494/select-only-shows-first-char-of-selected-option)
-            if (ieVersion >= 9) {
+            // Also fixes IE7 and IE8 bug that causes selects to be zero width if enclosed by 'if' or 'with'. (See issue #839)
+            if (ieVersion) {
                 var originalWidth = selectElement.style.width;
                 selectElement.style.width = 0;
                 selectElement.style.width = originalWidth;

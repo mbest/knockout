@@ -36,8 +36,7 @@ describe('Binding: Options', function() {
         ]);
         testNode.innerHTML = "<select data-bind='options:myValues, optionsText: function (v) { return v[\"name\"] + \" (\" + v[\"job\"] + \")\"; }'><option>should be deleted</option></select>";
         ko.applyBindings({ myValues: modelValues }, testNode);
-        var displayedText = ko.utils.arrayMap(testNode.childNodes[0].childNodes, function (node) { return node.innerText || node.textContent; });
-        expect(displayedText).toEqual(["bob (manager)", "frank (coder & tester)"]);
+        expect(testNode.childNodes[0]).toHaveTexts(["bob (manager)", "frank (coder & tester)"]);
     });
 
     it('Should accept a function in optionsValue param to select subproperties of the model values (and use that for the option text)', function() {
@@ -48,8 +47,7 @@ describe('Binding: Options', function() {
         testNode.innerHTML = "<select data-bind='options: myValues, optionsValue: function (v) { return v.name + \" (\" + v.job + \")\"; }'><option>should be deleted</option></select>";
         ko.applyBindings({ myValues: modelValues }, testNode);
         expect(testNode.childNodes[0]).toHaveValues(["bob (manager)", "frank (coder & tester)"]);
-        var displayedText = ko.utils.arrayMap(testNode.childNodes[0].childNodes, function (node) { return node.innerText || node.textContent; });
-        expect(displayedText).toEqual(["bob (manager)", "frank (coder & tester)"]);
+        expect(testNode.childNodes[0]).toHaveTexts(["bob (manager)", "frank (coder & tester)"]);
     });
 
     it('Should exclude any items marked as destroyed', function() {
@@ -112,6 +110,12 @@ describe('Binding: Options', function() {
         expect(testNode.childNodes[0]).toHaveTexts([]);
     });
 
+    it('Should include a caption even if it\'s blank', function() {
+        testNode.innerHTML = "<select data-bind='options: [\"A\",\"B\"], optionsCaption: \"\"'></select>";
+        ko.applyBindings({}, testNode);
+        expect(testNode.childNodes[0]).toHaveTexts(["", "A", "B"]);
+    });
+
     it('Should allow the caption to be given by an observable, and update it when the model value changes (without affecting selection)', function() {
         var myCaption = ko.observable("Initial caption");
         testNode.innerHTML = "<select data-bind='options:[\"A\", \"B\"], optionsCaption: myCaption'></select>";
@@ -125,6 +129,11 @@ describe('Binding: Options', function() {
         myCaption("New caption");
         expect(testNode.childNodes[0].selectedIndex).toEqual(2);
         expect(testNode.childNodes[0]).toHaveTexts(["New caption", "A", "B"]);
+
+        // Show that caption will be blank if value is null
+        myCaption(null);
+        expect(testNode.childNodes[0].selectedIndex).toEqual(2);
+        expect(testNode.childNodes[0]).toHaveTexts(["", "A", "B"]);
     });
 
     it('Should allow the option text to be given by an observable and update it when the model changes without affecting selection', function() {
@@ -143,5 +152,25 @@ describe('Binding: Options', function() {
         people[1].name("Bob");
         expect(testNode.childNodes[0].selectedIndex).toEqual(2);
         expect(testNode.childNodes[0]).toHaveTexts(["-", "Annie", "Bob"]);
+    });
+
+    it('Should call an optionsAfterRender callback function and not cause updates if an observable accessed in the callback is changed', function () {
+        testNode.innerHTML = "<select data-bind=\"options: someItems, optionsText: 'childprop', optionsAfterRender: callback\"></select>";
+        var callbackObservable = ko.observable(1),
+            someItems = ko.observableArray([{ childprop: 'first child' }]),
+            callbacks = 0;
+        ko.applyBindings({ someItems: someItems, callback: function() { callbackObservable(); callbacks++; } }, testNode);
+        expect(callbacks).toEqual(1);
+
+        // Change the array, but don't update the observableArray so that the options binding isn't updated
+        someItems().push({ childprop: 'hidden child'});
+        expect(testNode.childNodes[0]).toContainText('first child');
+        // Update callback observable and check that the binding wasn't updated
+        callbackObservable(2);
+        expect(testNode.childNodes[0]).toContainText('first child');
+        // Update the observableArray and verify that the binding is now updated
+        someItems.valueHasMutated();
+        expect(testNode.childNodes[0]).toContainText('first childhidden child');
+        expect(callbacks).toEqual(2);
     });
 });
