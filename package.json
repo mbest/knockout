@@ -2,7 +2,7 @@
   "name": "knockout-grand",
   "description": "Knockout makes it easier to create rich, responsive UIs with JavaScript",
   "url": "https://github.com/mbest/knockout",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "license": "MIT",
   "author": "Michael Best",
   "main": "build/output/knockout-latest.debug.js",
