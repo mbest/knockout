@@ -383,64 +383,64 @@ describe('Binding: Value', function() {
             testNode.innerHTML = "<select data-bind='options:[], value:myObservable'></select>";
             ko.applyBindings({ myObservable: observable }, testNode);
             expect(testNode.childNodes[0].selectedIndex).toEqual(-1);   // nothing selected
-    
+
             observable('D'); // This change should be rejected, as there's no corresponding option in the UI
             expect(observable()).toEqual(undefined);
         });
-    
+
         it('When empty, should reject model values that don\'t match any option value (value before options [also with no options])', function() {
             var observable = new ko.observable('B');
             testNode.innerHTML = "<select data-bind='value:myObservable', options:[]></select>";
             ko.applyBindings({ myObservable: observable }, testNode);
             expect(testNode.childNodes[0].selectedIndex).toEqual(-1);   // nothing selected
-    
+
             observable('D'); // This change should be rejected, as there's no corresponding option in the UI
             expect(observable()).toEqual(undefined);
         });
-    
+
         it('Should clear value if selected item is deleted', function() {
             var observable = new ko.observable('B');
             var observableArray = new ko.observableArray(["A", "B"]);
             testNode.innerHTML = "<select data-bind='value:myObservable, options:myObservableArray, optionsCaption:\"Select...\"'></select>";
             ko.applyBindings({ myObservable: observable, myObservableArray: observableArray }, testNode);
             expect(testNode.childNodes[0].selectedIndex).toEqual(2);
-    
+
             observableArray.remove('B');
             expect(testNode.childNodes[0].selectedIndex).toEqual(0);
             expect(observable()).toEqual(undefined);
         });
-    
+
         it('Should set value to first in list if selected item is deleted and no caption', function() {
             var observable = new ko.observable('B');
             var observableArray = new ko.observableArray(["A", "B"]);
             testNode.innerHTML = "<select data-bind='value:myObservable, options:myObservableArray'></select>";
             ko.applyBindings({ myObservable: observable, myObservableArray: observableArray }, testNode);
             expect(testNode.childNodes[0].selectedIndex).toEqual(1);
-    
+
             observableArray.remove('B');
             expect(testNode.childNodes[0].selectedIndex).toEqual(0);
             expect(observable()).toEqual("A");
         });
-    
+
         it('Should clear value if select is cleared and no caption', function() {
             var observable = new ko.observable('B');
             var observableArray = new ko.observable(["A", "B"]);
             testNode.innerHTML = "<select data-bind='options:myObservableArray, value:myObservable'></select>";
             ko.applyBindings({ myObservable: observable, myObservableArray: observableArray }, testNode);
             expect(testNode.childNodes[0].selectedIndex).toEqual(1);
-    
+
             observableArray(undefined);
             expect(testNode.childNodes[0].selectedIndex).toEqual(-1);
             expect(observable()).toEqual(undefined);
         });
-    
+
         it('Should set value if select is filled and no caption', function() {
             var observable = new ko.observable();
             var observableArray = new ko.observable();
             testNode.innerHTML = "<select data-bind='options:myObservableArray, value:myObservable'></select>";
             ko.applyBindings({ myObservable: observable, myObservableArray: observableArray }, testNode);
             expect(testNode.childNodes[0].selectedIndex).toEqual(-1);
-    
+
             observableArray(["A", "B"]);
             expect(testNode.childNodes[0].selectedIndex).toEqual(0);
             expect(observable()).toEqual("A");

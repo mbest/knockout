@@ -1,7 +1,7 @@
 console.log("Running Knockout tests in Node.js");
 
 var fs = require('fs');
-var jasmine = require('./lib/jasmine-1.2.0/jasmine');
+var jasmine = require('./lib/jasmine-1.3.1/jasmine');
 
 // export jasmine globals
 for (var key in jasmine) {
@@ -32,7 +32,7 @@ if (process.argv.length > 2 && process.argv[2] == '--source') {
 require('./arrayEditDetectionBehaviors');
 require('./asyncBehaviors');
 require('./dependentObservableBehaviors');
-require('./expressionRewritingBehaviors');
+//require('./expressionRewritingBehaviors');
 require('./extenderBehaviors');
 require('./mappingHelperBehaviors');
 require('./observableArrayBehaviors');

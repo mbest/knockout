@@ -18,4 +18,22 @@ describe('Dependent Observable DOM', function() {
         expect(ko.utils.domData.clear(nodeForActive)).toEqual(true);    // There was a callback
         expect(ko.utils.domData.clear(nodeForInactive)).toEqual(false); // There was no callback
     });
-})
+
+    it('ko.utils.possiblyWrap should support dispose-when-node-is-removed', function() {
+        var testNode = document.createElement("div");
+        document.body.appendChild(testNode);
+
+        var observable = ko.observable(1),
+            depedentObservable = ko.utils.possiblyWrap(function () { return observable() + 1; }, testNode);
+        expect(depedentObservable()).toEqual(2);
+
+        // update before node is removed works
+        observable(50);
+        expect(depedentObservable()).toEqual(51);
+
+        // after node is removed, value isn't updated
+        ko.removeNode(testNode);
+        observable(80);
+        expect(depedentObservable()).toEqual(51);
+    });
+});
