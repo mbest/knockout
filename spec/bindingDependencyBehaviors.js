@@ -1,4 +1,4 @@
-describe('Binding attribute syntax', function() {
+describe('Binding dependencies', function() {
     beforeEach(function () {
         ko.bindingProvider.instance.clearCache();
     });
