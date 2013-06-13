@@ -27,7 +27,7 @@ ko.observable = function (initialValue) {
     observable.peek = function() { return _latestValue };
     observable.valueHasMutated = function () { observable.notifySubscribers(_latestValue); }
     observable.valueWillMutate = function () { observable.notifySubscribers(_latestValue, "beforeChange"); }
-    ko.utils.extendInternal(observable, ko.observable['fn']);
+    ko.utils.makePrototypeOf(observable, ko.observable['fn']);
 
     return ko.exportProperties(observable,
         "peek", observable.peek,

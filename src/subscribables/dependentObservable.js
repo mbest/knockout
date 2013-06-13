@@ -204,7 +204,7 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
         addDisposalNodes(options.disposalNodes || options["disposeWhenNodeIsRemoved"]);
 
     ko.subscribable.call(dependentObservable);
-    ko.utils.extendInternal(dependentObservable, ko.dependentObservable['fn']);
+    ko.utils.makePrototypeOf(dependentObservable, ko.dependentObservable['fn']);
 
     return ko.exportProperties(dependentObservable,
         'peek', dependentObservable.peek,

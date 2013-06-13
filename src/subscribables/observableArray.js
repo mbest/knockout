@@ -55,7 +55,7 @@ ko.observableArray = function (initialValues) {
         return lastEditScript;
     };
 
-    ko.utils.extendInternal(observable, ko.observableArray['fn']);
+    ko.utils.makePrototypeOf(observable, ko.observableArray['fn']);
 
     return ko.exportProperties(observable,
         "subscribe", observable.subscribe,

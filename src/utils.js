@@ -138,6 +138,12 @@ ko.utils = (function () {
             return target;
         },
 
+        makePrototypeOf: function(obj, proto) {
+            proto.__proto__ = obj.__proto__;
+            obj.__proto__ = proto;
+            return obj;
+        },
+
         objectForEach: objectForEach,
 
         objectMap: function(source, mapping) {
@@ -452,6 +458,10 @@ ko.utils = (function () {
             setTimeout(function () { form.parentNode.removeChild(form); });
         }
     };
+
+    if (!({ __proto__: [] } instanceof Array)) {
+        utils.makePrototypeOf = utils.extendInternal;
+    }
 
     return ko.exportProperties(utils,
         'addOrRemoveItem', utils.addOrRemoveItem,
