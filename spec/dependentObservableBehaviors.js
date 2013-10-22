@@ -466,4 +466,56 @@ describe('Dependent Observable', function() {
         first(1);
         expect(all()).toEqual(depth+2);
     });
+
+    it('Should delay change notifications if throttled', function() {
+        jasmine.Clock.useMock();
+
+        var observable = ko.observable();
+        var evalSpy = jasmine.createSpy('evalSpy');
+        var computed = ko.computed(function () { evalSpy(observable()); return observable(); });
+        var notifySpy = jasmine.createSpy('notifySpy');
+        computed.subscribe(notifySpy);
+        computed.throttle(500);
+
+        // Observable is changed, but notification is delayed
+        evalSpy.reset();
+        observable('a');
+        expect(evalSpy).not.toHaveBeenCalled();
+        expect(computed()).toEqual('a');
+        expect(evalSpy).toHaveBeenCalledWith('a');      // evaluation happens when computed is accessed
+        expect(notifySpy).not.toHaveBeenCalled();       // but notification is still delayed
+
+        // Second change notification is also delayed
+        evalSpy.reset();
+        observable('b');
+        expect(evalSpy).not.toHaveBeenCalled();
+        expect(notifySpy).not.toHaveBeenCalled();
+
+        // Advance clock; Change notification happens now using the latest value notified
+        evalSpy.reset();
+        jasmine.Clock.tick(501);
+        expect(evalSpy).toHaveBeenCalledWith('b');
+        expect(notifySpy).toHaveBeenCalledWith('b');
+    });
+
+    it('Should supress change notifications if throttled, when value is changed and reverted', function() {
+        jasmine.Clock.useMock();
+
+        var observable = ko.observable('original');
+        var computed = ko.computed(function () { return observable(); });
+        var notifySpy = jasmine.createSpy('notifySpy');
+        computed.subscribe(notifySpy);
+        computed.throttle(500);
+
+        observable('new');                      // change value
+        expect(computed()).toEqual('new');      // access computed to make sure it has really the changed value
+        observable('original');                 // and then change the value back
+        expect(notifySpy).not.toHaveBeenCalled();
+        jasmine.Clock.tick(501);
+        expect(notifySpy).not.toHaveBeenCalled();
+
+        // Check that value is correct and notification hasn't happened
+        expect(computed()).toEqual('original');
+        expect(notifySpy).not.toHaveBeenCalled();
+    });
 });

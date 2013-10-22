@@ -251,4 +251,46 @@ describe('Observable', function() {
         expect(interceptedNotifications[0].value).toEqual(123);
         expect(interceptedNotifications[1].value).toEqual(456);
     });
+
+    it('Should delay change notifications if throttled', function() {
+        jasmine.Clock.useMock();
+
+        var observable = ko.observable();
+        var notifySpy = jasmine.createSpy('notifySpy');
+        observable.subscribe(notifySpy);
+        observable.throttle(500);
+
+        // Observable is changed, but notification is delayed
+        observable('a');
+        expect(observable()).toEqual('a');
+        expect(notifySpy).not.toHaveBeenCalled();
+
+        // Second change notification is also delayed
+        observable('b');
+        expect(notifySpy).not.toHaveBeenCalled();
+
+        // Advance clock; Change notification happens now using the latest value notified
+        jasmine.Clock.tick(501);
+        expect(notifySpy).toHaveBeenCalledWith('b');
+    });
+
+    it('Should supress change notifications if throttled, when value is changed and reverted', function() {
+        jasmine.Clock.useMock();
+
+        var observable = ko.observable('original');
+        var notifySpy = jasmine.createSpy('notifySpy');
+        observable.subscribe(notifySpy);
+        observable.throttle(500);
+
+        observable('new');                      // change value
+        expect(observable()).toEqual('new');    // access observable to make sure it has really the changed value
+        observable('original');                 // but then change it back
+        expect(notifySpy).not.toHaveBeenCalled();
+        jasmine.Clock.tick(501);
+        expect(notifySpy).not.toHaveBeenCalled();
+
+        // Check that value is correct and notification hasn't happened
+        expect(observable()).toEqual('original');
+        expect(notifySpy).not.toHaveBeenCalled();
+    });
 });

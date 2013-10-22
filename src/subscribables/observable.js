@@ -6,11 +6,15 @@ ko.observable = function (initialValue) {
             // Write
 
             // Ignore writes if the value hasn't changed
-            if (!observable['equalityComparer'] || !observable['equalityComparer'](_latestValue, arguments[0])) {
+            if (observable.isDifferent(_latestValue, arguments[0])) {
+                var previousValue = _latestValue;
                 observable.valueWillMutate();
                 _latestValue = arguments[0];
                 if (DEBUG) observable._latestValue = _latestValue;
-                observable.valueHasMutated();
+                if (observable.notifyThrottled)
+                    observable.notifyThrottled(previousValue);
+                else
+                    observable.valueHasMutated();
             }
             return this; // Permits chained assignments
         }

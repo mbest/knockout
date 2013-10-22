@@ -34,8 +34,12 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
         if (throttleEvaluationTimeout && throttleEvaluationTimeout >= 0) {
             clearTimeout(evaluationTimeoutInstance);
             evaluationTimeoutInstance = setTimeout(evaluateImmediate, throttleEvaluationTimeout);
-        } else
+        } else if (dependentObservable.notifyThrottled) {
+            _hasBeenEvaluated = false;   // mark as dirty
+            dependentObservable.notifyThrottled(_latestValue);
+        } else {
             evaluateImmediate();
+        }
     }
 
     function evaluateImmediate() {
@@ -82,12 +86,14 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
             }
             _hasBeenEvaluated = true;
 
-            if (!dependentObservable['equalityComparer'] || !dependentObservable['equalityComparer'](_latestValue, newValue)) {
+            if (dependentObservable.isDifferent(_latestValue, newValue)) {
                 dependentObservable["notifySubscribers"](_latestValue, "beforeChange");
 
                 _latestValue = newValue;
                 if (DEBUG) dependentObservable._latestValue = _latestValue;
-                dependentObservable["notifySubscribers"](_latestValue);
+                if (!dependentObservable.notifyThrottled) {
+                    dependentObservable["notifySubscribers"](_latestValue);
+                }
             }
         } finally {
             ko.dependencyDetection.end();
