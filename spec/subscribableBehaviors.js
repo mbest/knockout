@@ -106,29 +106,4 @@ describe('Subscribable', function() {
         expect(interceptedNotifications[0].eventName).toEqual("myEvent");
         expect(interceptedNotifications[0].value).toEqual(123);
     });
-
-    it('Should delay change notifications if throttled', function() {
-        jasmine.Clock.useMock();
-
-        var subscribable = new ko.subscribable();
-        var notifySpy = jasmine.createSpy('notifySpy');
-        subscribable.notifySubscribers = notifySpy;
-        subscribable.throttle(500);
-
-        // "change" notification is delayed
-        subscribable.notifySubscribers('a', "change");
-        expect(notifySpy).not.toHaveBeenCalled();
-
-        // Default notification is delayed
-        subscribable.notifySubscribers('b');
-        expect(notifySpy).not.toHaveBeenCalled();
-
-        // Other notifications happen immediately
-        subscribable.notifySubscribers('c', "custom");
-        expect(notifySpy).toHaveBeenCalledWith('c', 'custom');
-
-        // Advance clock; Change notification happens now using the latest value notified
-        jasmine.Clock.tick(501);
-        expect(notifySpy).toHaveBeenCalledWith('b', 'change');
-    });
 });

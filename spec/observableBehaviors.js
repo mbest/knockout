@@ -252,45 +252,97 @@ describe('Observable', function() {
         expect(interceptedNotifications[1].value).toEqual(456);
     });
 
-    it('Should delay change notifications if throttled', function() {
-        jasmine.Clock.useMock();
+    describe('throttled', function() {
+        beforeEach(function() {
+            jasmine.Clock.useMock();
+        });
 
-        var observable = ko.observable();
-        var notifySpy = jasmine.createSpy('notifySpy');
-        observable.subscribe(notifySpy);
-        observable.throttle(500);
+        it('Should delay change notifications', function() {
+            var observable = ko.observable();
+            var notifySpy = jasmine.createSpy('notifySpy');
+            observable.subscribe(notifySpy);
+            observable.throttle(500);
 
-        // Observable is changed, but notification is delayed
-        observable('a');
-        expect(observable()).toEqual('a');
-        expect(notifySpy).not.toHaveBeenCalled();
+            // Observable is changed, but notification is delayed
+            observable('a');
+            expect(observable()).toEqual('a');
+            expect(notifySpy).not.toHaveBeenCalled();
 
-        // Second change notification is also delayed
-        observable('b');
-        expect(notifySpy).not.toHaveBeenCalled();
+            // Second change notification is also delayed
+            observable('b');
+            expect(notifySpy).not.toHaveBeenCalled();
 
-        // Advance clock; Change notification happens now using the latest value notified
-        jasmine.Clock.tick(501);
-        expect(notifySpy).toHaveBeenCalledWith('b');
-    });
+            // Advance clock; Change notification happens now using the latest value notified
+            jasmine.Clock.tick(501);
+            expect(notifySpy).toHaveBeenCalledWith('b');
+        });
 
-    it('Should supress change notifications if throttled, when value is changed and reverted', function() {
-        jasmine.Clock.useMock();
+        it('Should supress change notification when value is changed/reverted', function() {
+            var observable = ko.observable('original');
+            var notifySpy = jasmine.createSpy('notifySpy');
+            observable.subscribe(notifySpy);
+            observable.throttle(500);
 
-        var observable = ko.observable('original');
-        var notifySpy = jasmine.createSpy('notifySpy');
-        observable.subscribe(notifySpy);
-        observable.throttle(500);
+            observable('new');                      // change value
+            expect(observable()).toEqual('new');    // access observable to make sure it has really the changed value
+            observable('original');                 // but then change it back
+            expect(notifySpy).not.toHaveBeenCalled();
+            jasmine.Clock.tick(501);
+            expect(notifySpy).not.toHaveBeenCalled();
 
-        observable('new');                      // change value
-        expect(observable()).toEqual('new');    // access observable to make sure it has really the changed value
-        observable('original');                 // but then change it back
-        expect(notifySpy).not.toHaveBeenCalled();
-        jasmine.Clock.tick(501);
-        expect(notifySpy).not.toHaveBeenCalled();
+            // Check that value is correct and notification hasn't happened
+            expect(observable()).toEqual('original');
+            expect(notifySpy).not.toHaveBeenCalled();
+        });
 
-        // Check that value is correct and notification hasn't happened
-        expect(observable()).toEqual('original');
-        expect(notifySpy).not.toHaveBeenCalled();
+        it('Should support notifications from nested update', function() {
+            var observable = ko.observable('a');
+            var notifySpy = jasmine.createSpy('notifySpy');
+            observable.subscribe(notifySpy);
+            observable.throttle(500);
+
+            // Create a one-time subscription that will modify the observable
+            var updateSub = observable.subscribe(function() {
+                updateSub.dispose();
+                observable('z');
+            });
+
+            observable('b');
+            expect(notifySpy).not.toHaveBeenCalled();
+            expect(observable()).toEqual('b');
+
+            jasmine.Clock.tick(501);
+            expect(notifySpy).toHaveBeenCalledWith('b');
+            expect(observable()).toEqual('z');
+
+            jasmine.Clock.tick(501);
+            expect(notifySpy).toHaveBeenCalledWith('z');
+        });
+
+        it('Should supress notifications when value is changed/reverted from nested update', function() {
+            var observable = ko.observable('a');
+            var notifySpy = jasmine.createSpy('notifySpy');
+            observable.subscribe(notifySpy);
+            observable.throttle(500);
+
+            // Create a one-time subscription that will modify the observable and then revert the change
+            var updateSub = observable.subscribe(function(newValue) {
+                updateSub.dispose();
+                observable('z');
+                observable(newValue);
+            });
+
+            observable('b');
+            expect(notifySpy).not.toHaveBeenCalled();
+            expect(observable()).toEqual('b');
+
+            jasmine.Clock.tick(501);
+            expect(notifySpy).toHaveBeenCalledWith('b');
+            expect(observable()).toEqual('b');
+
+            notifySpy.reset();
+            jasmine.Clock.tick(501);
+            expect(notifySpy).not.toHaveBeenCalled();
+        });
     });
 });

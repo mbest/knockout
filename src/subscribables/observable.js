@@ -7,13 +7,15 @@ ko.observable = function (initialValue) {
 
             // Ignore writes if the value hasn't changed
             if (observable.isDifferent(_latestValue, arguments[0])) {
-                var previousValue = _latestValue;
+                if (observable.notifyThrottled)
+                    observable.notifyThrottled(_latestValue);
+
                 observable.valueWillMutate();
+
                 _latestValue = arguments[0];
                 if (DEBUG) observable._latestValue = _latestValue;
-                if (observable.notifyThrottled)
-                    observable.notifyThrottled(previousValue);
-                else
+
+                if (!observable.notifyThrottled)
                     observable.valueHasMutated();
             }
             return this; // Permits chained assignments
@@ -39,7 +41,27 @@ ko.observable = function (initialValue) {
 }
 
 ko.observable['fn'] = {
-    "equalityComparer": valuesArePrimitiveAndEqual
+    "equalityComparer": valuesArePrimitiveAndEqual,
+
+    'throttle': function(timeout) {
+        var self = this, savedValue, throttleTimeoutInstance;
+        self.notifyThrottled = function(previousValue) {
+            if (!throttleTimeoutInstance) {
+                savedValue = previousValue;
+                throttleTimeoutInstance = setTimeout(function() {
+                    var oldValue = savedValue, newValue = self();
+                    savedValue = throttleTimeoutInstance = undefined;
+                    if (self.isDifferent(oldValue, newValue)) {
+                        self["notifySubscribers"](newValue);
+                    }
+                }, timeout);
+            }
+        };
+    },
+
+    isDifferent: function(oldValue, newValue) {
+        return !this['equalityComparer'] || !this['equalityComparer'](oldValue, newValue);
+    }
 };
 
 var protoProperty = ko.observable.protoProperty = "__ko_proto__";

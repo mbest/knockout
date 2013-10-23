@@ -65,49 +65,6 @@ ko.subscribable['fn'] = {
         return total;
     },
 
-    'throttle': function(timeout) {
-        var self = this, savedValue, throttleTimeoutInstance;
-        if (ko.isObservable(self)) {
-            function notifyIfDifferent(newValue) {
-                if (self.isDifferent(savedValue, newValue)) {
-                    self["notifySubscribers"](newValue);
-                }
-            }
-            self.notifyThrottled = function(previousValue) {
-                if (!throttleTimeoutInstance) {
-                    savedValue = previousValue;
-                    throttleTimeoutInstance = setTimeout(function() {
-                        throttleTimeoutInstance = undefined;
-                        notifyIfDifferent(self());
-                        savedValue = undefined;
-                    }, timeout);
-                }
-            };
-        } else {
-            // Replace notifySubscribers with one that throttles change events
-            // Note that calling "throttle" multiple times is additive because it always chains onto the notifySubscribers function
-            var originalNotifySubscribers = self['notifySubscribers'];
-            self['notifySubscribers'] = function(valueToNotify, event) {
-                if (event === defaultEvent || event === undefined) {
-                    savedValue = valueToNotify;
-                    if (!throttleTimeoutInstance) {
-                        throttleTimeoutInstance = setTimeout(function() {
-                            throttleTimeoutInstance = undefined;
-                            originalNotifySubscribers.call(self, savedValue, defaultEvent);
-                            savedValue = undefined;
-                        }, timeout);
-                    }
-                } else {
-                    originalNotifySubscribers.call(self, valueToNotify, event);
-                }
-            };
-        }
-    },
-
-    isDifferent: function(oldValue, newValue) {
-        return !this['equalityComparer'] || !this['equalityComparer'](oldValue, newValue);
-    },
-
     extend: applyExtenders
 };
 

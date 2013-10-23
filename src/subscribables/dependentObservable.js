@@ -151,6 +151,7 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
     dependentObservable.isActive = isActive;
 
     ko.subscribable.call(dependentObservable);
+    ko.utils.extend(dependentObservable, ko.observable['fn']);
     ko.utils.extend(dependentObservable, ko.dependentObservable['fn']);
 
     ko.exportProperty(dependentObservable, 'peek', dependentObservable.peek);
@@ -201,9 +202,7 @@ ko.isComputed = function(instance) {
 var protoProp = ko.observable.protoProperty; // == "__ko_proto__"
 ko.dependentObservable[protoProp] = ko.observable;
 
-ko.dependentObservable['fn'] = {
-    "equalityComparer": valuesArePrimitiveAndEqual
-};
+ko.dependentObservable['fn'] = { };
 ko.dependentObservable['fn'][protoProp] = ko.dependentObservable;
 
 ko.exportSymbol('dependentObservable', ko.dependentObservable);
