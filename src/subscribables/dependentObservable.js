@@ -30,8 +30,8 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
     }
 
     function evaluatePossiblyAsync() {
-        if (dependentObservable._notifyThrottled) {
-            dependentObservable._notifyThrottled();
+        if (dependentObservable._evalThrottled) {
+            dependentObservable._evalThrottled();
         } else {
             evaluateImmediate();
         }
@@ -86,7 +86,7 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
 
                 _latestValue = newValue;
                 if (DEBUG) dependentObservable._latestValue = _latestValue;
-                if (!dependentObservable._notifyThrottled) {
+                if (!dependentObservable._evalThrottled) {
                     dependentObservable["notifySubscribers"](_latestValue);
                 }
             }
@@ -149,10 +149,10 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
     ko.utils.extend(dependentObservable, ko.observable['fn']);
     ko.utils.extend(dependentObservable, ko.dependentObservable['fn']);
 
-    // Replace the throttle function with one that delay evaluation as well.
+    // Replace the throttle function with one that delays evaluation as well.
     dependentObservable['throttle'] = function(timeout) {
         var savedValue, throttleTimeoutInstance;
-        dependentObservable._notifyThrottled = function() {
+        dependentObservable._evalThrottled = function() {
             _hasBeenEvaluated = false;   // mark as dirty
             if (!throttleTimeoutInstance) {
                 savedValue = _latestValue;

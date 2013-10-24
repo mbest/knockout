@@ -48,7 +48,7 @@ ko.subscribable['fn'] = {
                 for (var a = this._subscriptions[event].slice(0), i = 0, subscription; subscription = a[i]; ++i) {
                     // In case a subscription was disposed during the arrayForEach cycle, check
                     // for isDisposed on each subscription before invoking its callback
-                    if (subscription && !subscription.isDisposed)
+                    if (!subscription.isDisposed)
                         subscription.callback(valueToNotify);
                 }
             } finally {
