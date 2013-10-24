@@ -123,7 +123,7 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
     }
 
     function peek() {
-        if (!_hasBeenEvaluated)
+        if (!_hasBeenEvaluated && !_subscriptionsToDependencies.length)
             evaluateImmediate();
         return _latestValue;
     }
