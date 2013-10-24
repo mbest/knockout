@@ -111,9 +111,10 @@ describe('Subscribable', function() {
         jasmine.Clock.useMock();
 
         var subscribable = new ko.subscribable();
-        var notifySpy = jasmine.createSpy('notifySpy');
-        subscribable.notifySubscribers = notifySpy;
         subscribable.throttle(500);
+        var notifySpy = jasmine.createSpy('notifySpy');
+        subscribable.subscribe(notifySpy);
+        subscribable.subscribe(notifySpy, null, 'custom');
 
         // "change" notification is delayed
         subscribable.notifySubscribers('a', "change");
@@ -125,10 +126,10 @@ describe('Subscribable', function() {
 
         // Other notifications happen immediately
         subscribable.notifySubscribers('c', "custom");
-        expect(notifySpy).toHaveBeenCalledWith('c', 'custom');
+        expect(notifySpy).toHaveBeenCalledWith('c');
 
         // Advance clock; Change notification happens now using the latest value notified
         jasmine.Clock.tick(501);
-        expect(notifySpy).toHaveBeenCalledWith('b', 'change');
+        expect(notifySpy).toHaveBeenCalledWith('b');
     });
 });

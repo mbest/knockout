@@ -30,6 +30,9 @@ ko.subscribable['fn'] = {
             ko.utils.arrayRemoveItem(this._subscriptions[event], subscription);
         }.bind(this));
 
+        if (event === defaultEvent && this._throttleSubscribeCallback)
+            this._throttleSubscribeCallback(subscription);
+
         if (!this._subscriptions[event])
             this._subscriptions[event] = [];
         this._subscriptions[event].push(subscription);
@@ -66,28 +69,25 @@ ko.subscribable['fn'] = {
     },
 
     'throttle': function(timeout) {
-        // Replace notifySubscribers with one that throttles change events
-        // Note that calling "throttle" multiple times is additive because it always chains onto the notifySubscribers function
-        var self = this, originalNotifySubscribers = self['notifySubscribers'],
-            previousValue = self.peek ? self.peek() : undefined,
-            latestValue, throttleTimeoutInstance;
-        self['notifySubscribers'] = function(valueToNotify, event) {
-            if (event === defaultEvent || event === undefined) {
-                latestValue = valueToNotify;
+        var self = this;
+        self._throttleSubscribeCallback = function(subscription) {
+            var originalCallback = subscription.callback,
+                lastNotifiedValue = self.peek ? self.peek() : undefined,
+                pendingValue, throttleTimeoutInstance;
+            subscription.callback = function(value) {
+                pendingValue = value;
                 if (!throttleTimeoutInstance) {
                     throttleTimeoutInstance = setTimeout(function() {
-                        var oldValue = previousValue, newValue = latestValue;
-                        previousValue = latestValue;
-                        throttleTimeoutInstance = latestValue = undefined;
-                        if (self.isDifferent(oldValue, newValue)) {
-                            originalNotifySubscribers.call(self, newValue, defaultEvent);
+                        var oldValue = lastNotifiedValue, newValue = pendingValue;
+                        lastNotifiedValue = pendingValue;
+                        throttleTimeoutInstance = pendingValue = undefined;
+                        if (subscription.isDisposed !== true && self.isDifferent(oldValue, newValue)) {
+                            originalCallback(newValue);
                         }
                     }, timeout);
                 }
-            } else {
-                originalNotifySubscribers.call(self, valueToNotify, event);
-            }
-        };
+            };
+        }
     },
 
     isDifferent: function(oldValue, newValue) {

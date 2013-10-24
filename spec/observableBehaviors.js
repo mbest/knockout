@@ -259,9 +259,9 @@ describe('Observable', function() {
 
         it('Should delay change notifications', function() {
             var observable = ko.observable();
+            observable.throttle(500);
             var notifySpy = jasmine.createSpy('notifySpy');
             observable.subscribe(notifySpy);
-            observable.throttle(500);
 
             // Observable is changed, but notification is delayed
             observable('a');
@@ -279,9 +279,9 @@ describe('Observable', function() {
 
         it('Should supress change notification when value is changed/reverted', function() {
             var observable = ko.observable('original');
+            observable.throttle(500);
             var notifySpy = jasmine.createSpy('notifySpy');
             observable.subscribe(notifySpy);
-            observable.throttle(500);
 
             observable('new');                      // change value
             expect(observable()).toEqual('new');    // access observable to make sure it has really the changed value
@@ -297,9 +297,9 @@ describe('Observable', function() {
 
         it('Should support notifications from nested update', function() {
             var observable = ko.observable('a');
+            observable.throttle(500);
             var notifySpy = jasmine.createSpy('notifySpy');
             observable.subscribe(notifySpy);
-            observable.throttle(500);
 
             // Create a one-time subscription that will modify the observable
             var updateSub = observable.subscribe(function() {
@@ -321,9 +321,9 @@ describe('Observable', function() {
 
         it('Should supress notifications when value is changed/reverted from nested update', function() {
             var observable = ko.observable('a');
+            observable.throttle(500);
             var notifySpy = jasmine.createSpy('notifySpy');
             observable.subscribe(notifySpy);
-            observable.throttle(500);
 
             // Create a one-time subscription that will modify the observable and then revert the change
             var updateSub = observable.subscribe(function(newValue) {
