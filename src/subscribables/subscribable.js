@@ -65,6 +65,35 @@ ko.subscribable['fn'] = {
         return total;
     },
 
+    'throttle': function(timeout) {
+        // Replace notifySubscribers with one that throttles change events
+        // Note that calling "throttle" multiple times is additive because it always chains onto the notifySubscribers function
+        var self = this, originalNotifySubscribers = self['notifySubscribers'],
+            previousValue = self.peek ? self.peek() : undefined,
+            latestValue, throttleTimeoutInstance;
+        self['notifySubscribers'] = function(valueToNotify, event) {
+            if (event === defaultEvent || event === undefined) {
+                latestValue = valueToNotify;
+                if (!throttleTimeoutInstance) {
+                    throttleTimeoutInstance = setTimeout(function() {
+                        var oldValue = previousValue, newValue = latestValue;
+                        previousValue = latestValue;
+                        throttleTimeoutInstance = latestValue = undefined;
+                        if (self.isDifferent(oldValue, newValue)) {
+                            originalNotifySubscribers.call(self, newValue, defaultEvent);
+                        }
+                    }, timeout);
+                }
+            } else {
+                originalNotifySubscribers.call(self, valueToNotify, event);
+            }
+        };
+    },
+
+    isDifferent: function(oldValue, newValue) {
+        return !this['equalityComparer'] || !this['equalityComparer'](oldValue, newValue);
+    },
+
     extend: applyExtenders
 };
 

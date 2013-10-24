@@ -202,7 +202,23 @@ ko.isComputed = function(instance) {
 var protoProp = ko.observable.protoProperty; // == "__ko_proto__"
 ko.dependentObservable[protoProp] = ko.observable;
 
-ko.dependentObservable['fn'] = { };
+ko.dependentObservable['fn'] = {
+    'throttle': function(timeout) {
+        var self = this, savedValue, throttleTimeoutInstance;
+        self.notifyThrottled = function(previousValue) {
+            if (!throttleTimeoutInstance) {
+                savedValue = previousValue;
+                throttleTimeoutInstance = setTimeout(function() {
+                    var oldValue = savedValue, newValue = self();
+                    savedValue = throttleTimeoutInstance = undefined;
+                    if (self.isDifferent(oldValue, newValue)) {
+                        self["notifySubscribers"](newValue);
+                    }
+                }, timeout);
+            }
+        };
+    }
+};
 ko.dependentObservable['fn'][protoProp] = ko.dependentObservable;
 
 ko.exportSymbol('dependentObservable', ko.dependentObservable);
