@@ -3,6 +3,7 @@ ko.subscription = function (target, callback, disposeCallback) {
     this.target = target;
     this.callback = callback;
     this.disposeCallback = disposeCallback;
+    this.isDisposed = false;
     ko.exportProperty(this, 'dispose', this.dispose);
 };
 ko.subscription.prototype.dispose = function () {
@@ -47,7 +48,7 @@ ko.subscribable['fn'] = {
                 for (var a = this._subscriptions[event].slice(0), i = 0, subscription; subscription = a[i]; ++i) {
                     // In case a subscription was disposed during the arrayForEach cycle, check
                     // for isDisposed on each subscription before invoking its callback
-                    if (subscription && (subscription.isDisposed !== true))
+                    if (subscription && !subscription.isDisposed)
                         subscription.callback(valueToNotify);
                 }
             } finally {
@@ -72,17 +73,18 @@ ko.subscribable['fn'] = {
         var self = this;
         self._throttleSubscribeCallback = function(subscription) {
             var originalCallback = subscription.callback,
-                lastNotifiedValue = self.peek ? self.peek() : undefined,
-                pendingValue, throttleTimeoutInstance;
+                notifiedValue = self.peek ? self.peek() : undefined,
+                pendingValue,
+                throttleTimeoutInstance;
             subscription.callback = function(value) {
                 pendingValue = value;
                 if (!throttleTimeoutInstance) {
                     throttleTimeoutInstance = setTimeout(function() {
-                        var oldValue = lastNotifiedValue, newValue = pendingValue;
-                        lastNotifiedValue = pendingValue;
+                        var valueToCompare = notifiedValue;
+                        notifiedValue = pendingValue;
                         throttleTimeoutInstance = pendingValue = undefined;
-                        if (subscription.isDisposed !== true && self.isDifferent(oldValue, newValue)) {
-                            originalCallback(newValue);
+                        if (!subscription.isDisposed && self.isDifferent(valueToCompare, notifiedValue)) {
+                            originalCallback(notifiedValue);
                         }
                     }, timeout);
                 }
