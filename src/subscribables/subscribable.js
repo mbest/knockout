@@ -10,6 +10,29 @@ ko.subscription.prototype.dispose = function () {
     this.isDisposed = true;
     this.disposeCallback();
 };
+ko.subscription.prototype['throttle'] = function (timeout) {
+    var self = this,
+        target = self.target,
+        originalCallback = self.callback,
+        notifiedValue = target.peek ? target.peek() : undefined,
+        pendingValue,
+        throttleTimeoutInstance;
+
+    function finish() {
+        var valueToCompare = notifiedValue;
+        notifiedValue = pendingValue;
+        throttleTimeoutInstance = pendingValue = undefined;
+        if (!self.isDisposed && target.isDifferent(valueToCompare, notifiedValue)) {
+            originalCallback(notifiedValue);
+        }
+    }
+
+    self.callback = function(value) {
+        pendingValue = value;
+        if (!throttleTimeoutInstance)
+            throttleTimeoutInstance = setTimeout(finish, timeout);
+    };
+};
 
 ko.subscribable = function () {
     this._subscriptions = {};
@@ -31,8 +54,9 @@ ko.subscribable['fn'] = {
             ko.utils.arrayRemoveItem(this._subscriptions[event], subscription);
         }.bind(this));
 
-        if (event === defaultEvent && this._throttleSubscribeCallback)
-            this._throttleSubscribeCallback(subscription);
+        if (event === defaultEvent && this._throttleTimeout >= 0) {
+            subscription['throttle'](this._throttleTimeout);
+        }
 
         if (!this._subscriptions[event])
             this._subscriptions[event] = [];
@@ -57,6 +81,10 @@ ko.subscribable['fn'] = {
         }
     },
 
+    'throttle': function(timeout) {
+        this._throttleTimeout = timeout;
+    },
+
     hasSubscriptionsForEvent: function(event) {
         return this._subscriptions[event] && this._subscriptions[event].length;
     },
@@ -67,29 +95,6 @@ ko.subscribable['fn'] = {
             total += subscriptions.length;
         });
         return total;
-    },
-
-    'throttle': function(timeout) {
-        var self = this;
-        self._throttleSubscribeCallback = function(subscription) {
-            var originalCallback = subscription.callback,
-                notifiedValue = self.peek ? self.peek() : undefined,
-                pendingValue,
-                throttleTimeoutInstance;
-            subscription.callback = function(value) {
-                pendingValue = value;
-                if (!throttleTimeoutInstance) {
-                    throttleTimeoutInstance = setTimeout(function() {
-                        var valueToCompare = notifiedValue;
-                        notifiedValue = pendingValue;
-                        throttleTimeoutInstance = pendingValue = undefined;
-                        if (!subscription.isDisposed && self.isDifferent(valueToCompare, notifiedValue)) {
-                            originalCallback(notifiedValue);
-                        }
-                    }, timeout);
-                }
-            };
-        }
     },
 
     isDifferent: function(oldValue, newValue) {
