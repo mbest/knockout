@@ -258,8 +258,7 @@ describe('Observable', function() {
         });
 
         it('Should delay change notifications', function() {
-            var observable = ko.observable();
-            observable.throttle(500);
+            var observable = ko.observable().extend({throttle:500});
             var notifySpy = jasmine.createSpy('notifySpy');
             observable.subscribe(notifySpy);
 
@@ -278,8 +277,7 @@ describe('Observable', function() {
         });
 
         it('Should supress change notification when value is changed/reverted', function() {
-            var observable = ko.observable('original');
-            observable.throttle(500);
+            var observable = ko.observable('original').extend({throttle:500});
             var notifySpy = jasmine.createSpy('notifySpy');
             observable.subscribe(notifySpy);
 
@@ -296,8 +294,7 @@ describe('Observable', function() {
         });
 
         it('Should support notifications from nested update', function() {
-            var observable = ko.observable('a');
-            observable.throttle(500);
+            var observable = ko.observable('a').extend({throttle:500});
             var notifySpy = jasmine.createSpy('notifySpy');
             observable.subscribe(notifySpy);
 
@@ -320,8 +317,7 @@ describe('Observable', function() {
         });
 
         it('Should supress notifications when value is changed/reverted from nested update', function() {
-            var observable = ko.observable('a');
-            observable.throttle(500);
+            var observable = ko.observable('a').extend({throttle:500});
             var notifySpy = jasmine.createSpy('notifySpy');
             observable.subscribe(notifySpy);
 

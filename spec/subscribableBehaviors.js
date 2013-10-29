@@ -110,8 +110,7 @@ describe('Subscribable', function() {
     it('Should delay change notifications if throttled', function() {
         jasmine.Clock.useMock();
 
-        var subscribable = new ko.subscribable();
-        subscribable.throttle(500);
+        var subscribable = new ko.subscribable().extend({throttle:500});
         var notifySpy = jasmine.createSpy('notifySpy');
         subscribable.subscribe(notifySpy);
         subscribable.subscribe(notifySpy, null, 'custom');
@@ -140,7 +139,7 @@ describe('Subscribable', function() {
         // First subscription is throttled
         var notifySpy1 = jasmine.createSpy('notifySpy1');
         var subscription1 = subscribable.subscribe(notifySpy1, null, 'custom');
-        subscription1.throttle(500);
+        ko.extenders.throttle(subscription1, 500);
         // Second isn't
         var notifySpy2 = jasmine.createSpy('notifySpy2');
         var subscription2 = subscribable.subscribe(notifySpy2, null, 'custom');

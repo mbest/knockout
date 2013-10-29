@@ -150,20 +150,18 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
     ko.utils.extend(dependentObservable, ko.dependentObservable['fn']);
 
     // Replace the throttle function with one that delays evaluation as well.
-    dependentObservable['throttle'] = function(timeout) {
-        var savedValue, throttleTimeoutInstance;
+    dependentObservable['limit'] = function(limitFunction) {
+        var notifiedValue = peek();
+        var finish = limitFunction(function() {
+            var valueToCompare = notifiedValue;
+            notifiedValue = dependentObservable();
+            if (dependentObservable.isDifferent(valueToCompare, notifiedValue)) {
+                dependentObservable["notifySubscribers"](notifiedValue);
+            }
+        });
         dependentObservable._evalThrottled = function() {
             _hasBeenEvaluated = false;   // mark as dirty
-            if (!throttleTimeoutInstance) {
-                savedValue = _latestValue;
-                throttleTimeoutInstance = setTimeout(function() {
-                    var oldValue = savedValue;
-                    savedValue = throttleTimeoutInstance = undefined;
-                    if (dependentObservable.isDifferent(oldValue, dependentObservable())) {
-                        dependentObservable["notifySubscribers"](_latestValue);
-                    }
-                }, timeout);
-            }
+            finish();
         };
     };
 

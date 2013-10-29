@@ -10,27 +10,25 @@ ko.subscription.prototype.dispose = function () {
     this.isDisposed = true;
     this.disposeCallback();
 };
-ko.subscription.prototype['throttle'] = function (timeout) {
+ko.subscription.prototype['limit'] = function (limitFunction) {
     var self = this,
         target = self.target,
         originalCallback = self.callback,
         notifiedValue = target.peek ? target.peek() : undefined,
-        pendingValue,
-        throttleTimeoutInstance;
+        pendingValue;
 
-    function finish() {
+    var finish = limitFunction(function () {
         var valueToCompare = notifiedValue;
         notifiedValue = pendingValue;
-        throttleTimeoutInstance = pendingValue = undefined;
+        pendingValue = undefined;
         if (!self.isDisposed && target.isDifferent(valueToCompare, notifiedValue)) {
             originalCallback(notifiedValue);
         }
-    }
+    });
 
     self.callback = function(value) {
         pendingValue = value;
-        if (!throttleTimeoutInstance)
-            throttleTimeoutInstance = setTimeout(finish, timeout);
+        finish();
     };
 };
 
@@ -54,8 +52,8 @@ ko.subscribable['fn'] = {
             ko.utils.arrayRemoveItem(this._subscriptions[event], subscription);
         }.bind(this));
 
-        if (event === defaultEvent && this._throttleTimeout >= 0) {
-            subscription['throttle'](this._throttleTimeout);
+        if (event === defaultEvent && this._limitFunction) {
+            subscription['limit'](this._limitFunction);
         }
 
         if (!this._subscriptions[event])
@@ -81,8 +79,8 @@ ko.subscribable['fn'] = {
         }
     },
 
-    'throttle': function(timeout) {
-        this._throttleTimeout = timeout;
+    'limit': function(limitFunction) {
+        this._limitFunction = limitFunction;
     },
 
     hasSubscriptionsForEvent: function(event) {

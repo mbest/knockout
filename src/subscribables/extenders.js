@@ -1,7 +1,32 @@
 ko.extenders = {
     'throttle': function(target, timeout) {
-        if (target['throttle'])
-            target['throttle'](timeout);
+        if (!target['limit'])
+            return;
+
+        target['limit'](function (callback) {
+            var timeoutInstance;
+            return function () {
+                if (!timeoutInstance) {
+                    timeoutInstance = setTimeout(function() {
+                        timeoutInstance = undefined;
+                        callback();
+                    }, timeout);
+                }
+            };
+        });
+    },
+
+    'debounce': function(target, timeout) {
+        if (!target['limit'])
+            return;
+
+        target['limit'](function (callback) {
+            var timeoutInstance;
+            return function () {
+                clearTimeout(timeoutInstance);
+                timeoutInstance = setTimeout(callback, timeout);
+            };
+        });
     },
 
     'notify': function(target, notifyWhen) {

@@ -475,8 +475,7 @@ describe('Dependent Observable', function() {
         it('Should delay change notifications', function() {
             var observable = ko.observable();
             var evalSpy = jasmine.createSpy('evalSpy');
-            var computed = ko.computed(function () { evalSpy(observable()); return observable(); });
-            computed.throttle(500);
+            var computed = ko.computed(function () { evalSpy(observable()); return observable(); }).extend({throttle:500});
             var notifySpy = jasmine.createSpy('notifySpy');
             computed.subscribe(notifySpy);
 
@@ -503,8 +502,7 @@ describe('Dependent Observable', function() {
 
         it('Should supress change notifications when value is changed/reverted', function() {
             var observable = ko.observable('original');
-            var computed = ko.computed(function () { return observable(); });
-            computed.throttle(500);
+            var computed = ko.computed(function () { return observable(); }).extend({throttle:500});
             var notifySpy = jasmine.createSpy('notifySpy');
             computed.subscribe(notifySpy);
 
