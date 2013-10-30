@@ -18,11 +18,8 @@ ko.subscription.prototype['limit'] = function (limitFunction) {
         pendingValue;
 
     var finish = limitFunction(function () {
-        var valueToCompare = notifiedValue;
-        notifiedValue = pendingValue;
-        pendingValue = undefined;
-        if (!self.isDisposed && target.isDifferent(valueToCompare, notifiedValue)) {
-            originalCallback(notifiedValue);
+        if (!self.isDisposed && target.isDifferent(notifiedValue, pendingValue)) {
+            originalCallback(notifiedValue = pendingValue);
         }
     });
 

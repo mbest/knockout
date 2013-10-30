@@ -151,15 +151,18 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
 
     // Replace the throttle function with one that delays evaluation as well.
     dependentObservable['limit'] = function(limitFunction) {
-        var notifiedValue = peek();
+        var isPending, previousValue;
         var finish = limitFunction(function() {
-            var valueToCompare = notifiedValue;
-            notifiedValue = dependentObservable();
-            if (dependentObservable.isDifferent(valueToCompare, notifiedValue)) {
-                dependentObservable["notifySubscribers"](notifiedValue);
+            isPending = false;
+            if (dependentObservable.isDifferent(previousValue, dependentObservable())) {
+                dependentObservable["notifySubscribers"](_latestValue);
             }
         });
         dependentObservable._evalThrottled = function() {
+            if (!isPending) {
+                isPending = true;
+                previousValue = peek();
+            }
             _hasBeenEvaluated = false;   // mark as dirty
             finish();
         };
