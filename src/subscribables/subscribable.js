@@ -25,7 +25,7 @@ ko.subscription.prototype['limit'] = function (limitFunction) {
 
     self.callback = function(value) {
         pendingValue = value;
-        finish();
+        finish(target, value);
     };
 };
 

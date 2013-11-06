@@ -164,7 +164,7 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
                 previousValue = peek();
             }
             _hasBeenEvaluated = false;   // mark as dirty
-            finish();
+            finish(dependentObservable);
         };
     };
 
