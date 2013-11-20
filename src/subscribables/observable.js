@@ -16,7 +16,7 @@ ko.observable = function (initialValue) {
         }
         else {
             // Read
-            ko.dependencyDetection.registerDependency(observable); // The caller only needs to be notified of changes if they did a "read" operation
+            ko.computedContext.registerDependency(observable); // The caller only needs to be notified of changes if they did a "read" operation
             return _latestValue;
         }
     }
