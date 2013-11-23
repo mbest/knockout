@@ -1,7 +1,7 @@
 
 ko.dependencyDetection = ko.computedContext = (function () {
-    var frames = [],
-        frame,
+    var outerFrames = [],
+        currentFrame,
         nonce = 0;
 
     // Return a unique ID that can be assigned to an observable for dependency tracking.
@@ -15,12 +15,12 @@ ko.dependencyDetection = ko.computedContext = (function () {
     }
 
     function begin(options) {
-        frames.push(frame = options);
+        outerFrames.push(currentFrame);
+        currentFrame = options;
     }
 
     function end() {
-        frames.pop();
-        frame = frames.length ? frames[frames.length - 1] : undefined;
+        currentFrame = outerFrames.pop();
     }
 
     return {
@@ -29,10 +29,10 @@ ko.dependencyDetection = ko.computedContext = (function () {
         _end: end,
 
         registerDependency: function (subscribable) {
-            if (frame) {
+            if (currentFrame) {
                 if (!ko.isSubscribable(subscribable))
                     throw new Error("Only subscribable things can act as dependencies");
-                frame.callback(subscribable, subscribable._id || (subscribable._id = getId()));
+                currentFrame.callback(subscribable, subscribable._id || (subscribable._id = getId()));
             }
         },
 
@@ -46,23 +46,23 @@ ko.dependencyDetection = ko.computedContext = (function () {
         },
 
         getDependenciesCount: function () {
-            if (frame)
-                return frame.target.getDependenciesCount();
+            if (currentFrame)
+                return currentFrame.target.getDependenciesCount();
         },
 
         hasDependency: function(subscribable) {
-            if (frame)
-                return frame.target.hasDependency(subscribable);
+            if (currentFrame)
+                return currentFrame.target.hasDependency(subscribable);
         },
 
         isInitial: function() {
-            if (frame)
-                return frame.isInitial;
+            if (currentFrame)
+                return currentFrame.isInitial;
         },
 
         computed: function() {
-            if (frame)
-                return frame.target;
+            if (currentFrame)
+                return currentFrame.target;
         }
 
     };
