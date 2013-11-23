@@ -68,7 +68,7 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
             // Initially, we assume that none of the subscriptions are still being used (i.e., all are candidates for disposal).
             // Then, during evaluation, we cross off any that are in fact still being used.
             var disposalCandidates = _subscriptionsToDependencies, disposalCount = _dependenciesCount;
-            ko.computedContext.begin({
+            ko.computedContext._begin({
                 callback: function(subscribable, id) {
                     if (disposalCount && disposalCandidates[id]) {
                         // Don't want to dispose this subscription, as it's still being used
@@ -109,7 +109,7 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
                 dependentObservable["notifySubscribers"](_latestValue);
             }
         } finally {
-            ko.computedContext.end();
+            ko.computedContext._end();
             _isBeingEvaluated = false;
         }
 

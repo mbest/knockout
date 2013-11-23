@@ -1,7 +1,7 @@
 
 ko.dependencyDetection = ko.computedContext = (function () {
-    var _frames = [],
-        _frame,
+    var frames = [],
+        frame,
         nonce = 0;
 
     // Return a unique ID that can be assigned to an observable for dependency tracking.
@@ -15,29 +15,30 @@ ko.dependencyDetection = ko.computedContext = (function () {
     }
 
     function begin(options) {
-        _frames.push(_frame = options);
+        frames.push(frame = options);
     }
 
     function end() {
-        _frames.pop();
-        _frame = _frames.length ? _frames[_frames.length - 1] : undefined;
+        frames.pop();
+        frame = frames.length ? frames[frames.length - 1] : undefined;
     }
 
     return {
-        begin: begin,
-        end: end,
+        _begin: begin,
+
+        _end: end,
 
         registerDependency: function (subscribable) {
-            if (_frame) {
+            if (frame) {
                 if (!ko.isSubscribable(subscribable))
                     throw new Error("Only subscribable things can act as dependencies");
-                _frame.callback(subscribable, subscribable._id || (subscribable._id = getId()));
+                frame.callback(subscribable, subscribable._id || (subscribable._id = getId()));
             }
         },
 
         ignore: function (callback, callbackTarget, callbackArgs) {
             try {
-                begin(null);
+                begin();
                 return callback.apply(callbackTarget, callbackArgs || []);
             } finally {
                 end();
@@ -45,23 +46,23 @@ ko.dependencyDetection = ko.computedContext = (function () {
         },
 
         getDependenciesCount: function () {
-            if (_frame)
-                return _frame.target.getDependenciesCount();
+            if (frame)
+                return frame.target.getDependenciesCount();
         },
 
         hasDependency: function(subscribable) {
-            if (_frame)
-                return _frame.target.hasDependency(subscribable);
+            if (frame)
+                return frame.target.hasDependency(subscribable);
         },
 
         isInitial: function() {
-            if (_frame)
-                return _frame.isInitial;
+            if (frame)
+                return frame.isInitial;
         },
 
         computed: function() {
-            if (_frame)
-                return _frame.target;
+            if (frame)
+                return frame.target;
         }
 
     };
