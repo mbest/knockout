@@ -10,7 +10,7 @@ ko.subscription.prototype.dispose = function () {
     this.isDisposed = true;
     this.disposeCallback();
 };
-ko.subscription.prototype['limit'] = function (limitFunction) {
+ko.subscription.prototype['limit'] = function (limitFunction, funcOptions) {
     var self = this,
         target = self.target,
         originalCallback = self.callback,
@@ -21,7 +21,7 @@ ko.subscription.prototype['limit'] = function (limitFunction) {
         if (!self.isDisposed && target.isDifferent(notifiedValue, pendingValue)) {
             originalCallback(notifiedValue = pendingValue);
         }
-    });
+    }, funcOptions);
 
     self.callback = function(value) {
         pendingValue = value;
@@ -46,7 +46,7 @@ var ko_subscribable_fn = {
         }.bind(this));
 
         if (event === defaultEvent && this._limitFunction) {
-            subscription['limit'](this._limitFunction);
+            subscription['limit'](this._limitFunction, this._limitFuncOptions);
         }
 
         if (!this._subscriptions[event])
@@ -72,8 +72,9 @@ var ko_subscribable_fn = {
         }
     },
 
-    'limit': function(limitFunction) {
+    'limit': function(limitFunction, funcOptions) {
         this._limitFunction = limitFunction;
+        this._limitFuncOptions = funcOptions;
     },
 
     hasSubscriptionsForEvent: function(event) {

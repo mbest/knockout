@@ -140,10 +140,10 @@ describe('Subscribable', function() {
         expect(subscribable.customFunction).toBe(customFunction);
     });
 
-    it('Should delay change notifications if throttled', function() {
+    it('Should delay change notifications if rate-limited', function() {
         jasmine.Clock.useMock();
 
-        var subscribable = new ko.subscribable().extend({throttle:500});
+        var subscribable = new ko.subscribable().extend({rateLimit:500});
         var notifySpy = jasmine.createSpy('notifySpy');
         subscribable.subscribe(notifySpy);
         subscribable.subscribe(notifySpy, null, 'custom');
@@ -161,18 +161,19 @@ describe('Subscribable', function() {
         expect(notifySpy).toHaveBeenCalledWith('c');
 
         // Advance clock; Change notification happens now using the latest value notified
+        notifySpy.reset();
         jasmine.Clock.tick(501);
         expect(notifySpy).toHaveBeenCalledWith('b');
     });
 
-    it('Should delay notifications if subscription is throttled', function() {
+    it('Should delay notifications if subscription is rate-limited', function() {
         jasmine.Clock.useMock();
 
         var subscribable = new ko.subscribable();
-        // First subscription is throttled
+        // First subscription is rate-limited
         var notifySpy1 = jasmine.createSpy('notifySpy1');
         var subscription1 = subscribable.subscribe(notifySpy1, null, 'custom');
-        ko.extenders.throttle(subscription1, 500);
+        ko.extenders.rateLimit(subscription1, 500);
         // Second isn't
         var notifySpy2 = jasmine.createSpy('notifySpy2');
         var subscription2 = subscribable.subscribe(notifySpy2, null, 'custom');
@@ -181,6 +182,7 @@ describe('Subscribable', function() {
         expect(notifySpy1).not.toHaveBeenCalled();
         expect(notifySpy2).toHaveBeenCalledWith('a');
 
+        notifySpy2.reset();
         subscribable.notifySubscribers('b', 'custom');
         expect(notifySpy1).not.toHaveBeenCalled();
         expect(notifySpy2).toHaveBeenCalledWith('b');

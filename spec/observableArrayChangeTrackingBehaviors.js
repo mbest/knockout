@@ -269,10 +269,10 @@ describe('Observable Array change tracking', function() {
         ]);
     });
 
-    it('Should provide correct changelist when multiple updates are merged into one notification using throttle', function() {
+    it('Should provide correct changelist when multiple updates are merged into one notification using rate-limiting', function() {
         jasmine.Clock.useMock();
 
-        var myArray = ko.observableArray(['Alpha', 'Beta']).extend({throttle:1}),
+        var myArray = ko.observableArray(['Alpha', 'Beta']).extend({rateLimit:1}),
             changelist;
 
         myArray.subscribe(function(changes) {
@@ -300,7 +300,7 @@ describe('Observable Array change tracking', function() {
         myArray.push('Epsilon');
         myArray.pop();
         jasmine.Clock.tick(10);
-        expect(changelist).toEqualOneOf([[], undefined]);
+        expect(changelist).toEqual(undefined);
     });
 
     function testKnownOperation(array, operationName, options) {

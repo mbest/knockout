@@ -30,8 +30,12 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
     }
 
     function evaluatePossiblyAsync() {
-        if (dependentObservable._evalThrottled) {
-            dependentObservable._evalThrottled();
+        var throttleEvaluationTimeout = dependentObservable['throttleEvaluation'];
+        if (throttleEvaluationTimeout && throttleEvaluationTimeout >= 0) {
+            clearTimeout(evaluationTimeoutInstance);
+            evaluationTimeoutInstance = setTimeout(evaluateImmediate, throttleEvaluationTimeout);
+        } else if (dependentObservable._evalRateLimited) {
+            dependentObservable._evalRateLimited();
         } else {
             evaluateImmediate();
         }
@@ -86,7 +90,7 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
 
                 _latestValue = newValue;
                 if (DEBUG) dependentObservable._latestValue = _latestValue;
-                if (!dependentObservable._evalThrottled) {
+                if (!dependentObservable._evalRateLimited) {
                     dependentObservable["notifySubscribers"](_latestValue);
                 }
             }
@@ -148,16 +152,16 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
     dependentObservable.dispose = function () { dispose(); };
     dependentObservable.isActive = isActive;
 
-    // Replace the throttle function with one that delays evaluation as well.
-    dependentObservable['limit'] = function(limitFunction) {
+    // Replace the limit function with one that delays evaluation as well.
+    dependentObservable['limit'] = function(limitFunction, funcOptions) {
         var isPending, previousValue;
         var finish = limitFunction(function() {
             isPending = false;
             if (dependentObservable.isDifferent(previousValue, dependentObservable())) {
                 dependentObservable["notifySubscribers"](_latestValue);
             }
-        });
-        dependentObservable._evalThrottled = function() {
+        }, funcOptions);
+        dependentObservable._evalRateLimited = function() {
             if (!isPending) {
                 isPending = true;
                 previousValue = peek();

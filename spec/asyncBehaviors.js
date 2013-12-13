@@ -50,18 +50,18 @@ describe("Throttled dependent observables", function() {
         });
 
         // Check initial state
-        expect(asyncDepObs.peek()).toBeUndefined();
+        expect(asyncDepObs()).toBeUndefined();
         runs(function() {
             // Mutate
             underlying('New value');
-            expect(asyncDepObs.peek()).toBeUndefined(); // Should not update synchronously
+            expect(asyncDepObs()).toBeUndefined(); // Should not update synchronously
             expect(notifiedValues.length).toEqual(0);
         });
 
         // Still shouldn't have evaluated
         waits(10);
         runs(function() {
-            expect(asyncDepObs.peek()).toBeUndefined(); // Should not update until throttle timeout
+            expect(asyncDepObs()).toBeUndefined(); // Should not update until throttle timeout
             expect(notifiedValues.length).toEqual(0);
         });
 
@@ -70,7 +70,7 @@ describe("Throttled dependent observables", function() {
             return notifiedValues.length > 0;
         }, 300);
         runs(function() {
-            expect(asyncDepObs.peek()).toEqual('New value');
+            expect(asyncDepObs()).toEqual('New value');
             expect(notifiedValues.length).toEqual(1);
             expect(notifiedValues[0]).toEqual('New value');
         });

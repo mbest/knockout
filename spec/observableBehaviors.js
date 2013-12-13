@@ -300,13 +300,13 @@ describe('Observable', function() {
         expect(observable.customFunction2).toBe(customFunction2);
     });
 
-    describe('throttled', function() {
+    describe('rate-limited', function() {
         beforeEach(function() {
             jasmine.Clock.useMock();
         });
 
         it('Should delay change notifications', function() {
-            var observable = ko.observable().extend({throttle:500});
+            var observable = ko.observable().extend({rateLimit:500});
             var notifySpy = jasmine.createSpy('notifySpy');
             observable.subscribe(notifySpy);
 
@@ -324,13 +324,13 @@ describe('Observable', function() {
             expect(notifySpy).toHaveBeenCalledWith('b');
         });
 
-        it('Should supress change notification when value is changed/reverted', function() {
-            var observable = ko.observable('original').extend({throttle:500});
+        it('Should suppress change notification when value is changed/reverted', function() {
+            var observable = ko.observable('original').extend({rateLimit:500});
             var notifySpy = jasmine.createSpy('notifySpy');
             observable.subscribe(notifySpy);
 
             observable('new');                      // change value
-            expect(observable()).toEqual('new');    // access observable to make sure it has really the changed value
+            expect(observable()).toEqual('new');    // access observable to make sure it really has the changed value
             observable('original');                 // but then change it back
             expect(notifySpy).not.toHaveBeenCalled();
             jasmine.Clock.tick(501);
@@ -342,7 +342,7 @@ describe('Observable', function() {
         });
 
         it('Should support notifications from nested update', function() {
-            var observable = ko.observable('a').extend({throttle:500});
+            var observable = ko.observable('a').extend({rateLimit:500});
             var notifySpy = jasmine.createSpy('notifySpy');
             observable.subscribe(notifySpy);
 
@@ -356,16 +356,18 @@ describe('Observable', function() {
             expect(notifySpy).not.toHaveBeenCalled();
             expect(observable()).toEqual('b');
 
+            notifySpy.reset();
             jasmine.Clock.tick(501);
             expect(notifySpy).toHaveBeenCalledWith('b');
             expect(observable()).toEqual('z');
 
+            notifySpy.reset();
             jasmine.Clock.tick(501);
             expect(notifySpy).toHaveBeenCalledWith('z');
         });
 
-        it('Should supress notifications when value is changed/reverted from nested update', function() {
-            var observable = ko.observable('a').extend({throttle:500});
+        it('Should suppress notifications when value is changed/reverted from nested update', function() {
+            var observable = ko.observable('a').extend({rateLimit:500});
             var notifySpy = jasmine.createSpy('notifySpy');
             observable.subscribe(notifySpy);
 
@@ -380,6 +382,7 @@ describe('Observable', function() {
             expect(notifySpy).not.toHaveBeenCalled();
             expect(observable()).toEqual('b');
 
+            notifySpy.reset();
             jasmine.Clock.tick(501);
             expect(notifySpy).toHaveBeenCalledWith('b');
             expect(observable()).toEqual('b');

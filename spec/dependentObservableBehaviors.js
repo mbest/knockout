@@ -515,15 +515,15 @@ describe('Dependent Observable', function() {
         expect(computed.customFunction2).toBe(customFunction2);
     });
 
-    describe('throttled', function() {
+    describe('rate-limited', function() {
         beforeEach(function() {
             jasmine.Clock.useMock();
         });
 
-        it('Should delay change notifications', function() {
+        it('Should delay change notifications and evaluation', function() {
             var observable = ko.observable();
             var evalSpy = jasmine.createSpy('evalSpy');
-            var computed = ko.computed(function () { evalSpy(observable()); return observable(); }).extend({throttle:500});
+            var computed = ko.computed(function () { evalSpy(observable()); return observable(); }).extend({rateLimit:500});
             var notifySpy = jasmine.createSpy('notifySpy');
             computed.subscribe(notifySpy);
 
@@ -548,14 +548,14 @@ describe('Dependent Observable', function() {
             expect(notifySpy).toHaveBeenCalledWith('b');
         });
 
-        it('Should supress change notifications when value is changed/reverted', function() {
+        it('Should suppress change notifications when value is changed/reverted', function() {
             var observable = ko.observable('original');
-            var computed = ko.computed(function () { return observable(); }).extend({throttle:500});
+            var computed = ko.computed(function () { return observable(); }).extend({rateLimit:500});
             var notifySpy = jasmine.createSpy('notifySpy');
             computed.subscribe(notifySpy);
 
             observable('new');                      // change value
-            expect(computed()).toEqual('new');      // access computed to make sure it has really the changed value
+            expect(computed()).toEqual('new');      // access computed to make sure it really has the changed value
             observable('original');                 // and then change the value back
             expect(notifySpy).not.toHaveBeenCalled();
             jasmine.Clock.tick(501);
