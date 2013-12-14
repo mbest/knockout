@@ -30,7 +30,7 @@ ko.extenders = {
             method = options['method'];
         }
 
-        limitFunction = method == 'throttle' ?  throttle : debounce;
+        limitFunction = method == 'debounce' ?  debounce : throttle;
         target['limit'](limitFunction, timeout);
     },
 
