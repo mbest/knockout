@@ -27,6 +27,7 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
             subscription.dispose();
         });
         _subscriptionsToDependencies = [];
+        _hasBeenEvaluated = true;
     }
 
     function evaluatePossiblyAsync() {
@@ -83,20 +84,20 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
                 if (disposalCandidates[i])
                     _subscriptionsToDependencies.splice(i, 1)[0].dispose();
             }
-            _hasBeenEvaluated = true;
 
             if (dependentObservable.isDifferent(_latestValue, newValue)) {
                 dependentObservable["notifySubscribers"](_latestValue, "beforeChange");
 
                 _latestValue = newValue;
                 if (DEBUG) dependentObservable._latestValue = _latestValue;
-                if (!dependentObservable._evalRateLimited) {
+                if (!dependentObservable._evalRateLimited || dependentObservable['throttleEvaluation']) {
                     dependentObservable["notifySubscribers"](_latestValue);
                 }
             }
         } finally {
             ko.dependencyDetection.end();
             _isBeingEvaluated = false;
+            _hasBeenEvaluated = true;
         }
 
         if (!_subscriptionsToDependencies.length)

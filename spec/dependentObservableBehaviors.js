@@ -418,7 +418,7 @@ describe('Dependent Observable', function() {
         var observable = ko.observable(true),
             computed = ko.computed(function() {
                 if (!observable()) {
-                    throw Error("Some dummy error");
+                    throw Error("Error during computed evaluation");
                 } else {
                     return observable();
                 }
@@ -564,6 +564,52 @@ describe('Dependent Observable', function() {
             // Check that value is correct and notification hasn't happened
             expect(computed()).toEqual('original');
             expect(notifySpy).not.toHaveBeenCalled();
+        });
+
+        it('Should not re-evaluate if computed is disposed before timeout', function() {
+            var observable = ko.observable('a');
+            var evalSpy = jasmine.createSpy('evalSpy');
+            var computed = ko.computed(function () { evalSpy(observable()); return observable(); }).extend({rateLimit:500});
+
+            expect(computed()).toEqual('a');
+            expect(evalSpy.calls.length).toBe(1);
+            expect(evalSpy).toHaveBeenCalledWith('a');
+
+            evalSpy.reset();
+            observable('b');
+            computed.dispose();
+
+            jasmine.Clock.tick(501);
+            expect(computed()).toEqual('a');
+            expect(evalSpy).not.toHaveBeenCalled();
+        });
+
+        it('Should be able to re-evaluate a computed that previously threw an exception', function() {
+            var observable = ko.observable(true),
+                computed = ko.computed(function() {
+                    if (!observable()) {
+                        throw Error("Error during computed evaluation");
+                    } else {
+                        return observable();
+                    }
+                }).extend({rateLimit:500});
+
+            // Initially the computed value is true (executed sucessfully -> same value as observable)
+            expect(computed()).toEqual(true);
+
+            expect(function () {
+                // Update observable to cause computed to throw an exception
+                observable(false);
+                computed();
+            }).toThrow();
+
+            // The value of the computed is now undefined, although currently it keeps the previous value
+            // This should not try to re-evaluate and thus shouldn't throw an exception
+            expect(computed()).toEqual(true);
+
+            // Update observable to cause computed to re-evaluate
+            observable(1);
+            expect(computed()).toEqual(1);
         });
     });
 });
