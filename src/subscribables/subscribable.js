@@ -13,13 +13,12 @@ ko.subscription.prototype.dispose = function () {
 ko.subscription.prototype['limit'] = function (limitFunction, funcOptions) {
     var self = this,
         target = self.target,
-        isObservable = target.peek,
-        previousValue = isObservable ? target.peek() : undefined,
+        previousValue = target.peek ? target.peek() : undefined,
         originalCallback = self.callback,
         pendingValue;
 
     var finish = limitFunction(function () {
-        if (isObservable && pendingValue === undefined) {
+        if (pendingValue === target) {
             pendingValue = target();
         }
         if (!self.isDisposed && target.isDifferent(previousValue, pendingValue)) {
