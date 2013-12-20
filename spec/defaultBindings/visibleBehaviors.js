@@ -8,6 +8,7 @@ describe('Binding: Visible', function() {
 
         expect(testNode.childNodes[0].style.display).toEqual("none");
         observable(true);
+        ko.processAllDeferredBindingUpdates();
         expect(testNode.childNodes[0].style.display).toEqual("");
     });
 

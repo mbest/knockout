@@ -12,6 +12,7 @@ describe('Observable Array change tracking', function() {
         // logic is all in ko.utils.compareArrays, which is tested separately. Just
         // checking that a simple 'push' comes through OK.
         myArray.push('Delta');
+        ko.processAllDeferredUpdates();
         expect(changelist).toEqual([
             { status: 'added', value: 'Delta', index: 3 }
         ]);
@@ -29,17 +30,20 @@ describe('Observable Array change tracking', function() {
             // When there's a subscriber, it does compute diffs
             var subscription = myArray.subscribe(function() {}, null, 'arrayChange');
             myArray(['Changed']);
+            ko.processAllDeferredUpdates();
             expect(callLog.length).toBe(1);
 
             // If all the subscriptions are disposed, it stops computing diffs
             subscription.dispose();
             myArray(['Changed again']);
+            ko.processAllDeferredUpdates();
             expect(callLog.length).toBe(1); // Did not increment
 
             // ... but that doesn't stop someone else subscribing in the future,
             // then diffs are computed again
             myArray.subscribe(function() {}, null, 'arrayChange');
             myArray(['Changed once more']);
+            ko.processAllDeferredUpdates();
             expect(callLog.length).toBe(2);
         });
     });
@@ -53,6 +57,7 @@ describe('Observable Array change tracking', function() {
             myArray.subscribe(function(changes) { changelist1 = changes; }, null, 'arrayChange');
             myArray.subscribe(function(changes) { changelist2 = changes; }, null, 'arrayChange');
             myArray(['Gamma']);
+            ko.processAllDeferredUpdates();
 
             // See that, not only did it invoke compareArrays only once, but the
             // return values from getChanges are the same array instances
@@ -65,6 +70,7 @@ describe('Observable Array change tracking', function() {
 
             // Then when there's a further change, there's a further diff
             myArray(['Delta']);
+            ko.processAllDeferredUpdates();
             expect(callLog.length).toBe(2);
             expect(changelist1).toEqual([
                 { status: 'deleted', value: 'Gamma', index: 0 },
@@ -154,6 +160,7 @@ describe('Observable Array change tracking', function() {
                 // Browser doesn't support that underlying operation, so just set the state
                 // to what it needs to be to run the remaining tests
                 myArray(['First', 'Second']);
+                ko.processAllDeferredUpdates();
             }
 
             // Splice - deletion end index out of bounds
@@ -218,12 +225,14 @@ describe('Observable Array change tracking', function() {
         }, null, 'arrayChange');
 
         myArray(['Alpha', 'Beta', 'Gamma', 'Delta']);
+        ko.processAllDeferredUpdates();
         expect(changelist).toEqual([
             { status: 'added', value: 'Delta', index: 3 }
         ]);
 
         // Should treat null value as an empty array
         myArray(null);
+        ko.processAllDeferredUpdates();
         expect(changelist).toEqual([
             { status : 'deleted', value : 'Alpha', index : 0 },
             { status : 'deleted', value : 'Beta', index : 1 },
@@ -241,6 +250,7 @@ describe('Observable Array change tracking', function() {
         }, null, 'arrayChange');
 
         myArray(['Gamma']);
+        ko.processAllDeferredUpdates();
         expect(callCount).toEqual(1);
         expect(changelist2).toEqual([
             { status : 'added', value : 'Gamma', index : 0 }
@@ -262,6 +272,7 @@ describe('Observable Array change tracking', function() {
         }, null, 'arrayChange');
 
         myArray(['Alpha', 'Beta', 'Gamma', 'Delta']);
+        ko.processAllDeferredUpdates();
         expect(myComputed()).toEqual(['Gamma', 'Delta']);
         expect(changelist).toEqual([
             { status : 'deleted', value : 'Beta', index : 0 },
@@ -276,6 +287,7 @@ describe('Observable Array change tracking', function() {
                 changeList = changes;
             }, null, 'arrayChange');
         array[operationName].apply(array, options.args);
+        ko.processAllDeferredUpdates();
         subscription.dispose();
 
         // The ordering of added/deleted items for replaced entries isn't defined, so

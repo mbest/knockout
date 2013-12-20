@@ -29,6 +29,7 @@ describe('Binding: If', function() {
 
         // Change the value to a different truthy value; see the previous SPAN remains
         someItem('different truthy value');
+        ko.processAllDeferredBindingUpdates();
         expect(testNode.childNodes[0].childNodes[0].tagName.toLowerCase()).toEqual("span");
         expect(testNode.childNodes[0].childNodes[0]).toEqual(originalNode);
     });
@@ -43,11 +44,13 @@ describe('Binding: If', function() {
 
         // Then it's there
         someItem({ occasionallyExistentChildProp: 'Child prop value' });
+        ko.processAllDeferredBindingUpdates();
         expect(testNode.childNodes[0].childNodes.length).toEqual(1);
         expect(testNode.childNodes[0].childNodes[0]).toContainText("Child prop value");
 
         // Then it's gone again
         someItem(null);
+        ko.processAllDeferredBindingUpdates();
         expect(testNode.childNodes[0].childNodes.length).toEqual(0);
     });
 
@@ -68,10 +71,12 @@ describe('Binding: If', function() {
 
         // Then it's there
         someitem({ occasionallyexistentchildprop: 'child prop value' });
+        ko.processAllDeferredBindingUpdates();
         expect(testNode).toContainHtml("hello <!-- ko if: someitem --><span data-bind=\"text: someitem().occasionallyexistentchildprop\">child prop value</span><!-- /ko --> goodbye");
 
         // Then it's gone again
         someitem(null);
+        ko.processAllDeferredBindingUpdates();
         expect(testNode).toContainHtml("hello <!-- ko if: someitem --><!-- /ko --> goodbye");
     });
 
@@ -86,10 +91,12 @@ describe('Binding: If', function() {
 
         // Make outer appear
         condition1(true);
+        ko.processAllDeferredBindingUpdates();
         expect(testNode).toContainHtml("hello <!-- ko if: condition1 -->first is true<!-- ko if: condition2 --><!-- /ko --><!-- /ko -->");
 
         // Make inner appear
         condition2(true);
+        ko.processAllDeferredBindingUpdates();
         expect(testNode).toContainHtml("hello <!-- ko if: condition1 -->first is true<!-- ko if: condition2 -->both are true<!-- /ko --><!-- /ko -->");
     });
 });

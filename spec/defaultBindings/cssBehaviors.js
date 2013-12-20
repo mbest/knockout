@@ -9,8 +9,10 @@ describe('Binding: CSS class name', function() {
 
         expect(testNode.childNodes[0].className).toEqual("unrelatedClass1 unrelatedClass2 anotherRule");
         observable1(true);
+        ko.processAllDeferredBindingUpdates();
         expect(testNode.childNodes[0].className).toEqual("unrelatedClass1 unrelatedClass2 anotherRule myRule");
         observable2(false);
+        ko.processAllDeferredBindingUpdates();
         expect(testNode.childNodes[0].className).toEqual("unrelatedClass1 unrelatedClass2 myRule");
     });
 
@@ -21,6 +23,7 @@ describe('Binding: CSS class name', function() {
 
         expect(testNode.childNodes[0].className).toEqual("");
         observable1(true);
+        ko.processAllDeferredBindingUpdates();
         expect(testNode.childNodes[0].className).toEqual("myRule");
     });
 
@@ -31,8 +34,10 @@ describe('Binding: CSS class name', function() {
 
         expect(testNode.childNodes[0].className).toEqual("unrelatedClass1");
         observable1(true);
+        ko.processAllDeferredBindingUpdates();
         expect(testNode.childNodes[0].className).toEqual("unrelatedClass1 myRule _another-Rule123");
         observable1(false);
+        ko.processAllDeferredBindingUpdates();
         expect(testNode.childNodes[0].className).toEqual("unrelatedClass1");
     });
 
@@ -43,10 +48,13 @@ describe('Binding: CSS class name', function() {
 
         expect(testNode.childNodes[0].className).toEqual("unrelatedClass1");
         observable1("my-Rule");
+        ko.processAllDeferredBindingUpdates();
         expect(testNode.childNodes[0].className).toEqual("unrelatedClass1 my-Rule");
         observable1("another_Rule  my-Rule");
+        ko.processAllDeferredBindingUpdates();
         expect(testNode.childNodes[0].className).toEqual("unrelatedClass1 another_Rule my-Rule");
         observable1(undefined);
+        ko.processAllDeferredBindingUpdates();
         expect(testNode.childNodes[0].className).toEqual("unrelatedClass1");
     });
 
@@ -58,6 +66,7 @@ describe('Binding: CSS class name', function() {
 
         expect(testNode.childNodes[0].className).toEqual("");
         observable1(true);
+        ko.processAllDeferredBindingUpdates();
         expect(testNode.childNodes[0].className).toEqual("complex/className complex.className");
     });
 });

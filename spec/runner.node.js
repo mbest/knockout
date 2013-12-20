@@ -29,6 +29,7 @@ if (process.argv.length > 2 && process.argv[2] == '--source') {
 }
 
 // reference behaviors that should work out of browser
+require('./taskBehaviors');
 require('./arrayEditDetectionBehaviors');
 require('./asyncBehaviors');
 require('./dependentObservableBehaviors');

@@ -37,11 +37,13 @@ describe('Binding: With', function() {
 
         // Then it's there
         someItem({ occasionallyExistentChildProp: 'Child prop value' });
+        ko.processAllDeferredBindingUpdates();
         expect(testNode.childNodes[0].childNodes.length).toEqual(1);
         expect(testNode.childNodes[0].childNodes[0]).toContainText("Child prop value");
 
         // Then it's gone again
         someItem(null);
+        ko.processAllDeferredBindingUpdates();
         expect(testNode.childNodes[0].childNodes.length).toEqual(0);
     });
 
@@ -55,6 +57,7 @@ describe('Binding: With', function() {
         // Force "update" binding handler to fire, then check the DOM changed
         someItem().childProp = 'Goodbye';
         someItem.valueHasMutated();
+        ko.processAllDeferredBindingUpdates();
         expect(testNode.childNodes[0].childNodes[0]).toContainText("Goodbye");
     });
 
@@ -144,10 +147,12 @@ describe('Binding: With', function() {
 
         // Then it's there
         someitem({ occasionallyexistentchildprop: 'child prop value' });
+        ko.processAllDeferredBindingUpdates();
         expect(testNode).toContainHtml("hello <!-- ko with: someitem --><span data-bind=\"text: occasionallyexistentchildprop\">child prop value</span><!-- /ko --> goodbye");
 
         // Then it's gone again
         someitem(null);
+        ko.processAllDeferredBindingUpdates();
         expect(testNode).toContainHtml("hello <!-- ko with: someitem --><!-- /ko --> goodbye");
     });
 
@@ -166,14 +171,17 @@ describe('Binding: With', function() {
 
         // Make top appear
         viewModel.topitem({ topprop: 'property of top', childitem: ko.observable() });
+        ko.processAllDeferredBindingUpdates();
         expect(testNode).toContainHtml("hello <!-- ko with: topitem -->got top: <span data-bind=\"text: topprop\">property of top</span><!-- ko with: childitem --><!-- /ko --><!-- /ko -->");
 
         // Make child appear
         viewModel.topitem().childitem({ childprop: 'property of child' });
+        ko.processAllDeferredBindingUpdates();
         expect(testNode).toContainHtml("hello <!-- ko with: topitem -->got top: <span data-bind=\"text: topprop\">property of top</span><!-- ko with: childitem -->got child: <span data-bind=\"text: childprop\">property of child</span><!-- /ko --><!-- /ko -->");
 
         // Make top disappear
         viewModel.topitem(null);
+        ko.processAllDeferredBindingUpdates();
         expect(testNode).toContainHtml("hello <!-- ko with: topitem --><!-- /ko -->");
     });
 });

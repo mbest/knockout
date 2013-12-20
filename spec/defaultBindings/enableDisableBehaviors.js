@@ -8,6 +8,7 @@ describe('Binding: Enable/Disable', function() {
 
         expect(testNode.childNodes[0].disabled).toEqual(true);
         observable(1);
+        ko.processAllDeferredBindingUpdates();
         expect(testNode.childNodes[0].disabled).toEqual(false);
     });
 
@@ -18,6 +19,7 @@ describe('Binding: Enable/Disable', function() {
 
         expect(testNode.childNodes[0].disabled).toEqual(false);
         observable(1);
+        ko.processAllDeferredBindingUpdates();
         expect(testNode.childNodes[0].disabled).toEqual(true);
     });
 

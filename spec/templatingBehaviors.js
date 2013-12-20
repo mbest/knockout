@@ -138,6 +138,7 @@ describe('Templating', function() {
         expect(testNode.innerHTML).toEqual("Value = A");
 
         dependency("B");
+        ko.processAllDeferredBindingUpdates();
         expect(testNode.childNodes.length).toEqual(1);
         expect(testNode.innerHTML).toEqual("Value = B");
     });
@@ -156,6 +157,7 @@ describe('Templating', function() {
         expect(testNode.innerHTML).toEqual("Value = 1");
 
         observable("B");
+        ko.processAllDeferredBindingUpdates();
         expect(testNode.childNodes.length).toEqual(1);
         expect(testNode.innerHTML).toEqual("Value = 1");
     });
@@ -170,6 +172,7 @@ describe('Templating', function() {
         expect(testNode.innerHTML).toEqual("Value = A");
 
         observable("B");
+        ko.processAllDeferredBindingUpdates();
         expect(testNode.innerHTML).toEqual("Value = B");
     });
 
@@ -184,6 +187,7 @@ describe('Templating', function() {
 
         testNode.parentNode.removeChild(testNode);
         dependency("B");
+        ko.processAllDeferredBindingUpdates();
         expect(testNode.childNodes.length).toEqual(1);
         expect(testNode.innerHTML).toEqual("Value = A");
     });
@@ -220,6 +224,7 @@ describe('Templating', function() {
         // Now mutate and notify
         myData().childProp = 456;
         myData.valueHasMutated();
+        ko.processAllDeferredBindingUpdates();
         expect(testNode.childNodes[0].innerHTML).toEqual("result = 456");
     });
 
@@ -246,6 +251,7 @@ describe('Templating', function() {
         expect(testNode.childNodes[0].innerHTML).toEqual("First template output");
 
         chosenTemplate("secondTemplate");
+        ko.processAllDeferredBindingUpdates();
         expect(testNode.childNodes[0].innerHTML).toEqual("Second template output");
     });
 
@@ -261,6 +267,7 @@ describe('Templating', function() {
         expect(testNode.childNodes[0].innerHTML).toEqual("First template output");
 
         chosenTemplate("secondTemplate");
+        ko.processAllDeferredBindingUpdates();
         expect(testNode.childNodes[0].innerHTML).toEqual("Second template output");
     });
 
@@ -300,6 +307,7 @@ describe('Templating', function() {
         expect(timesRenderedInner).toEqual(1);
 
         observable("DEF");
+        ko.processAllDeferredBindingUpdates();
         expect(testNode.childNodes[0]).toContainHtml("outer template output, def");
         expect(timesRenderedOuter).toEqual(1);
         expect(timesRenderedInner).toEqual(2);
@@ -464,6 +472,7 @@ describe('Templating', function() {
             var originalFrankNode = testNode.childNodes[0].childNodes[1];
 
             myArray.push({ personName: "Steve" });
+            ko.processAllDeferredBindingUpdates();
             expect(testNode.childNodes[0]).toContainHtml("<div>the item is bob</div><div>the item is frank</div><div>the item is steve</div>");
             expect(testNode.childNodes[0].childNodes[0]).toEqual(originalBobNode);
             expect(testNode.childNodes[0].childNodes[1]).toEqual(originalFrankNode);
@@ -503,6 +512,7 @@ describe('Templating', function() {
             // Now replace the entire array contents with one different entry.
             // UI just shows "new" (previously with bug, showed "original" AND "new")
             myArray(["new"]);
+            ko.processAllDeferredBindingUpdates();
             expect(testNode.childNodes[0]).toContainHtml("<div>new</div>");
         });
 
@@ -521,6 +531,7 @@ describe('Templating', function() {
 
             // Now replace the entire array contents with one different entry.
             myArray(["new"]);
+            ko.processAllDeferredBindingUpdates();
             expect(testNode.childNodes[0]).toContainHtml("<div>new</div>inner <span>123</span>x");
         });
 
@@ -539,6 +550,7 @@ describe('Templating', function() {
             // Modify the observable property and check that UI is updated
             // Previously with the bug, it wasn't updated because the removal of the memo comment caused the array-to-DOM-node computed to be disposed
             myItem.name("b");
+            ko.processAllDeferredBindingUpdates();
             expect(testNode.childNodes[0]).toContainHtml("<div>b</div>");
         });
 
@@ -560,9 +572,11 @@ describe('Templating', function() {
             expect(testNode.childNodes[0]).toContainHtml("the item <span>bob</span>is <span>0</span>the item <span>frank</span>is <span>1</span>");
 
             var frank = myArray.pop(); // remove frank
+            ko.processAllDeferredBindingUpdates();
             expect(testNode.childNodes[0]).toContainHtml("the item <span>bob</span>is <span>0</span>");
 
             myArray.unshift(frank); // put frank in the front
+            ko.processAllDeferredBindingUpdates();
             expect(testNode.childNodes[0]).toContainHtml("the item <span>frank</span>is <span>0</span>the item <span>bob</span>is <span>1</span>");
         });
 
@@ -586,14 +600,17 @@ describe('Templating', function() {
             var originalBobNode = testNode.childNodes[0].childNodes[0];
 
             myObservable("Steve2");
+            ko.processAllDeferredBindingUpdates();
             expect(testNode.childNodes[0]).toContainHtml("<div>the item is bob</div><div>the item is steve2</div><div>the item is another</div>");
             expect(testNode.childNodes[0].childNodes[0]).toEqual(originalBobNode);
 
             // Ensure we can still remove the corresponding nodes (even though they've changed), and that doing so causes the subscription to be disposed
             expect(myObservable.getSubscriptionsCount()).toEqual(1);
             myArray.splice(1, 1);
+            ko.processAllDeferredBindingUpdates();
             expect(testNode.childNodes[0]).toContainHtml("<div>the item is bob</div><div>the item is another</div>");
             myObservable("Something else"); // Re-evaluating the observable causes the orphaned subscriptions to be disposed
+            ko.processAllDeferredBindingUpdates();
             expect(myObservable.getSubscriptionsCount()).toEqual(0);
         });
 
@@ -608,6 +625,7 @@ describe('Templating', function() {
             // Now set the observable to null and check it's treated like an empty array
             // (because how else should null be interpreted?)
             myArray(null);
+            ko.processAllDeferredBindingUpdates();
             expect(testNode.childNodes[0].childNodes.length).toEqual(0);
         });
 
@@ -645,8 +663,10 @@ describe('Templating', function() {
             expect(innerObservable.getSubscriptionsCount()).toEqual(2);
 
             myArray.splice(1, 1);
+            ko.processAllDeferredBindingUpdates();
             expect(innerObservable.getSubscriptionsCount()).toEqual(1);
             myArray([]);
+            ko.processAllDeferredBindingUpdates();
             expect(innerObservable.getSubscriptionsCount()).toEqual(0);
         });
 
@@ -704,6 +724,7 @@ describe('Templating', function() {
             expect(testNode.childNodes[0]).toContainText("The 0 item A has 0.1,1.2,2.3, The 1 item B has 0.4,1.5,2.6, The 2 item C has 0.7,1.8,2.9, ");
 
             myVm({items: ['C', 'B', 'A'], itemValues: { 'A': [1, 2, 30], 'B': [4, 5, 60], 'C': [7, 8, 90] }});
+            ko.processAllDeferredUpdates();
             expect(testNode.childNodes[0]).toContainText("The 0 item C has 0.7,1.8,2.90, The 1 item B has 0.4,1.5,2.60, The 2 item A has 0.1,1.2,2.30, ");
         });
 
@@ -721,10 +742,12 @@ describe('Templating', function() {
 
         // Causing the condition to become false causes the output to be removed
         viewModel.myProp(null);
+        ko.processAllDeferredBindingUpdates();
         expect(testNode.childNodes[0]).toContainText("");
 
         // Causing the condition to become true causes the output to reappear
         viewModel.myProp({ childProp: 'def' });
+        ko.processAllDeferredBindingUpdates();
         expect(testNode.childNodes[0]).toContainText("Value: def");
     });
 
@@ -740,10 +763,12 @@ describe('Templating', function() {
 
         // Causing the condition to become false causes the output to be displayed
         viewModel.shouldHide(false);
+        ko.processAllDeferredBindingUpdates();
         expect(testNode.childNodes[0]).toContainText("Hello");
 
         // Causing the condition to become true causes the output to disappear
         viewModel.shouldHide(true);
+        ko.processAllDeferredBindingUpdates();
         expect(testNode.childNodes[0]).toContainText("");
     });
 
@@ -759,10 +784,12 @@ describe('Templating', function() {
 
         // Causing the condition to become false causes the output to be removed
         viewModel.myProp(null);
+        ko.processAllDeferredBindingUpdates();
         expect(testNode.childNodes[0]).toContainText("");
 
         // Causing the condition to become true causes the output to reappear
         viewModel.myProp({ childProp: 'def' });
+        ko.processAllDeferredBindingUpdates();
         expect(testNode.childNodes[0].childNodes[0].nodeValue).toEqual("Value: def");
         expect(testNode.childNodes[0].childNodes[1].nodeValue).toEqual("Value: def");
         expect(testNode.childNodes[0].childNodes[2].nodeValue).toEqual("Value: def");
@@ -812,6 +839,7 @@ describe('Templating', function() {
         // By changing the object for subModel, we force the data-bind value to be re-evaluated and the template to be re-rendered,
         // setting up a new template subscription, so there have now existed two subscriptions on myObservable...
         myModel.subModel({ myObservable: myObservable });
+        ko.processAllDeferredBindingUpdates();
         expect(testNode.childNodes[0].childNodes[0]).not.toEqual(renderedNode1);
 
         // ...but, because the old subscription should have been disposed automatically, there should only be one left
@@ -967,6 +995,7 @@ describe('Templating', function() {
         // Check that 'foreach' knows which set of elements to remove when an item vanishes from the model array,
         // even though the original 'foreach' output's first node, the memo comment, was removed during unmemoization.
         items.shift();
+        ko.processAllDeferredUpdates();
         expect(testNode).toContainText('Beta OK. ');
     });
 

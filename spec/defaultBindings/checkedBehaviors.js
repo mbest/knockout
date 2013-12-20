@@ -29,6 +29,7 @@ describe('Binding: Checked', function() {
         expect(testNode.childNodes[0].checked).toEqual(true);
 
         myobservable(false);
+        ko.processAllDeferredBindingUpdates();
         expect(testNode.childNodes[0].checked).toEqual(false);
     });
 
@@ -52,11 +53,13 @@ describe('Binding: Checked', function() {
         ko.utils.triggerEvent(testNode.childNodes[0], "click");
         ko.utils.triggerEvent(testNode.childNodes[0], "change");
         ko.utils.triggerEvent(testNode.childNodes[0], "change");
+        ko.processAllDeferredUpdates();
         expect(timesNotified).toEqual(1);
 
         // ... until the checkbox value actually changes
         ko.utils.triggerEvent(testNode.childNodes[0], "click");
         ko.utils.triggerEvent(testNode.childNodes[0], "change");
+        ko.processAllDeferredUpdates();
         expect(timesNotified).toEqual(2);
     });
 
@@ -77,6 +80,7 @@ describe('Binding: Checked', function() {
         expect(testNode.childNodes[0].checked).toEqual(false);
 
         myobservable("This Radio Button Value");
+        ko.processAllDeferredBindingUpdates();
         expect(testNode.childNodes[0].checked).toEqual(true);
     });
 
@@ -102,11 +106,13 @@ describe('Binding: Checked', function() {
         ko.utils.triggerEvent(testNode.childNodes[0], "change");
         ko.utils.triggerEvent(testNode.childNodes[0], "click");
         ko.utils.triggerEvent(testNode.childNodes[0], "change");
+        ko.processAllDeferredUpdates();
         expect(timesNotified).toEqual(1);
 
         // ... until you click something with a different value
         ko.utils.triggerEvent(testNode.childNodes[1], "click");
         ko.utils.triggerEvent(testNode.childNodes[1], "change");
+        ko.processAllDeferredUpdates();
         expect(timesNotified).toEqual(2);
     });
 
@@ -149,10 +155,12 @@ describe('Binding: Checked', function() {
 
         // Put the value in the array; observe the checkbox reflect this
         model.myObservableArray.push("My value");
+        ko.processAllDeferredBindingUpdates();
         expect(testNode.childNodes[0].checked).toEqual(true);
 
         // Remove the value from the array; observe the checkbox reflect this
         model.myObservableArray.remove("My value");
+        ko.processAllDeferredBindingUpdates();
         expect(testNode.childNodes[0].checked).toEqual(false);
     });
 
@@ -163,6 +171,7 @@ describe('Binding: Checked', function() {
 
         expect(testNode.childNodes[0].checked).toEqual(true);
         myobservable("another value");
+        ko.processAllDeferredBindingUpdates();
         expect(testNode.childNodes[0].checked).toEqual(false);
     });
 
@@ -173,6 +182,7 @@ describe('Binding: Checked', function() {
 
         expect(testNode.childNodes[0].checked).toEqual(true);
         myobservable("another value");
+        ko.processAllDeferredBindingUpdates();
         expect(testNode.childNodes[0].checked).toEqual(false);
     });
 
@@ -204,10 +214,12 @@ describe('Binding: Checked', function() {
 
         // Put the value in the array; observe the checkbox reflect this
         model.myArray.push(2);
+        ko.processAllDeferredBindingUpdates();
         expect(testNode.childNodes[1].checked).toEqual(true);
 
         // Remove the value from the array; observe the checkbox reflect this
         model.myArray.remove(1);
+        ko.processAllDeferredBindingUpdates();
         expect(testNode.childNodes[0].checked).toEqual(false);
     });
 
@@ -246,18 +258,21 @@ describe('Binding: Checked', function() {
 
         // Update the value observable of the checked item; should update the selected values and leave checked values unchanged
         object1.id(3);
+        ko.processAllDeferredBindingUpdates();
         expect(testNode.childNodes[0].childNodes[0].checked).toEqual(true);
         expect(testNode.childNodes[0].childNodes[1].checked).toEqual(false);
         expect(model.values).toEqual([3]);
 
         // Update the value observable of the unchecked item; should do nothing
         object2.id(4);
+        ko.processAllDeferredBindingUpdates();
         expect(model.values).toEqual([3]);
         expect(testNode.childNodes[0].childNodes[0].checked).toEqual(true);
         expect(testNode.childNodes[0].childNodes[1].checked).toEqual(false);
 
         // Update the value observable of the unchecked item to the current model value; should set to checked
         object2.id(3);
+        ko.processAllDeferredBindingUpdates();
         expect(model.values).toEqual([3]);
         expect(testNode.childNodes[0].childNodes[0].checked).toEqual(true);
         expect(testNode.childNodes[0].childNodes[1].checked).toEqual(true);
@@ -277,11 +292,13 @@ describe('Binding: Checked', function() {
 
         // Update observable; verify elements
         myobservable(true);
+        ko.processAllDeferredBindingUpdates();
         expect(testNode.childNodes[0].checked).toEqual(true);
         expect(testNode.childNodes[1].checked).toEqual(false);
 
         // "Click" a button; verify observable and elements
         testNode.childNodes[1].click();
+        ko.processAllDeferredBindingUpdates();
         expect(myobservable()).toEqual(false);
         expect(testNode.childNodes[0].checked).toEqual(false);
         expect(testNode.childNodes[1].checked).toEqual(true);
@@ -301,18 +318,21 @@ describe('Binding: Checked', function() {
 
         // Update the value observable of the checked item; should update the selected value and leave checked values unchanged
         object1.id(3);
+        ko.processAllDeferredBindingUpdates();
         expect(model.value).toEqual(3);
         expect(testNode.childNodes[0].childNodes[0].checked).toEqual(true);
         expect(testNode.childNodes[0].childNodes[1].checked).toEqual(false);
 
         // Update the value observable of the unchecked item; should do nothing
         object2.id(4);
+        ko.processAllDeferredBindingUpdates();
         expect(model.value).toEqual(3);
         expect(testNode.childNodes[0].childNodes[0].checked).toEqual(true);
         expect(testNode.childNodes[0].childNodes[1].checked).toEqual(false);
 
         // Update the value observable of the unchecked item to the current model value; should set to checked
         object2.id(3);
+        ko.processAllDeferredBindingUpdates();
         expect(model.value).toEqual(3);
         expect(testNode.childNodes[0].childNodes[0].checked).toEqual(true);
         expect(testNode.childNodes[0].childNodes[1].checked).toEqual(true);
@@ -337,6 +357,7 @@ describe('Binding: Checked', function() {
 
         // Click on item 3; verify item 1 is selected
         ko.utils.triggerEvent(testNode.childNodes[2], "click");
+        ko.processAllDeferredBindingUpdates();
         expect(testNode.childNodes[0].checked).toEqual(true);
     });
 });

@@ -35,11 +35,13 @@ describe('Dependent Observable DOM', function() {
 
         // Update computed and check that it's still active
         observable('second');
+        ko.processAllDeferredUpdates();
         expect(computed.isActive()).toEqual(true);
 
         // Remove the node, update the computed, and check that it was disposed
         testNode.removeChild(node);
         observable('third');
+        ko.processAllDeferredUpdates();
         expect(computed.isActive()).toEqual(false);
     });
 
@@ -53,16 +55,19 @@ describe('Dependent Observable DOM', function() {
 
         // Update computed and check that it's still active
         observable('second');
+        ko.processAllDeferredUpdates();
         expect(computed.isActive()).toEqual(true);
 
         // Add the node, update the computed, and check that it is still active
         testNode.appendChild(node);
         observable('third');
+        ko.processAllDeferredUpdates();
         expect(computed.isActive()).toEqual(true);
 
         // Remove the node, update the computed, and check that it was disposed
         testNode.removeChild(node);
         observable('fourth');
+        ko.processAllDeferredUpdates();
         expect(computed.isActive()).toEqual(false);
     });
 })

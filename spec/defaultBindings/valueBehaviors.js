@@ -31,6 +31,7 @@ describe('Binding: Value', function() {
         ko.applyBindings({ someProp: myobservable }, testNode);
         expect(testNode.childNodes[0].value).toEqual("123");
         myobservable(456);
+        ko.processAllDeferredBindingUpdates();
         expect(testNode.childNodes[0].value).toEqual("456");
     });
 
@@ -40,6 +41,7 @@ describe('Binding: Value', function() {
         ko.applyBindings({ someProp: myobservable }, testNode);
         expect(testNode.childNodes[0].value).toEqual("+123");
         myobservable(123);
+        ko.processAllDeferredBindingUpdates();
         expect(testNode.childNodes[0].value).toEqual("123");
     });
 
@@ -159,6 +161,7 @@ describe('Binding: Value', function() {
         expect(testNode.childNodes[0].value).toEqual("original value");
 
         model.myprop({ subproperty : newSubproperty }); // Note that myprop (and hence its subproperty) is changed *after* the bindings are applied
+        ko.processAllDeferredBindingUpdates();
         testNode.childNodes[0].value = "Some new value";
         ko.utils.triggerEvent(testNode.childNodes[0], "change");
 
@@ -181,10 +184,12 @@ describe('Binding: Value', function() {
         // we'll see one new value per onchange event. More handlers cause more notifications.
         testNode.childNodes[0].value = "ABC";
         ko.utils.triggerEvent(testNode.childNodes[0], "change");
+        ko.processAllDeferredUpdates();
         expect(notifiedValues.length).toEqual(1);
 
         testNode.childNodes[0].value = "DEF";
         ko.utils.triggerEvent(testNode.childNodes[0], "change");
+        ko.processAllDeferredUpdates();
         expect(notifiedValues.length).toEqual(2);
     });
 
@@ -229,8 +234,10 @@ describe('Binding: Value', function() {
             ko.utils.triggerEvent(testNode.childNodes[0], "propertychange");
             ko.utils.triggerEvent(testNode.childNodes[0], "change");
             expect(myobservable()).toEqual("some user-entered value");
+            ko.processAllDeferredUpdates();
             expect(numUpdates).toEqual(1);
             ko.utils.triggerEvent(testNode.childNodes[0], "blur");
+            ko.processAllDeferredUpdates();
             expect(numUpdates).toEqual(1);
 
             // Simulate:
@@ -242,8 +249,10 @@ describe('Binding: Value', function() {
             ko.utils.triggerEvent(testNode.childNodes[0], "propertychange");
             ko.utils.triggerEvent(testNode.childNodes[0], "blur");
             expect(myobservable()).toEqual("different user-entered value");
+            ko.processAllDeferredUpdates();
             expect(numUpdates).toEqual(2);
             ko.utils.triggerEvent(testNode.childNodes[0], "change");
+            ko.processAllDeferredUpdates();
             expect(numUpdates).toEqual(3);
         }
     });
@@ -257,6 +266,7 @@ describe('Binding: Value', function() {
             expect(observable()).toEqual('B');
 
             observable('A');
+            ko.processAllDeferredBindingUpdates();
             expect(testNode.childNodes[0].selectedIndex).toEqual(0);
             expect(observable()).toEqual('A');
         });
@@ -269,6 +279,7 @@ describe('Binding: Value', function() {
             expect(observable()).toEqual('B');
 
             observable('A');
+            ko.processAllDeferredBindingUpdates();
             expect(testNode.childNodes[0].selectedIndex).toEqual(0);
             expect(observable()).toEqual('A');
         });
@@ -281,18 +292,23 @@ describe('Binding: Value', function() {
             // Caption is selected when observable changed to undefined
             expect(testNode.childNodes[0].selectedIndex).toEqual(2);
             observable(undefined);
+            ko.processAllDeferredBindingUpdates();
             expect(testNode.childNodes[0].selectedIndex).toEqual(0);
 
             // Caption is selected when observable changed to null
             observable("B");
+            ko.processAllDeferredBindingUpdates();
             expect(testNode.childNodes[0].selectedIndex).toEqual(2);
             observable(null);
+            ko.processAllDeferredBindingUpdates();
             expect(testNode.childNodes[0].selectedIndex).toEqual(0);
 
             // Caption is selected when observable changed to ""
             observable("B");
+            ko.processAllDeferredBindingUpdates();
             expect(testNode.childNodes[0].selectedIndex).toEqual(2);
             observable("");
+            ko.processAllDeferredBindingUpdates();
             expect(testNode.childNodes[0].selectedIndex).toEqual(0);
 
         });
@@ -305,18 +321,23 @@ describe('Binding: Value', function() {
             // Caption is selected when observable changed to undefined
             expect(testNode.childNodes[0].selectedIndex).toEqual(2);
             observable(undefined);
+            ko.processAllDeferredBindingUpdates();
             expect(testNode.childNodes[0].selectedIndex).toEqual(0);
 
             // Caption is selected when observable changed to null
             observable("B");
+            ko.processAllDeferredBindingUpdates();
             expect(testNode.childNodes[0].selectedIndex).toEqual(2);
             observable(null);
+            ko.processAllDeferredBindingUpdates();
             expect(testNode.childNodes[0].selectedIndex).toEqual(0);
 
             // Caption is selected when observable changed to ""
             observable("B");
+            ko.processAllDeferredBindingUpdates();
             expect(testNode.childNodes[0].selectedIndex).toEqual(2);
             observable("");
+            ko.processAllDeferredBindingUpdates();
             expect(testNode.childNodes[0].selectedIndex).toEqual(0);
 
         });
@@ -348,6 +369,7 @@ describe('Binding: Value', function() {
 
             // Check that when we change the model value, the UI is updated
             selectedValue(x);
+            ko.processAllDeferredBindingUpdates();
             expect(dropdown.selectedIndex).toEqual(0);
 
             // Check that when we change the UI, this changes the model value
@@ -384,6 +406,7 @@ describe('Binding: Value', function() {
             expect(testNode.childNodes[0].selectedIndex).toEqual(1);
 
             observable('D'); // This change should be rejected, as there's no corresponding option in the UI
+            ko.processAllDeferredBindingUpdates();
             expect(observable()).not.toEqual('D');
         });
 
@@ -426,6 +449,7 @@ describe('Binding: Value', function() {
             expect(observable()).toEqual("A");
 
             observable('C');
+            ko.processAllDeferredBindingUpdates();
             expect(dropdown.selectedIndex).toEqual(2);
         });
     });

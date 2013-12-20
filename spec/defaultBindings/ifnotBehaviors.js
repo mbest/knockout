@@ -29,6 +29,7 @@ describe('Binding: Ifnot', function() {
 
         // Change the value to a different falsey value
         someItem(0);
+        ko.processAllDeferredBindingUpdates();
         expect(testNode.childNodes[0].childNodes[0]).toContainText("0");
         expect(testNode.childNodes[0].childNodes[0]).toEqual(originalNode);
     });
@@ -45,12 +46,14 @@ describe('Binding: Ifnot', function() {
         // Then it's there
         someItem({ occasionallyExistentChildProp: 'Child prop value' });
         condition(false);
+        ko.processAllDeferredBindingUpdates();
         expect(testNode.childNodes[0].childNodes.length).toEqual(1);
         expect(testNode.childNodes[0].childNodes[0]).toContainText("Child prop value");
 
         // Then it's gone again
         condition(true);
         someItem(null);
+        ko.processAllDeferredBindingUpdates();
         expect(testNode.childNodes[0].childNodes.length).toEqual(0);
     });
 

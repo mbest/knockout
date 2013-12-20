@@ -12,10 +12,12 @@ describe('Binding: Hasfocus', function() {
 
         // When the value becomes true, we focus
         model.myVal(true);
+        ko.processAllDeferredBindingUpdates();
         expect(currentState).toEqual(true);
 
         // When the value becomes false, we blur
         model.myVal(false);
+        ko.processAllDeferredBindingUpdates();
         expect(currentState).toEqual(false);
     });
 
@@ -29,11 +31,13 @@ describe('Binding: Hasfocus', function() {
 
         testNode.childNodes[0].focus();
         ko.utils.triggerEvent(testNode.childNodes[0], "focusin");
+        ko.processAllDeferredUpdates();
         expect(model.myVal()).toEqual(true);
 
         // Move the focus elsewhere
         testNode.childNodes[1].focus();
         ko.utils.triggerEvent(testNode.childNodes[0], "focusout");
+        ko.processAllDeferredUpdates();
         expect(model.myVal()).toEqual(false);
 
         // If the model value becomes true after a blur, we re-focus the element
@@ -41,6 +45,7 @@ describe('Binding: Hasfocus', function() {
         var didFocusExpectedElement = false;
         ko.utils.registerEventHandler(testNode.childNodes[0], "focusin", function() { didFocusExpectedElement = true });
         model.myVal(true);
+        ko.processAllDeferredBindingUpdates();
         expect(didFocusExpectedElement).toEqual(true);
     });
 

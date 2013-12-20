@@ -21,6 +21,7 @@ describe('Binding: Attr', function() {
 
         // Also check we can remove it (which, for a name attribute, means setting it to an empty string)
         myValue(false);
+        ko.processAllDeferredBindingUpdates();
         expect(testNode.childNodes[0].name).toEqual("");
         if (testNode.childNodes[0].outerHTML) { // Old Firefox doesn't support outerHTML
             expect(testNode.childNodes[0].outerHTML).toNotMatch('name="?([^">]+)');
@@ -36,6 +37,7 @@ describe('Binding: Attr', function() {
 
         // Change the observable; observe it reflected in the DOM
         model.myprop("new value");
+        ko.processAllDeferredBindingUpdates();
         expect(testNode.childNodes[0].getAttribute("someAttrib")).toEqual("new value");
     });
 
@@ -45,8 +47,10 @@ describe('Binding: Attr', function() {
         ko.applyBindings(model, testNode);
         ko.utils.arrayForEach([false, null, undefined], function(testValue) {
             model.myprop("nonempty value");
+            ko.processAllDeferredBindingUpdates();
             expect(testNode.childNodes[0].getAttribute("someAttrib")).toEqual("nonempty value");
             model.myprop(testValue);
+            ko.processAllDeferredBindingUpdates();
             expect(testNode.childNodes[0].getAttribute("someAttrib")).toEqual(null);
         });
     });
@@ -59,6 +63,7 @@ describe('Binding: Attr', function() {
         expect(testNode.childNodes[0].className).toEqual("newClass");
         // Should be able to clear class also
         model.myprop(undefined);
+        ko.processAllDeferredBindingUpdates();
         expect(testNode.childNodes[0].className).toEqual("");
         expect(testNode.childNodes[0].getAttribute("class")).toEqual(null);
     });

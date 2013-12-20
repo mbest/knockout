@@ -32,6 +32,10 @@ ko.observable = function (initialValue) {
     ko.exportProperty(observable, "valueHasMutated", observable.valueHasMutated);
     ko.exportProperty(observable, "valueWillMutate", observable.valueWillMutate);
 
+    if (ko.dependentObservable['deferUpdates']) {
+        ko.extenders.deferred(observable, true);
+    }
+
     return observable;
 }
 

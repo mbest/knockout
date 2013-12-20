@@ -72,6 +72,12 @@ jasmine.clearTimeout = jasmine.bindOriginal_(jasmine.getGlobal(), 'clearTimeout'
 jasmine.setInterval = jasmine.bindOriginal_(jasmine.getGlobal(), 'setInterval');
 jasmine.clearInterval = jasmine.bindOriginal_(jasmine.getGlobal(), 'clearInterval');
 
+jasmine.hasSetImmediate = 'setImmediate' in jasmine.getGlobal();
+if (jasmine.hasSetImmediate) {
+    jasmine.setImmediate = jasmine.bindOriginal_(jasmine.getGlobal(), 'setImmediate');
+    jasmine.clearImmediate = jasmine.bindOriginal_(jasmine.getGlobal(), 'clearImmediate');
+}
+
 jasmine.MessageResult = function(values) {
   this.type = 'log';
   this.values = values;
@@ -734,6 +740,10 @@ jasmine.Env.prototype.setTimeout = jasmine.setTimeout;
 jasmine.Env.prototype.clearTimeout = jasmine.clearTimeout;
 jasmine.Env.prototype.setInterval = jasmine.setInterval;
 jasmine.Env.prototype.clearInterval = jasmine.clearInterval;
+if (jasmine.hasSetImmediate) {
+    jasmine.Env.prototype.setImmediate = jasmine.setImmediate;
+    jasmine.Env.prototype.clearImmediate = jasmine.clearImmediate;
+}
 
 /**
  * @returns an object containing jasmine version build info, if set.
@@ -1556,6 +1566,16 @@ jasmine.FakeTimer = function() {
     self.scheduledFunctions[timeoutKey] = jasmine.undefined;
   };
 
+  self.setImmediate = function(funcToCall) {
+    self.timeoutsMade++;
+    self.scheduleFunction(self.timeoutsMade, funcToCall, 0, false);
+    return self.timeoutsMade;
+  };
+
+  self.clearImmediate = function(timeoutKey) {
+    self.scheduledFunctions[timeoutKey] = jasmine.undefined;
+  };
+
 };
 
 jasmine.FakeTimer.prototype.reset = function() {
@@ -1607,6 +1627,7 @@ jasmine.FakeTimer.prototype.runFunctionsWithinRange = function(oldMillis, nowMil
 };
 
 jasmine.FakeTimer.prototype.scheduleFunction = function(timeoutKey, funcToCall, millis, recurring) {
+  millis = millis || 0;
   this.scheduledFunctions[timeoutKey] = {
     runAtMillis: this.nowMillis + millis,
     funcToCall: funcToCall,
@@ -1679,6 +1700,11 @@ jasmine.Clock = {
 };
 jasmine.Clock.installed = jasmine.Clock.real;
 
+if (jasmine.hasSetImmediate) {
+    jasmine.Clock.real.setImmediate = jasmine.getGlobal().setImmediate;
+    jasmine.Clock.real.setImmediate = jasmine.getGlobal().clearImmediate;
+}
+
 //else for IE support
 jasmine.getGlobal().setTimeout = function(funcToCall, millis) {
   if (jasmine.Clock.installed.setTimeout.apply) {
@@ -1711,6 +1737,24 @@ jasmine.getGlobal().clearInterval = function(timeoutKey) {
     return jasmine.Clock.installed.clearInterval(timeoutKey);
   }
 };
+
+if (jasmine.hasSetImmediate) {
+    jasmine.getGlobal().setImmediate = function(funcToCall) {
+      if (jasmine.Clock.installed.setImmediate.apply) {
+        return jasmine.Clock.installed.setImmediate.apply(this, arguments);
+      } else {
+        return jasmine.Clock.installed.setImmediate(funcToCall);
+      }
+    };
+
+    jasmine.getGlobal().clearImmediate = function(timeoutKey) {
+      if (jasmine.Clock.installed.clearImmediate.apply) {
+        return jasmine.Clock.installed.clearImmediate.apply(this, arguments);
+      } else {
+        return jasmine.Clock.installed.clearImmediate(timeoutKey);
+      }
+    };
+}
 
 /**
  * @constructor

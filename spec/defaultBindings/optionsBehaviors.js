@@ -73,6 +73,7 @@ describe('Binding: Options', function() {
         testNode.innerHTML = "<select data-bind='options:myValues'><option>should be deleted</option></select>";
         ko.applyBindings({ myValues: observable }, testNode);
         observable.splice(1, 1);
+        ko.processAllDeferredBindingUpdates();
         expect(testNode.childNodes[0]).toHaveTexts(["A", "C"]);
     });
 
@@ -107,6 +108,7 @@ describe('Binding: Options', function() {
         expect(testNode.childNodes[0]).toHaveSelectedValues([2]);
 
         viewModel.filterValues.splice(0, 2, {x:4});
+        ko.processAllDeferredBindingUpdates();
         expect(testNode.childNodes[0]).toHaveSelectedValues([4]);
     });
 
@@ -120,7 +122,9 @@ describe('Binding: Options', function() {
         expect(testNode.childNodes[0]).toHaveSelectedValues([undefined]);
 
         viewModel.filterValues.push("1");
+        ko.processAllDeferredBindingUpdates();
         viewModel.filterValues.push("2");
+        ko.processAllDeferredBindingUpdates();
         expect(testNode.childNodes[0]).toHaveSelectedValues([undefined]);
     });
 
@@ -136,21 +140,25 @@ describe('Binding: Options', function() {
 
         // Change the order of options; since selection is not changed, should not trigger change event
         observable(["B", "C", "A"]);
+        ko.processAllDeferredBindingUpdates();
         expect(testNode.childNodes[0].selectedIndex).toEqual(2);
         expect(changeHandlerFireCount).toEqual(1);
 
         // Change to a new set of options; since selection is changed, should trigger change event
         observable(["D", "E"]);
+        ko.processAllDeferredBindingUpdates();
         expect(testNode.childNodes[0].selectedIndex).toEqual(0);
         expect(changeHandlerFireCount).toEqual(2);
 
         // Delete all options; selection is changed (to nothing), so should trigger event
         observable([]);
+        ko.processAllDeferredBindingUpdates();
         expect(testNode.childNodes[0].selectedIndex).toEqual(-1);
         expect(changeHandlerFireCount).toEqual(3);
 
         // Re-add options; should trigger change event
         observable([1, 2, 3]);
+        ko.processAllDeferredBindingUpdates();
         expect(testNode.childNodes[0].selectedIndex).toEqual(0);
         expect(changeHandlerFireCount).toEqual(4);
     });
@@ -168,6 +176,7 @@ describe('Binding: Options', function() {
         testNode.childNodes[0].options[0].selected = true;
         expect(testNode.childNodes[0]).toHaveSelectedValues(["A"]);
         observable(["B", "C", "A"]);
+        ko.processAllDeferredBindingUpdates();
         expect(testNode.childNodes[0]).toHaveSelectedValues(["A"]);
         expect(changeHandlerFireCount).toEqual(0);
 
@@ -175,26 +184,31 @@ describe('Binding: Options', function() {
         testNode.childNodes[0].options[0].selected = true;
         expect(testNode.childNodes[0]).toHaveSelectedValues(["B","A"]);
         observable(["C", "A"]);
+        ko.processAllDeferredBindingUpdates();
         expect(testNode.childNodes[0]).toHaveSelectedValues(["A"]);
         expect(changeHandlerFireCount).toEqual(1);
 
         // Change to a new set of options; since selection is changed (to nothing), should trigger change event
         observable(["D", "E"]);
+        ko.processAllDeferredBindingUpdates();
         expect(testNode.childNodes[0]).toHaveSelectedValues([]);
         expect(changeHandlerFireCount).toEqual(2);
 
         // Delete all options; selection is not changed, so shouldn't trigger event
         observable([]);
+        ko.processAllDeferredBindingUpdates();
         expect(changeHandlerFireCount).toEqual(2);
 
         // Set observable options and select them
         observable([ko.observable("X"), ko.observable("Y")]);
+        ko.processAllDeferredBindingUpdates();
         expect(changeHandlerFireCount).toEqual(2);
         testNode.childNodes[0].options[0].selected = testNode.childNodes[0].options[1].selected = true;
         expect(testNode.childNodes[0]).toHaveSelectedValues(["X","Y"]);
 
         // Change the value of a selected item, which should deselect it and trigger a change event
         observable()[1]("Z");
+        ko.processAllDeferredBindingUpdates();
         expect(testNode.childNodes[0]).toHaveSelectedValues(["X"]);
         expect(changeHandlerFireCount).toEqual(3);
     });
@@ -240,11 +254,13 @@ describe('Binding: Options', function() {
 
         // Show we can update the caption without affecting selection
         myCaption("New caption");
+        ko.processAllDeferredBindingUpdates();
         expect(testNode.childNodes[0].selectedIndex).toEqual(2);
         expect(testNode.childNodes[0]).toHaveTexts(["New caption", "A", "B"]);
 
         // Show that caption will be removed if value is null
         myCaption(null);
+        ko.processAllDeferredBindingUpdates();
         expect(testNode.childNodes[0].selectedIndex).toEqual(1);
         expect(testNode.childNodes[0]).toHaveTexts(["A", "B"]);
     });
@@ -263,6 +279,7 @@ describe('Binding: Options', function() {
 
         // Also show we can update the text without affecting selection
         people[1].name("Bob");
+        ko.processAllDeferredBindingUpdates();
         expect(testNode.childNodes[0].selectedIndex).toEqual(2);
         expect(testNode.childNodes[0]).toHaveTexts(["-", "Annie", "Bob"]);
     });
@@ -277,12 +294,15 @@ describe('Binding: Options', function() {
 
         // Change the array, but don't update the observableArray so that the options binding isn't updated
         someItems().push({ childprop: 'hidden child'});
+        ko.processAllDeferredBindingUpdates();
         expect(testNode.childNodes[0]).toContainText('first child');
         // Update callback observable and check that the binding wasn't updated
         callbackObservable(2);
+        ko.processAllDeferredBindingUpdates();
         expect(testNode.childNodes[0]).toContainText('first child');
         // Update the observableArray and verify that the binding is now updated
         someItems.valueHasMutated();
+        ko.processAllDeferredBindingUpdates();
         expect(testNode.childNodes[0]).toContainText('first childhidden child');
         expect(callbacks).toEqual(2);
     });

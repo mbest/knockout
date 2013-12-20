@@ -8,8 +8,10 @@ describe('Binding: CSS style', function() {
 
         expect(testNode.childNodes[0].style.backgroundColor).toEqualOneOf(["red", "#ff0000"]); // Opera returns style color values in #rrggbb notation, unlike other browsers
         myObservable("green");
+        ko.processAllDeferredBindingUpdates();
         expect(testNode.childNodes[0].style.backgroundColor).toEqualOneOf(["green", "#008000"]);
         myObservable(undefined);
+        ko.processAllDeferredBindingUpdates();
         expect(testNode.childNodes[0].style.backgroundColor).toEqual("");
     });
 });

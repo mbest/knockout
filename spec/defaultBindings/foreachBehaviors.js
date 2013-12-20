@@ -64,30 +64,37 @@ describe('Binding: Foreach', function() {
 
         // Add items at the beginning...
         someItems.unshift({ childProp: 'zeroth child' });
+        ko.processAllDeferredBindingUpdates();
         expect(testNode.childNodes[0]).toContainHtml('<span data-bind="text: childprop">zeroth child</span><span data-bind="text: childprop">first child</span><span data-bind="text: childprop">second child</span>');
 
         // ... middle
         someItems.splice(2, 0, { childProp: 'middle child' });
+        ko.processAllDeferredBindingUpdates();
         expect(testNode.childNodes[0]).toContainHtml('<span data-bind="text: childprop">zeroth child</span><span data-bind="text: childprop">first child</span><span data-bind="text: childprop">middle child</span><span data-bind="text: childprop">second child</span>');
 
         // ... and end
         someItems.push({ childProp: 'last child' });
+        ko.processAllDeferredBindingUpdates();
         expect(testNode.childNodes[0]).toContainHtml('<span data-bind="text: childprop">zeroth child</span><span data-bind="text: childprop">first child</span><span data-bind="text: childprop">middle child</span><span data-bind="text: childprop">second child</span><span data-bind="text: childprop">last child</span>');
 
         // Also remove from beginning...
         someItems.shift();
+        ko.processAllDeferredBindingUpdates();
         expect(testNode.childNodes[0]).toContainHtml('<span data-bind="text: childprop">first child</span><span data-bind="text: childprop">middle child</span><span data-bind="text: childprop">second child</span><span data-bind="text: childprop">last child</span>');
 
         // ... and middle
         someItems.splice(1, 1);
+        ko.processAllDeferredBindingUpdates();
         expect(testNode.childNodes[0]).toContainHtml('<span data-bind="text: childprop">first child</span><span data-bind="text: childprop">second child</span><span data-bind="text: childprop">last child</span>');
 
         // ... and end
         someItems.pop();
+        ko.processAllDeferredBindingUpdates();
         expect(testNode.childNodes[0]).toContainHtml('<span data-bind="text: childprop">first child</span><span data-bind="text: childprop">second child</span>');
 
         // Also, marking as "destroy" should eliminate the item from display
         someItems.destroy(someItems()[0]);
+        ko.processAllDeferredBindingUpdates();
         expect(testNode.childNodes[0]).toContainHtml('<span data-bind="text: childprop">second child</span>');
     });
 
@@ -100,6 +107,7 @@ describe('Binding: Foreach', function() {
 
         // Now remove items, and check the corresponding child nodes vanished
         someitems.splice(1, 1);
+        ko.processAllDeferredBindingUpdates();
         expect(testNode).toContainHtml('<div data-bind="foreach: someitems">a<!-- ko if:true -->b<!-- /ko --></div>');
     });
 
@@ -119,6 +127,7 @@ describe('Binding: Foreach', function() {
 
         // Now remove items, and check the corresponding child nodes vanished
         someitems.splice(1, 1);
+        ko.processAllDeferredBindingUpdates();
         expect(testNode).toContainText('x-aaa');
     });
 
@@ -130,6 +139,7 @@ describe('Binding: Foreach', function() {
 
         // Now update an item
         someitems[0]('A2');
+        ko.processAllDeferredBindingUpdates();
         expect(testNode).toContainText('A2B');
     });
 
@@ -157,6 +167,7 @@ describe('Binding: Foreach', function() {
 
         // Try adding
         someItems.push({ childprop: 'added child'});
+        ko.processAllDeferredBindingUpdates();
         expect(testNode.childNodes[0]).toContainHtml('<span data-bind="text: childprop">first child</span><span data-bind="text: childprop">added child</span>');
         expect(afterAddCallbackData.length).toEqual(1);
         expect(afterAddCallbackData[0].elem).toEqual(testNode.childNodes[0].childNodes[1]);
@@ -166,6 +177,7 @@ describe('Binding: Foreach', function() {
 
         // Try removing
         someItems.shift();
+        ko.processAllDeferredBindingUpdates();
         expect(beforeRemoveCallbackData.length).toEqual(1);
         expect(beforeRemoveCallbackData[0].elem).toContainText("first child");
         expect(beforeRemoveCallbackData[0].index).toEqual(0);
@@ -188,9 +200,11 @@ describe('Binding: Foreach', function() {
         expect(testNode.childNodes[0]).toContainText('first child');
         // Update callback observable and check that the binding wasn't updated
         callbackObservable(2);
+        ko.processAllDeferredBindingUpdates();
         expect(testNode.childNodes[0]).toContainText('first child');
         // Update the observableArray and verify that the binding is now updated
         someItems.valueHasMutated();
+        ko.processAllDeferredBindingUpdates();
         expect(testNode.childNodes[0]).toContainText('first childhidden child');
     });
 
@@ -244,6 +258,7 @@ describe('Binding: Foreach', function() {
             callbacks = 0;
         ko.applyBindings({ someItems: someItems, callback: function() { callbackObservable(); callbacks++; } }, testNode);
         someItems.push({ childprop: 'added child'});
+        ko.processAllDeferredBindingUpdates();
         expect(callbacks).toEqual(1);
 
         // Change the array, but don't update the observableArray so that the foreach binding isn't updated
@@ -251,9 +266,11 @@ describe('Binding: Foreach', function() {
         expect(testNode.childNodes[0]).toContainText('added child');
         // Update callback observable and check that the binding wasn't updated
         callbackObservable(2);
+        ko.processAllDeferredBindingUpdates();
         expect(testNode.childNodes[0]).toContainText('added child');
         // Update the observableArray and verify that the binding is now updated
         someItems.valueHasMutated();
+        ko.processAllDeferredBindingUpdates();
         expect(testNode.childNodes[0]).toContainText('added childhidden child');
     });
 
@@ -264,6 +281,7 @@ describe('Binding: Foreach', function() {
             callbacks = 0;
         ko.applyBindings({ someItems: someItems, callback: function(elem) { callbackObservable(); callbacks++; ko.removeNode(elem); } }, testNode);
         someItems.pop();
+        ko.processAllDeferredBindingUpdates();
         expect(callbacks).toEqual(1);
 
         // Change the array, but don't update the observableArray so that the foreach binding isn't updated
@@ -271,9 +289,11 @@ describe('Binding: Foreach', function() {
         expect(testNode.childNodes[0]).toContainText('first child');
         // Update callback observable and check that the binding wasn't updated
         callbackObservable(2);
+        ko.processAllDeferredBindingUpdates();
         expect(testNode.childNodes[0]).toContainText('first child');
         // Update the observableArray and verify that the binding is now updated
         someItems.valueHasMutated();
+        ko.processAllDeferredBindingUpdates();
         expect(testNode.childNodes[0]).toContainText('first childhidden child');
     });
 
@@ -284,6 +304,7 @@ describe('Binding: Foreach', function() {
             callbacks = 0;
         ko.applyBindings({ someItems: someItems, callback: function() { callbackObservable(); callbacks++; } }, testNode);
         someItems.splice(0, 0, { childprop: 'added child'});
+        ko.processAllDeferredBindingUpdates();
         expect(callbacks).toEqual(1);
 
         // Change the array, but don't update the observableArray so that the foreach binding isn't updated
@@ -291,9 +312,11 @@ describe('Binding: Foreach', function() {
         expect(testNode.childNodes[0]).toContainText('added childfirst child');
         // Update callback observable and check that the binding wasn't updated
         callbackObservable(2);
+        ko.processAllDeferredBindingUpdates();
         expect(testNode.childNodes[0]).toContainText('added childfirst child');
         // Update the observableArray and verify that the binding is now updated
         someItems.valueHasMutated();
+        ko.processAllDeferredBindingUpdates();
         expect(testNode.childNodes[0]).toContainText('added childfirst childhidden child');
     });
 
@@ -304,6 +327,7 @@ describe('Binding: Foreach', function() {
             callbacks = 0;
         ko.applyBindings({ someItems: someItems, callback: function() { callbackObservable(); callbacks++; } }, testNode);
         someItems.splice(0, 0, { childprop: 'added child'});
+        ko.processAllDeferredBindingUpdates();
         expect(callbacks).toEqual(1);
 
         // Change the array, but don't update the observableArray so that the foreach binding isn't updated
@@ -311,9 +335,11 @@ describe('Binding: Foreach', function() {
         expect(testNode.childNodes[0]).toContainText('added childfirst child');
         // Update callback observable and check that the binding wasn't updated
         callbackObservable(2);
+        ko.processAllDeferredBindingUpdates();
         expect(testNode.childNodes[0]).toContainText('added childfirst child');
         // Update the observableArray and verify that the binding is now updated
         someItems.valueHasMutated();
+        ko.processAllDeferredBindingUpdates();
         expect(testNode.childNodes[0]).toContainText('added childfirst childhidden child');
     });
 
@@ -573,10 +599,12 @@ describe('Binding: Foreach', function() {
 
         // Should update the input when the observable changes
         y('fourth');
+        ko.processAllDeferredUpdates();
         expect(testNode.childNodes[0]).toHaveValues(['third', 'fourth']);
 
         // Should update the inputs when the array changes
         someItems([x]);
+        ko.processAllDeferredUpdates();
         expect(testNode.childNodes[0]).toHaveValues(['third']);
     });
 
@@ -588,6 +616,7 @@ describe('Binding: Foreach', function() {
 
         var saveNode = testNode.childNodes[0].childNodes[0];
         x('second');
+        ko.processAllDeferredUpdates();
         expect(testNode.childNodes[0]).toContainText('second');
         expect(testNode.childNodes[0].childNodes[0]).toEqual(saveNode);
     });

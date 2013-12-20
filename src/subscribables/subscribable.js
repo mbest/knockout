@@ -90,7 +90,8 @@ var ko_subscribable_fn = {
     getSubscriptionsCount: function () {
         var total = 0;
         ko.utils.objectForEach(this._subscriptions, function(eventName, subscriptions) {
-            total += subscriptions.length;
+            if (eventName != 'dirty')
+                total += subscriptions.length;
         });
         return total;
     },

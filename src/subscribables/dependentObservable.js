@@ -20,7 +20,21 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
 
     function addSubscriptionToDependency(subscribable, id) {
         if (!_subscriptionsToDependencies[id]) {
-            _subscriptionsToDependencies[id] = subscribable.subscribe(evaluatePossiblyAsync);
+            var subscription;
+            if (ko.dependentObservable['deferUpdates']) {
+                var dirtySub = subscribable.subscribe(evaluatePossiblyAsync, null, 'dirty'),
+                    changeSub = subscribable.subscribe(evaluatePossiblyAsync);
+                subscription = {
+                    dispose: function() {
+                        dirtySub.dispose();
+                        changeSub.dispose();
+                    },
+                    target: subscribable
+                };
+            } else {
+                subscription = subscribable.subscribe(evaluatePossiblyAsync);
+            }
+            _subscriptionsToDependencies[id] = subscription;
             ++_dependenciesCount;
         }
     }
@@ -101,8 +115,6 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
                         toDispose.dispose();
                     });
                 }
-
-                _needsEvaluation = false;
             }
 
             if (dependentObservable.isDifferent(_latestValue, newValue)) {
@@ -120,6 +132,7 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
             }
         } finally {
             _isBeingEvaluated = false;
+            _needsEvaluation = false;
         }
 
         if (!_dependenciesCount)
@@ -130,7 +143,16 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
         if (arguments.length > 0) {
             if (typeof writeFunction === "function") {
                 // Writing a value
-                writeFunction.apply(evaluatorFunctionTarget, arguments);
+
+                // Turn off deferred updates for this observable during the write so that the 'write' is registered
+                // immediately (assuming that the read function accesses any observables that are written to).
+                var saveDeferValue = dependentObservable._deferUpdates;
+                dependentObservable._deferUpdates = false;
+                try {
+                    writeFunction.apply(evaluatorFunctionTarget, arguments);
+                } finally {
+                    dependentObservable._deferUpdates = saveDeferValue;
+                }
             } else {
                 throw new Error("Cannot write a value to a ko.computed unless you specify a 'write' option. If you wish to read the current value, don't pass any parameters.");
             }
@@ -209,6 +231,10 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
                 return !ko.utils.domNodeIsAttachedToDocument(disposeWhenNodeIsRemoved) || (disposeWhenOption && disposeWhenOption());
             };
         }
+    }
+
+    if (ko.dependentObservable['deferUpdates']) {
+        ko.extenders.deferred(dependentObservable, true);
     }
 
     // Evaluate, unless deferEvaluation is true

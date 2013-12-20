@@ -17,6 +17,7 @@ describe('Binding dependencies', function() {
         expect(updatePassedValues[0]).toBeUndefined();
 
         observable("A");
+        ko.processAllDeferredBindingUpdates();
         expect(initPassedValues.length).toEqual(1);
         expect(updatePassedValues.length).toEqual(2);
         expect(updatePassedValues[1]).toEqual("A");
@@ -50,6 +51,7 @@ describe('Binding dependencies', function() {
         testNode.parentNode.removeChild(testNode);
         observable("B"); // Force re-evaluation
 
+        ko.processAllDeferredBindingUpdates();
         expect(observable.getSubscriptionsCount()).toEqual(0);
     });
 
@@ -64,6 +66,7 @@ describe('Binding dependencies', function() {
         expect(passedValues[0]).toEqual("hello");
 
         observable({ message: "goodbye" });
+        ko.processAllDeferredBindingUpdates();
         expect(passedValues.length).toEqual(2);
         expect(passedValues[1]).toEqual("goodbye");
     });
@@ -140,16 +143,19 @@ describe('Binding dependencies', function() {
 
         // update value of observable
         vm().myProp("second value");
+        ko.processAllDeferredUpdates();
         expect(lastBoundValueInit).toEqual("second value");
         expect(lastBoundValueUpdate).toEqual("second value");
 
         // update value of observable to another observable
         vm().myProp(ko.observable("third value"));
+        ko.processAllDeferredUpdates();
         expect(lastBoundValueInit).toEqual("third value");
         expect(lastBoundValueUpdate).toEqual("third value");
 
         // update view model with brand-new property
         vm({ myProp: function() {return "fourth value"; }});
+        ko.processAllDeferredUpdates();
         expect(lastBoundValueInit).toEqual("fourth value");
         expect(lastBoundValueUpdate).toEqual("fourth value");
     });
@@ -200,6 +206,7 @@ describe('Binding dependencies', function() {
         expect(updateValue).toEqual("first value");
         vm.myNonObservable = "second value";
         observable.notifySubscribers();
+        ko.processAllDeferredBindingUpdates();
         expect(updateValue).toEqual("second value");
     });
 
@@ -216,8 +223,10 @@ describe('Binding dependencies', function() {
         testNode.innerHTML = "<div data-bind='updatedHandler: true, modifyingHandler: true'></div>";
 
         ko.applyBindings({}, testNode);
+        ko.processAllDeferredBindingUpdates();
         expect(latestValue).toEqual(1);
         observable1(2);
+        ko.processAllDeferredBindingUpdates();
         expect(latestValue).toEqual(2);
     });
 
@@ -244,6 +253,7 @@ describe('Binding dependencies', function() {
 
             // set the view-model to a new object
             vm({ someProp: ko.observable('My new prop value'), checkVM: checkVM });
+            ko.processAllDeferredUpdates();
             expect(testNode.childNodes[0].childNodes[0].value).toEqual("My new prop value");
 
             // a change to the input value should be written to the new model
@@ -269,6 +279,7 @@ describe('Binding dependencies', function() {
             // remove the element and re-set the view-model; the subscription should be cleared
             testNode.parentNode.removeChild(testNode);
             vm(null);
+            ko.processAllDeferredUpdates();
             expect(vm.getSubscriptionsCount()).toEqual(0);
         });
 
@@ -289,10 +300,12 @@ describe('Binding dependencies', function() {
 
             // change view model to new object
             vm({obj1: {prop1: "Second view "}, prop2: "model"});
+            ko.processAllDeferredUpdates();
             expect(testNode).toContainText("Second view model");
 
             // change it again
             vm({obj1: {prop1: "Third view model"}, prop2: ""});
+            ko.processAllDeferredUpdates();
             expect(testNode).toContainText("Third view model");
 
             // clear the element and the view-model (shouldn't be any errors) and the subscription should be cleared
@@ -317,10 +330,12 @@ describe('Binding dependencies', function() {
 
             // ch ange view model to new object
             vm({obj1: {prop1: "Second view "}, prop2: "model"});
+            ko.processAllDeferredUpdates();
             expect(testNode).toContainText("Second view model");
 
             // change it again
             vm({obj1: {prop1: "Third view model"}, prop2: ""});
+            ko.processAllDeferredUpdates();
             expect(testNode).toContainText("Third view model");
 
             // clear the element and the view-model (shouldn't be any errors) and the subscription should be cleared
@@ -347,10 +362,12 @@ describe('Binding dependencies', function() {
 
             // ch ange view model to new object
             vm({obj1: {prop1: "Second view "}, prop2: "model"});
+            ko.processAllDeferredUpdates();
             expect(testNode).toContainText("Second view model");
 
             // change it again
             vm({obj1: {prop1: "Third view model"}, prop2: ""});
+            ko.processAllDeferredUpdates();
             expect(testNode).toContainText("Third view model");
 
             // clear the element and the view-model (shouldn't be any errors) and the subscription should be cleared

@@ -81,12 +81,14 @@ describe('Native template engine', function() {
 
         // Can cause re-rendering
         myItems.push({ itemProp: 'Pushed' });
+        ko.processAllDeferredBindingUpdates();
         expect(window.testDivTemplate.childNodes[0].childNodes[0]).toContainText("Item: Alpha");
         expect(window.testDivTemplate.childNodes[0].childNodes[1]).toContainText("Item: Beta");
         expect(window.testDivTemplate.childNodes[0].childNodes[2]).toContainText("Item: Gamma");
         expect(window.testDivTemplate.childNodes[0].childNodes[3]).toContainText("Item: Pushed");
 
         myItems.splice(1, 1);
+        ko.processAllDeferredBindingUpdates();
         expect(window.testDivTemplate.childNodes[0].childNodes[0]).toContainText("Item: Alpha");
         expect(window.testDivTemplate.childNodes[0].childNodes[1]).toContainText("Item: Gamma");
         expect(window.testDivTemplate.childNodes[0].childNodes[2]).toContainText("Item: Pushed");
@@ -113,6 +115,7 @@ describe('Native template engine', function() {
 
         // Check we can insert without causing anything else to rerender
         viewModel.items()[1].children.unshift('ANew');
+        ko.processAllDeferredBindingUpdates();
         expect(window.testDivTemplate.childNodes[0].childNodes[0]).toContainText("(Val: A1, Invocations: 1, Parents: 2)(Val: A2, Invocations: 2, Parents: 2)(Val: A3, Invocations: 3, Parents: 2)");
         expect(window.testDivTemplate.childNodes[0].childNodes[1]).toContainText("(Val: ANew, Invocations: 6, Parents: 2)(Val: B1, Invocations: 4, Parents: 2)(Val: B2, Invocations: 5, Parents: 2)");
     });

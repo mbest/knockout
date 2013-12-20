@@ -1,6 +1,7 @@
 
 describe('Observable Array', function() {
     beforeEach(function () {
+        ko.processAllDeferredUpdates();
         testObservableArray = new ko.observableArray([1, 2, 3]);
         notifiedValues = [];
         testObservableArray.subscribe(function (value) {
@@ -34,6 +35,7 @@ describe('Observable Array', function() {
 
     it('Should be able to write values to it', function () {
         testObservableArray(['X', 'Y']);
+        ko.processAllDeferredUpdates();
         expect(notifiedValues.length).toEqual(1);
         expect(notifiedValues[0][0]).toEqual('X');
         expect(notifiedValues[0][1]).toEqual('Y');
@@ -79,6 +81,7 @@ describe('Observable Array', function() {
 
     it('Should notify subscribers on push', function () {
         testObservableArray.push("Some new value");
+        ko.processAllDeferredUpdates();
         expect(notifiedValues).toEqual([[1, 2, 3, "Some new value"]]);
     });
 
@@ -90,6 +93,7 @@ describe('Observable Array', function() {
     it('Should notify subscribers on pop', function () {
         var popped = testObservableArray.pop();
         expect(popped).toEqual(3);
+        ko.processAllDeferredUpdates();
         expect(notifiedValues).toEqual([[1, 2]]);
     });
 
@@ -102,6 +106,7 @@ describe('Observable Array', function() {
     it('Should notify subscribers on splice', function () {
         var spliced = testObservableArray.splice(1, 1);
         expect(spliced).toEqual([2]);
+        ko.processAllDeferredUpdates();
         expect(notifiedValues).toEqual([[1, 3]]);
     });
 
@@ -113,33 +118,41 @@ describe('Observable Array', function() {
 
     it('Should notify subscribers on remove by value', function () {
         testObservableArray(["Alpha", "Beta", "Gamma"]);
+        ko.processAllDeferredUpdates();
         notifiedValues = [];
         var removed = testObservableArray.remove("Beta");
         expect(removed).toEqual(["Beta"]);
+        ko.processAllDeferredUpdates();
         expect(notifiedValues).toEqual([["Alpha", "Gamma"]]);
     });
 
     it('Should notify subscribers on remove by predicate', function () {
         testObservableArray(["Alpha", "Beta", "Gamma"]);
+        ko.processAllDeferredUpdates();
         notifiedValues = [];
         var removed = testObservableArray.remove(function (value) { return value == "Beta"; });
         expect(removed).toEqual(["Beta"]);
+        ko.processAllDeferredUpdates();
         expect(notifiedValues).toEqual([["Alpha", "Gamma"]]);
     });
 
     it('Should notify subscribers on remove multiple by value', function () {
         testObservableArray(["Alpha", "Beta", "Gamma"]);
+        ko.processAllDeferredUpdates();
         notifiedValues = [];
         var removed = testObservableArray.removeAll(["Gamma", "Alpha"]);
         expect(removed).toEqual(["Alpha", "Gamma"]);
+        ko.processAllDeferredUpdates();
         expect(notifiedValues).toEqual([["Beta"]]);
     });
 
     it('Should clear observable array entirely if you pass no args to removeAll()', function() {
         testObservableArray(["Alpha", "Beta", "Gamma"]);
+        ko.processAllDeferredUpdates();
         notifiedValues = [];
         var removed = testObservableArray.removeAll();
         expect(removed).toEqual(["Alpha", "Beta", "Gamma"]);
+        ko.processAllDeferredUpdates();
         expect(notifiedValues).toEqual([[]]);
     });
 
@@ -153,9 +166,11 @@ describe('Observable Array', function() {
 
     it('Should not notify subscribers on remove by value with no match', function () {
         testObservableArray(["Alpha", "Beta", "Gamma"]);
+        ko.processAllDeferredUpdates();
         notifiedValues = [];
         var removed = testObservableArray.remove("Delta");
         expect(removed).toEqual([]);
+        ko.processAllDeferredUpdates();
         expect(notifiedValues).toEqual([]);
     });
 
@@ -188,6 +203,7 @@ describe('Observable Array', function() {
         testObservableArray([x, y]);
         notifiedValues = [];
         var removed = testObservableArray.remove(y);
+        ko.processAllDeferredUpdates();
         expect(testObservableArray()).toEqual([x]);
         expect(removed).toEqual([y]);
         expect(notifiedValues).toEqual([[x]]);
@@ -195,8 +211,10 @@ describe('Observable Array', function() {
 
     it('Should notify subscribers on replace', function () {
         testObservableArray(["Alpha", "Beta", "Gamma"]);
+        ko.processAllDeferredUpdates();
         notifiedValues = [];
         testObservableArray.replace("Beta", "Delta");
+        ko.processAllDeferredUpdates();
         expect(notifiedValues).toEqual([["Alpha", "Delta", "Gamma"]]);
     });
 
@@ -216,6 +234,7 @@ describe('Observable Array', function() {
             didNotify = true;
         });
         testObservableArray.destroy(y);
+        ko.processAllDeferredUpdates();
         expect(didNotify).toEqual(true);
     });
 
@@ -274,6 +293,7 @@ describe('Observable Array', function() {
 
         // Don't just trust getSubscriptionsCount - directly verify that mutating newArray doesn't cause a re-eval
         newArray.push("Another");
+        ko.processAllDeferredUpdates();
         expect(timesEvaluated).toEqual(1);
     });
 

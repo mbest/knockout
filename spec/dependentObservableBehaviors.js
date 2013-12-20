@@ -178,8 +178,10 @@ describe('Dependent Observable', function() {
         var depedentObservable = new ko.dependentObservable(function () { return observable() + 1; });
         depedentObservable.subscribe(function (value) { notifiedValue = value; });
 
+        ko.processAllDeferredUpdates();
         expect(notifiedValue).toEqual(undefined);
         observable(2);
+        ko.processAllDeferredUpdates();
         expect(notifiedValue).toEqual(3);
     });
 
@@ -191,6 +193,7 @@ describe('Dependent Observable', function() {
 
         expect(notifiedValue).toEqual(undefined);
         observable(2);
+        ko.processAllDeferredUpdates();
         expect(notifiedValue).toEqual(2);
         expect(depedentObservable()).toEqual(3);
     });
@@ -200,7 +203,10 @@ describe('Dependent Observable', function() {
         var observable = new ko.observable();
         var depedentObservable = new ko.dependentObservable(function () { return observable() * observable(); });
         depedentObservable.subscribe(function (value) { notifiedValues.push(value); });
+        expect(observable.getSubscriptionsCount()).toEqual(1);
         observable(2);
+        ko.processAllDeferredUpdates();
+        expect(observable.getSubscriptionsCount()).toEqual(1);
         expect(notifiedValues.length).toEqual(1);
         expect(notifiedValues[0]).toEqual(4);
     });
@@ -251,6 +257,7 @@ describe('Dependent Observable', function() {
 
         timeToDispose = true;
         underlyingObservable(101);
+        ko.processAllDeferredUpdates();
         expect(timesEvaluated).toEqual(1);
         expect(dependent.getDependenciesCount()).toEqual(0);
         expect(dependent.isActive()).toEqual(false);
@@ -282,16 +289,24 @@ describe('Dependent Observable', function() {
         expect(underlyingObservable.getSubscriptionsCount()).toEqual(1);
         expect(dependent.isActive()).toEqual(true);
 
+        // disposeWhen value is still true, so it won't be disposed
+        underlyingObservable(101);
+        ko.processAllDeferredUpdates();
+        expect(underlyingObservable.getSubscriptionsCount()).toEqual(1);
+        expect(dependent.isActive()).toEqual(true);
+
         // Trigger the false result. Of course it still doesn't dispose yet, because
         // disposeWhen says false.
         shouldDispose = false;
-        underlyingObservable(101);
+        underlyingObservable(102);
+        ko.processAllDeferredUpdates();
         expect(underlyingObservable.getSubscriptionsCount()).toEqual(1);
         expect(dependent.isActive()).toEqual(true);
 
         // Now trigger a true result. This time it will dispose.
         shouldDispose = true;
-        underlyingObservable(102);
+        underlyingObservable(103);
+        ko.processAllDeferredUpdates();
         expect(underlyingObservable.getSubscriptionsCount()).toEqual(0);
         expect(dependent.isActive()).toEqual(false);
     });
@@ -316,6 +331,7 @@ describe('Dependent Observable', function() {
         // Trigger a refresh
         shouldHaveDependency = false;
         someObservable('modified');
+        ko.processAllDeferredUpdates();
         expect(dependentObservable.isActive()).toEqual(false);
     });
 
@@ -430,6 +446,7 @@ describe('Dependent Observable', function() {
         expect(function () {
             // Update observable to cause computed to throw an exception
             observableSwitch(false);
+            computed();     // Evaluate to force update
         }).toThrow("Error during computed evaluation");
 
         // The value of the computed is now undefined, although currently it keeps the previous value
@@ -452,15 +469,18 @@ describe('Dependent Observable', function() {
         var computed = new ko.computed(function () { return observable(); });
         computed.subscribe(function (value) { notifiedValues.push(value); });
 
+        ko.processAllDeferredUpdates();
         expect(notifiedValues).toEqual([]);
 
         // Trigger update without changing value; the computed will not notify the change (default behavior)
         observable.valueHasMutated();
+        ko.processAllDeferredUpdates();
         expect(notifiedValues).toEqual([]);
 
         // Set the computed to notify always
         computed.extend({ notify: 'always' });
         observable.valueHasMutated();
+        ko.processAllDeferredUpdates();
         expect(notifiedValues).toEqual([1]);
     });
 
@@ -479,6 +499,7 @@ describe('Dependent Observable', function() {
         }
         var all = ko.computed(function() { return last() + first(); });
         first(1);
+        ko.processAllDeferredUpdates();
         expect(all()).toEqual(depth+2);
     });
 

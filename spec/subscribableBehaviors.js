@@ -18,6 +18,7 @@ describe('Subscribable', function() {
         var notifiedValue;
         instance.subscribe(function (value) { notifiedValue = value; });
         instance.notifySubscribers(123);
+        ko.processAllDeferredUpdates();
         expect(notifiedValue).toEqual(123);
     });
 
@@ -27,6 +28,7 @@ describe('Subscribable', function() {
         var subscription = instance.subscribe(function (value) { notifiedValue = value; });
         subscription.dispose();
         instance.notifySubscribers(123);
+        ko.processAllDeferredUpdates();
         expect(notifiedValue).toEqual(undefined);
     });
 
@@ -38,6 +40,7 @@ describe('Subscribable', function() {
         var instance = new ko.subscribable();
         instance.subscribe(model.myCallback, model);
         instance.notifySubscribers('notifiedValue');
+        ko.processAllDeferredUpdates();
     });
 
     it('Should not notify subscribers after unsubscription, even if the unsubscription occurs midway through a notification cycle', function() {
@@ -60,12 +63,16 @@ describe('Subscribable', function() {
     it('Should be able to notify subscribers for a specific \'event\'', function () {
         var instance = new ko.subscribable();
         var notifiedValue = undefined;
-        instance.subscribe(function (value) { notifiedValue = value; }, null, "myEvent");
+        instance.subscribe(function (value) {
+            notifiedValue = value;
+        }, null, "myEvent");
 
         instance.notifySubscribers(123, "unrelatedEvent");
+        ko.processAllDeferredUpdates();
         expect(notifiedValue).toEqual(undefined);
 
         instance.notifySubscribers(456, "myEvent");
+        ko.processAllDeferredUpdates();
         expect(notifiedValue).toEqual(456);
     });
 
@@ -75,6 +82,7 @@ describe('Subscribable', function() {
         var subscription = instance.subscribe(function (value) { notifiedValue = value; }, null, "myEvent");
         subscription.dispose();
         instance.notifySubscribers(123, "myEvent");
+        ko.processAllDeferredUpdates();
         expect(notifiedValue).toEqual(undefined);
     });
 
@@ -83,6 +91,7 @@ describe('Subscribable', function() {
         var notifiedValue;
         var subscription = instance.subscribe(function (value) { notifiedValue = value; }, null, "myEvent");
         instance.notifySubscribers(123);
+        ko.processAllDeferredUpdates();
         expect(notifiedValue).toEqual(undefined);
     });
 
@@ -101,6 +110,7 @@ describe('Subscribable', function() {
             interceptedNotifications.push({ eventName: eventName, value: newValue });
         };
         instance.notifySubscribers(123, "myEvent");
+        ko.processAllDeferredUpdates();
 
         expect(interceptedNotifications.length).toEqual(1);
         expect(interceptedNotifications[0].eventName).toEqual("myEvent");

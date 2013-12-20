@@ -31,11 +31,13 @@ describe('Binding: Text', function() {
 
         // update observable; should update text
         observable("New text");
+        ko.processAllDeferredBindingUpdates();
         expect(testNode).toContainText("xxx New text");
         expect(testNode).toContainHtml("xxx <!-- ko text: textprop -->new text<!-- /ko -->");
 
         // clear observable; should remove text
         observable(undefined);
+        ko.processAllDeferredBindingUpdates();
         expect(testNode).toContainText("xxx ");
         expect(testNode).toContainHtml("xxx <!-- ko text: textprop --><!-- /ko -->");
     });

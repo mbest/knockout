@@ -35,6 +35,7 @@ describe('Node preprocessing', function() {
 
         // Check that updating the observable has the expected effect
         someValue('goodbye');
+        ko.processAllDeferredUpdates();
         expect(testNode).toContainText('agoodbyeb');
     });
 
@@ -66,6 +67,7 @@ describe('Node preprocessing', function() {
 
         // Check that updating the observable has the expected effect
         someValue('goodbye');
+        ko.processAllDeferredUpdates();
         expect(testNode).toContainText('the value is goodbye.');
     });
 
@@ -99,8 +101,10 @@ describe('Node preprocessing', function() {
 
         // Check that modifying the observable array has the expected effect
         items.splice(0, 1);
+        ko.processAllDeferredUpdates();
         expect(testNode).toContainText('BetaBeta');
         items.push('Gamma');
+        ko.processAllDeferredUpdates();
         expect(testNode).toContainText('BetaBetaGammaGamma');
     });
 });
