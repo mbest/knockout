@@ -333,6 +333,23 @@ describe('Rate-limited', function() {
     });
 
     describe('Dependent Observable', function() {
+        it('Should delay running evaluator where there are no subscribers', function() {
+            var observable = ko.observable();
+            var evalSpy = jasmine.createSpy('evalSpy');
+            var computed = ko.computed(function () { evalSpy(observable()); return observable(); }).extend({rateLimit:500});
+
+            // Observable is changed, but evaluation is delayed
+            evalSpy.reset();
+            observable('a');
+            observable('b');
+            expect(evalSpy).not.toHaveBeenCalled();
+
+            // Advance clock; Change notification happens now using the latest value notified
+            evalSpy.reset();
+            jasmine.Clock.tick(501);
+            expect(evalSpy).toHaveBeenCalledWith('b');
+        });
+
         it('Should delay change notifications and evaluation', function() {
             var observable = ko.observable();
             var evalSpy = jasmine.createSpy('evalSpy');
@@ -360,6 +377,29 @@ describe('Rate-limited', function() {
             jasmine.Clock.tick(501);
             expect(evalSpy).toHaveBeenCalledWith('b');
             expect(notifySpy).toHaveBeenCalledWith('b');
+        });
+
+        it('Should notify when initial evaluation happens later using deferEvaluation', function() {
+            var observable = ko.observable('a');
+            var evalSpy = jasmine.createSpy('evalSpy');
+            var computed = ko.computed({
+                read: function () {
+                    evalSpy(observable());
+                    return observable();
+                },
+                deferEvaluation: true
+            }).extend({rateLimit:500});
+            var notifySpy = jasmine.createSpy('notifySpy');
+            computed.subscribe(notifySpy);
+
+            expect(evalSpy).not.toHaveBeenCalled();
+            expect(notifySpy).not.toHaveBeenCalled();
+
+            expect(computed()).toEqual('a');
+            expect(evalSpy).toHaveBeenCalledWith('a');
+
+            jasmine.Clock.tick(501);
+            expect(notifySpy).toHaveBeenCalledWith('a');
         });
 
         it('Should suppress change notifications when value is changed/reverted', function() {
