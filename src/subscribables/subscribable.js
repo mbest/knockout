@@ -13,8 +13,8 @@ ko.subscription.prototype.dispose = function () {
 ko.subscription.prototype['limit'] = function (limitFunction, funcOptions) {
     var self = this,
         target = self.target,
-        previousValue = target.peek ? target.peek() : undefined,
         originalCallback = self.callback,
+        previousValue = target.peek ? target.peek() : undefined,
         pendingValue;
 
     var finish = limitFunction(function () {
