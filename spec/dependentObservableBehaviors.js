@@ -354,7 +354,7 @@ describe('Dependent Observable', function() {
         expect(timesEvaluated).toEqual(1);
     });
 
-    it('Should prevent recursive calling of read function', function() {
+    xit('Should prevent recursive calling of read function', function() {
         var observable = ko.observable(0),
             computed = ko.dependentObservable(function() {
                 // this both reads and writes to the observable
