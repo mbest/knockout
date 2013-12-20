@@ -379,7 +379,7 @@ describe('Rate-limited', function() {
             expect(notifySpy).toHaveBeenCalledWith('b');
         });
 
-        it('Should notify when initial evaluation happens later using deferEvaluation', function() {
+        it('Should run initial evaluation at first subscribe when using deferEvaluation', function() {
             var observable = ko.observable('a');
             var evalSpy = jasmine.createSpy('evalSpy');
             var computed = ko.computed({
@@ -389,17 +389,28 @@ describe('Rate-limited', function() {
                 },
                 deferEvaluation: true
             }).extend({rateLimit:500});
+            expect(evalSpy).not.toHaveBeenCalled();
+
             var notifySpy = jasmine.createSpy('notifySpy');
             computed.subscribe(notifySpy);
-
-            expect(evalSpy).not.toHaveBeenCalled();
+            expect(evalSpy).toHaveBeenCalledWith('a');
             expect(notifySpy).not.toHaveBeenCalled();
+        });
+
+        it('Should run initial evaluation when observable is accessed when using deferEvaluation', function() {
+            var observable = ko.observable('a');
+            var evalSpy = jasmine.createSpy('evalSpy');
+            var computed = ko.computed({
+                read: function () {
+                    evalSpy(observable());
+                    return observable();
+                },
+                deferEvaluation: true
+            }).extend({rateLimit:500});
+            expect(evalSpy).not.toHaveBeenCalled();
 
             expect(computed()).toEqual('a');
             expect(evalSpy).toHaveBeenCalledWith('a');
-
-            jasmine.Clock.tick(501);
-            expect(notifySpy).toHaveBeenCalledWith('a');
         });
 
         it('Should suppress change notifications when value is changed/reverted', function() {
