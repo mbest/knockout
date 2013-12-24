@@ -29,6 +29,10 @@ var ko_subscribable_fn = {
             ko.utils.arrayRemoveItem(self._subscriptions[event], subscription);
         });
 
+        if (event === defaultEvent && self._notifyRateLimited && self.peek) {
+            self.peek();
+        }
+
         if (!self._subscriptions[event])
             self._subscriptions[event] = [];
         self._subscriptions[event].push(subscription);
@@ -37,9 +41,13 @@ var ko_subscribable_fn = {
 
     "notifySubscribers": function (valueToNotify, event, immediate) {
         event = event || defaultEvent;
+
         if (!immediate && event === defaultEvent && this._notifyRateLimited) {
             this._notifyRateLimited(valueToNotify);
-        } else if (this.hasSubscriptionsForEvent(event)) {
+            return;
+        }
+
+        if (this.hasSubscriptionsForEvent(event)) {
             try {
                 ko.dependencyDetection.begin(); // Begin suppressing dependency detection (by setting the top frame to undefined)
                 for (var a = this._subscriptions[event].slice(0), i = 0, subscription; subscription = a[i]; ++i) {
@@ -55,19 +63,27 @@ var ko_subscribable_fn = {
     },
 
     'limit': function(limitFunction, funcOptions) {
-        var self = this, isPending, previousValue = self.peek ? self.peek() : undefined, pendingValue;
+        var self = this, isPending, previousValue, pendingValue;
         var finish = limitFunction(function() {
             if (pendingValue === self) {
                 pendingValue = self();
             }
+            isPending = false;
             if (self.isDifferent(previousValue, pendingValue)) {
                 self["notifySubscribers"](previousValue = pendingValue, defaultEvent, true /* immediate */);
             }
         }, funcOptions);
         self._notifyRateLimited = function(value) {
+            isPending = true;
             pendingValue = value;
             finish(self);
         };
+        self._storePreviousValue = function(value) {
+            if (!isPending) {
+                previousValue = value;
+            }
+        };
+        self.subscribe(self._storePreviousValue, null, 'beforeChange');
     },
 
     hasSubscriptionsForEvent: function(event) {
