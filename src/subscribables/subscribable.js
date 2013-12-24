@@ -10,27 +10,6 @@ ko.subscription.prototype.dispose = function () {
     this.isDisposed = true;
     this.disposeCallback();
 };
-ko.subscription.prototype['limit'] = function (limitFunction, funcOptions) {
-    var self = this,
-        target = self.target,
-        originalCallback = self.callback,
-        previousValue = target.peek ? target.peek() : undefined,
-        pendingValue;
-
-    var finish = limitFunction(function () {
-        if (pendingValue === target) {
-            pendingValue = target();
-        }
-        if (!self.isDisposed && target.isDifferent(previousValue, pendingValue)) {
-            originalCallback(previousValue = pendingValue);
-        }
-    }, funcOptions);
-
-    self.callback = function(value) {
-        pendingValue = value;
-        finish(target, value);
-    };
-};
 
 ko.subscribable = function () {
     ko.utils.setPrototypeOfOrExtend(this, ko.subscribable['fn']);
@@ -50,19 +29,17 @@ var ko_subscribable_fn = {
             ko.utils.arrayRemoveItem(self._subscriptions[event], subscription);
         });
 
-        if (event === defaultEvent && self._limitFunction) {
-            subscription['limit'](self._limitFunction, self._limitFuncOptions);
-        }
-
         if (!self._subscriptions[event])
             self._subscriptions[event] = [];
         self._subscriptions[event].push(subscription);
         return subscription;
     },
 
-    "notifySubscribers": function (valueToNotify, event) {
+    "notifySubscribers": function (valueToNotify, event, immediate) {
         event = event || defaultEvent;
-        if (this.hasSubscriptionsForEvent(event)) {
+        if (!immediate && event === defaultEvent && this._notifyRateLimited) {
+            this._notifyRateLimited(valueToNotify);
+        } else if (this.hasSubscriptionsForEvent(event)) {
             try {
                 ko.dependencyDetection.begin(); // Begin suppressing dependency detection (by setting the top frame to undefined)
                 for (var a = this._subscriptions[event].slice(0), i = 0, subscription; subscription = a[i]; ++i) {
@@ -78,8 +55,19 @@ var ko_subscribable_fn = {
     },
 
     'limit': function(limitFunction, funcOptions) {
-        this._limitFunction = limitFunction;
-        this._limitFuncOptions = funcOptions;
+        var self = this, isPending, previousValue = self.peek ? self.peek() : undefined, pendingValue;
+        var finish = limitFunction(function() {
+            if (pendingValue === self) {
+                pendingValue = self();
+            }
+            if (self.isDifferent(previousValue, pendingValue)) {
+                self["notifySubscribers"](previousValue = pendingValue, defaultEvent, true /* immediate */);
+            }
+        }, funcOptions);
+        self._notifyRateLimited = function(value) {
+            pendingValue = value;
+            finish(self);
+        };
     },
 
     hasSubscriptionsForEvent: function(event) {
