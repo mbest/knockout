@@ -162,19 +162,17 @@ ko.exportSymbol('evaluateAsynchronously', ko.evaluateAsynchronously);
 ko.extenders.deferred = function(target, value) {
     target._deferUpdates = value;
     if (value) {
-        target['limit'](deferFunction);
+        target['limit'](function (callback) {
+            return function () {
+                if (target._deferUpdates) {
+                    // TODO: figure out if this is a binding computed
+                    ko.tasks.processDelayed(callback);
+
+                    target['notifySubscribers'](undefined, 'dirty');
+                } else {
+                    callback();
+                }
+            };
+        });
     }
 };
-
-function deferFunction(callback) {
-    return function (target) {
-        if (target._deferUpdates) {
-            // TODO: figure out if this is a binding computed
-            ko.tasks.processDelayed(callback);
-
-            target['notifySubscribers'](undefined, 'dirty');
-        } else {
-            callback();
-        }
-    };
-}
