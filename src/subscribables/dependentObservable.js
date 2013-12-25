@@ -185,7 +185,7 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
     // Replace the limit function with one that delays evaluation as well.
     var originalLimit = dependentObservable['limit'];
     dependentObservable['limit'] = function(limitFunction, funcOptions) {
-        originalLimit.apply(this, arguments);
+        originalLimit.call(this, limitFunction, funcOptions);
         dependentObservable._evalRateLimited = function() {
             dependentObservable._storePreviousValue(_latestValue);
             dependentObservable._notifyRateLimited(dependentObservable);

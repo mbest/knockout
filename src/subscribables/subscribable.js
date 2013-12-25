@@ -39,14 +39,8 @@ var ko_subscribable_fn = {
         return subscription;
     },
 
-    "notifySubscribers": function (valueToNotify, event, immediate) {
+    "notifySubscribers": function (valueToNotify, event) {
         event = event || defaultEvent;
-
-        if (!immediate && event === defaultEvent && this._notifyRateLimited) {
-            this._notifyRateLimited(valueToNotify);
-            return;
-        }
-
         if (this.hasSubscriptionsForEvent(event)) {
             try {
                 ko.dependencyDetection.begin(); // Begin suppressing dependency detection (by setting the top frame to undefined)
@@ -64,15 +58,31 @@ var ko_subscribable_fn = {
 
     'limit': function(limitFunction, funcOptions) {
         var self = this, isPending, previousValue, pendingValue;
+
+        if (!self._origNotifySubscribers) {
+            self._origNotifySubscribers = self["notifySubscribers"];
+            self["notifySubscribers"] = function(value, event) {
+                if (!event || event === defaultEvent) {
+                    this._notifyRateLimited(value);
+                } else {
+                    if (event === 'beforeChange') {
+                        this._storePreviousValue(value);
+                    }
+                    this._origNotifySubscribers(value, event);
+                }
+            };
+        }
+
         var finish = limitFunction(function() {
             if (pendingValue === self) {
                 pendingValue = self();
             }
             isPending = false;
             if (self.isDifferent(previousValue, pendingValue)) {
-                self["notifySubscribers"](previousValue = pendingValue, defaultEvent, true /* immediate */);
+                self._origNotifySubscribers(previousValue = pendingValue);
             }
         }, funcOptions);
+
         self._notifyRateLimited = function(value) {
             isPending = true;
             pendingValue = value;
@@ -83,7 +93,6 @@ var ko_subscribable_fn = {
                 previousValue = value;
             }
         };
-        self.subscribe(self._storePreviousValue, null, 'beforeChange');
     },
 
     hasSubscriptionsForEvent: function(event) {
