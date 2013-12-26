@@ -158,6 +158,7 @@ describe('Observable Array', function() {
 
     it('Should notify "beforeChange" subscribers before remove', function () {
         testObservableArray(["Alpha", "Beta", "Gamma"]);
+        ko.processAllDeferredUpdates();
         beforeNotifiedValues = [];
         var removed = testObservableArray.remove("Beta");
         expect(removed).toEqual(["Beta"]);
@@ -220,6 +221,7 @@ describe('Observable Array', function() {
 
     it('Should notify "beforeChange" subscribers before replace', function () {
         testObservableArray(["Alpha", "Beta", "Gamma"]);
+        ko.processAllDeferredUpdates();
         beforeNotifiedValues = [];
         testObservableArray.replace("Beta", "Delta");
         expect(beforeNotifiedValues).toEqual([["Alpha", "Beta", "Gamma"]]);
@@ -241,6 +243,7 @@ describe('Observable Array', function() {
     it('Should notify "beforeChange" subscribers before marking items as destroyed', function () {
         var x = {}, y = {}, didNotify = false;
         testObservableArray([x, y]);
+        ko.processAllDeferredUpdates();
         testObservableArray.subscribe(function(value) {
             expect(x._destroy).toEqual(undefined);
             expect(y._destroy).toEqual(undefined);

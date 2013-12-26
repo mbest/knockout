@@ -103,9 +103,10 @@ describe('Observable', function() {
         }, null, "beforeChange");
 
         instance('A');
-        instance('B');
-
         ko.processAllDeferredUpdates();
+        instance('B');
+        ko.processAllDeferredUpdates();
+
         expect(notifiedValues.length).toEqual(2);
         expect(notifiedValues[0]).toEqual(undefined);
         expect(notifiedValues[1]).toEqual('A');
