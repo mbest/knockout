@@ -21,11 +21,9 @@ ko.computed = ko.dependentObservable = function (evaluatorFunctionOrOptions, eva
     if (typeof readFunction != "function")
         throw new Error("Pass a function that returns the value of the ko.computed");
 
-    function addSubscriptionToDependency(subscribable, id) {
-        if (!dependencyTracking[id]) {
-            dependencyTracking[id] = subscribable.subscribe(evaluatePossiblyAsync);
-            ++_dependenciesCount;
-        }
+    function addDependencyTracking(id, subscription) {
+        dependencyTracking[id] = subscription;
+        ++dependenciesCount;
     }
 
     function haveDependenciesChanged() {
@@ -40,13 +38,13 @@ ko.computed = ko.dependentObservable = function (evaluatorFunctionOrOptions, eva
     }
 
     function disposeComputed() {
-        if (!isSleeping) {
+        if (!isSleeping && dependencyTracking) {
             ko.utils.objectForEach(dependencyTracking, function (id, subscription) {
                 subscription.dispose();
             });
         }
-        dependencyTracking = {};
-        _dependenciesCount = 0;
+        dependencyTracking = null;
+        dependenciesCount = 0;
         _isDisposed = true;
         _needsEvaluation = false;
         isSleeping = false;
@@ -95,7 +93,7 @@ ko.computed = ko.dependentObservable = function (evaluatorFunctionOrOptions, eva
         }
 
         // Check if any dependencies have changed
-        if (pure && suppressChangeNotification && _dependenciesCount && !haveDependenciesChanged()) {
+        if (pure && suppressChangeNotification && dependenciesCount && !haveDependenciesChanged()) {
             _needsEvaluation = false;
             return;
         }
@@ -107,8 +105,7 @@ ko.computed = ko.dependentObservable = function (evaluatorFunctionOrOptions, eva
                 ko.dependencyDetection.begin({
                     callback: function (subscribable, id) {
                         if (!_isDisposed && !dependencyTracking[id]) {
-                            dependencyTracking[id] = subscribable;
-                            ++_dependenciesCount;
+                            addDependencyTracking(id, { _target: subscribable, _version: subscribable.getVersion() });
                         }
                     },
                     computed: dependentObservable,
@@ -117,31 +114,31 @@ ko.computed = ko.dependentObservable = function (evaluatorFunctionOrOptions, eva
             } else {
                 // Initially, we assume that none of the subscriptions are still being used (i.e., all are candidates for disposal).
                 // Then, during evaluation, we cross off any that are in fact still being used.
-                var disposalCandidates = dependencyTracking, disposalCount = _dependenciesCount;
+                var disposalCandidates = dependencyTracking, disposalCount = dependenciesCount;
                 ko.dependencyDetection.begin({
                     callback: function(subscribable, id) {
                         if (!_isDisposed) {
+                            var subscription;
                             if (disposalCount && disposalCandidates[id]) {
                                 // Don't want to dispose this subscription, as it's still being used
-                                dependencyTracking[id] = disposalCandidates[id];
-                                ++_dependenciesCount;
+                                addDependencyTracking(id, subscription = disposalCandidates[id]);
                                 delete disposalCandidates[id];
                                 --disposalCount;
-                            } else {
+                            } else if (!dependencyTracking[id]) {
                                 // Brand new subscription - add it
-                                addSubscriptionToDependency(subscribable, id);
+                                addDependencyTracking(id, subscription = subscribable.subscribe(evaluatePossiblyAsync));
                             }
                             if (pure) {
-                                dependencyTracking[id]._version = subscribable.getVersion();
+                                (subscription || dependencyTracking[id])._version = subscribable.getVersion();
                             }
                         }
                     },
                     computed: dependentObservable,
-                    isInitial: pure ? undefined : !_dependenciesCount        // If we're evaluating when there are no previous dependencies, it must be the first time
+                    isInitial: pure ? undefined : !dependenciesCount        // If we're evaluating when there are no previous dependencies, it must be the first time
                 });
             }
             dependencyTracking = {};
-            _dependenciesCount = 0;
+            dependenciesCount = 0;
 
             try {
                 var newValue = evaluatorFunctionTarget ? readFunction.call(evaluatorFunctionTarget) : readFunction();
@@ -149,11 +146,7 @@ ko.computed = ko.dependentObservable = function (evaluatorFunctionOrOptions, eva
             } finally {
                 ko.dependencyDetection.end();
 
-                if (isSleeping) {
-                    ko.utils.objectForEach(dependencyTracking, function (id, subscribable) {
-                        dependencyTracking[id] = { _target: subscribable, _version: subscribable.getVersion() };
-                    });
-                } else if (disposalCount) {
+                if (disposalCount) {
                     // For each subscription no longer being used, remove it from the active subscriptions list and dispose it
                     ko.utils.objectForEach(disposalCandidates, function(id, toDispose) {
                         toDispose.dispose();
@@ -180,7 +173,7 @@ ko.computed = ko.dependentObservable = function (evaluatorFunctionOrOptions, eva
             _isBeingEvaluated = false;
         }
 
-        if (!_dependenciesCount)
+        if (!dependenciesCount)
             dispose();
     }
 
@@ -205,13 +198,13 @@ ko.computed = ko.dependentObservable = function (evaluatorFunctionOrOptions, eva
     function peek() {
         // Peek won't re-evaluate, except while the computed is sleeping or to get the initial value when "deferEvaluation" is set.
         // Those are the only times that both of these conditions will be satisfied.
-        if (isSleeping || (_needsEvaluation && !_dependenciesCount))
+        if (isSleeping || (_needsEvaluation && !dependenciesCount))
             evaluateImmediate(true /* suppressChangeNotification */);
         return _latestValue;
     }
 
     function isActive() {
-        return _needsEvaluation || _dependenciesCount > 0;
+        return _needsEvaluation || dependenciesCount > 0;
     }
 
     // By here, "options" is always non-null
@@ -221,7 +214,7 @@ ko.computed = ko.dependentObservable = function (evaluatorFunctionOrOptions, eva
         disposeWhen = disposeWhenOption,
         dispose = disposeComputed,
         dependencyTracking = {},
-        _dependenciesCount = 0,
+        dependenciesCount = 0,
         evaluationTimeoutInstance = null;
 
     if (!evaluatorFunctionTarget)
@@ -231,7 +224,7 @@ ko.computed = ko.dependentObservable = function (evaluatorFunctionOrOptions, eva
     ko.utils.setPrototypeOfOrExtend(dependentObservable, ko.dependentObservable['fn']);
 
     dependentObservable.peek = peek;
-    dependentObservable.getDependenciesCount = function () { return _dependenciesCount; };
+    dependentObservable.getDependenciesCount = function () { return dependenciesCount; };
     dependentObservable.hasWriteFunction = typeof options["write"] === "function";
     dependentObservable.dispose = function () { dispose(); };
     dependentObservable.isActive = isActive;
@@ -258,7 +251,7 @@ ko.computed = ko.dependentObservable = function (evaluatorFunctionOrOptions, eva
         dependentObservable.beforeSubscriptionAdd = function () {
             // If asleep, wake up the computed and evaluate to save the current value.
             if (isSleeping) {
-                if (_dependenciesCount) {
+                if (dependenciesCount) {
                     ko.utils.objectForEach(dependencyTracking, function (id, dependency) {
                         var subscription = dependency._target.subscribe(evaluatePossiblyAsync);
                         subscription._version = dependency._version;
