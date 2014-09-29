@@ -23,7 +23,7 @@ ko.computed = ko.dependentObservable = function (evaluatorFunctionOrOptions, eva
 
     function addDependencyTracking(id, subscription) {
         dependencyTracking[id] = subscription;
-        ++dependenciesCount;
+        subscription._order = dependenciesCount++;
     }
 
     function haveDependenciesChanged() {
@@ -117,19 +117,20 @@ ko.computed = ko.dependentObservable = function (evaluatorFunctionOrOptions, eva
                 var disposalCandidates = dependencyTracking, disposalCount = dependenciesCount;
                 ko.dependencyDetection.begin({
                     callback: function(subscribable, id) {
-                        if (!_isDisposed) {
+                        if (!_isDisposed && !dependencyTracking[id]) {
                             var subscription;
                             if (disposalCount && disposalCandidates[id]) {
                                 // Don't want to dispose this subscription, as it's still being used
-                                addDependencyTracking(id, subscription = disposalCandidates[id]);
+                                subscription = disposalCandidates[id];
                                 delete disposalCandidates[id];
                                 --disposalCount;
-                            } else if (!dependencyTracking[id]) {
+                            } else {
                                 // Brand new subscription - add it
-                                addDependencyTracking(id, subscription = subscribable.subscribe(evaluatePossiblyAsync));
+                                subscription = subscribable.subscribe(evaluatePossiblyAsync);
                             }
+                            addDependencyTracking(id, subscription);
                             if (pure) {
-                                (subscription || dependencyTracking[id])._version = subscribable.getVersion();
+                                subscription._version = subscribable.getVersion();
                             }
                         }
                     },
@@ -252,10 +253,18 @@ ko.computed = ko.dependentObservable = function (evaluatorFunctionOrOptions, eva
             // If asleep, wake up the computed and evaluate to save the current value.
             if (isSleeping) {
                 if (dependenciesCount) {
+                    // First put the dependencies in order
+                    var dependeciesOrdered = [];
                     ko.utils.objectForEach(dependencyTracking, function (id, dependency) {
+                        dependeciesOrdered[dependency._order] = dependency;
+                        dependency._id = id;
+                    });
+                    // Next, subscribe to each one
+                    ko.utils.arrayForEach(dependeciesOrdered, function(dependency) {
                         var subscription = dependency._target.subscribe(evaluatePossiblyAsync);
                         subscription._version = dependency._version;
-                        dependencyTracking[id] = subscription;
+                        subscription._order = dependency._order;
+                        dependencyTracking[dependency._id] = subscription;
                     });
                 }
                 isSleeping = false;
@@ -268,7 +277,7 @@ ko.computed = ko.dependentObservable = function (evaluatorFunctionOrOptions, eva
             // all subscriptions to its dependencies.
             if (!dependentObservable.getSubscriptionsCount()) {
                 ko.utils.objectForEach(dependencyTracking, function (id, subscription) {
-                    dependencyTracking[id] = { _target: subscription._target, _version: subscription._version };
+                    dependencyTracking[id] = { _target: subscription._target, _version: subscription._version, _order: subscription._order };
                     subscription.dispose();
                 });
                 isSleeping = true;
